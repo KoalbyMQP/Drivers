@@ -7,7 +7,7 @@ on:
 jobs:
   auto-merge-submodule:
     # Only run on Dependabot PRs for submodules
-    if: github.actor == 'dependabot[bot]' && contains(github.event.pull_request.labels.*.name, 'deps')
+    if: github.actor == 'dependabot[bot]' && contains(github.event.pull_request.labels.*.name, 'submodule-update')
     runs-on: ubuntu-latest
     
     steps:
