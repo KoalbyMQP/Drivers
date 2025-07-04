@@ -1,0 +1,3 @@
+[submodule "packages/urchin-framework"]
+	path = packages/urchin-framework
+	url = https://github.com/KoalbyMQP/Urchin-Framework
