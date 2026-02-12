@@ -1,4 +1,5 @@
 #include <Herkulex.h>
+#include <HerkulexMotor.h>
 int n=12; //motor ID - verify your ID !!!!
 int is0601 = true;
 
@@ -6,8 +7,9 @@ uint16_t startTime = 0;
 uint16_t elapsedTime = 0;
 boolean runTest = true;
 
-void setup()
-{
+HerkulexMotor myMotor = HerkulexMotor(12, MotorModel::DRS_0601);
+
+void setup(){
   delay(2000);  //a delay to have time for serial monitor opening
   Serial.begin(115200);    // Open serial communications
   Serial.println("Begin");
@@ -16,13 +18,15 @@ void setup()
   delay(500);
   Herkulex.initialize(); //initialize motors
   delay(200);
+
+
 }
 
 void loop(){
   // this if statement makes sure that this only runs once at the beginning
   if (runTest) {
     startTime = micros();
-    Herkulex.moveOne(n, 100, 300, LED_BLUE, true);
+    myMotor.setPos(0.0);
     elapsedTime = micros() - startTime;
 
     Serial.print("time to send moveOne cmd: ");
@@ -33,14 +37,14 @@ void loop(){
     
     // reading the time needed for the angle of the motor to get back
     startTime = micros();
-    Herkulex.getAngle(n, is0601);
+    myMotor.getPos();
     elapsedTime = micros() - startTime;
 
     Serial.print("time to read position: ");
     Serial.print(elapsedTime);
     Serial.println(" microseconds");
 
-    Herkulex.moveOne(n, 1000, 300, LED_BLUE, true);
+    myMotor.setPos(90);
     delay(1200);
   }
   runTest = false;

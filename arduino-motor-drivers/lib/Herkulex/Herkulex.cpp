@@ -416,14 +416,14 @@ void HerkulexClass::actionMoves(int pTime)
 }
 
 // get Position
- int HerkulexClass::getPosition(int servoID, bool is0601) {
-	int Position  = 0;
+ uint16_t HerkulexClass::getPosition(int servoID) {
+	uint16_t Position  = 0;
 
     pSize = 0x09;               // 3.Packet size 7-58
 	pID   = servoID;     	    // 4. Servo ID - 253=all servos
 	cmd   = HRAMREAD;           // 5. CMD
 	data[0]=0x3A;               // 8. Address
-	data[1]=0x02;               // 9. Lenght
+	data[1]=0x02;               // 9. Length
 	
 	lenghtString=2;             // lenghtData
   	
@@ -463,18 +463,9 @@ void HerkulexClass::actionMoves(int pTime)
     if (ck1 != dataEx[5]) return -1;
 	if (ck2 != dataEx[6]) return -1;
 
-    int maxMSB = is0601 ? 0x07 : 0x03;
-
-	Position = ((dataEx[10]&maxMSB)<<8) | dataEx[9];
+	Position = (dataEx[10] << 8) | dataEx[9];
         return Position;
 	
-}
-
-// get angle
-float HerkulexClass::getAngle(int servoID, bool is0601) {
-	int pos = (int)getPosition(servoID, is0601);
-    int conversionFactor = is0601 ? 2 : 1;
-	return (pos/conversionFactor - 512) * 0.325;
 }
 
 // reboot single servo - pay attention 253 - all servos doesn't work!
@@ -580,12 +571,8 @@ int HerkulexClass::getSpeed(int servoID) {
 }
 
 // move one servo at goal position 0 - 1024
-void HerkulexClass::moveOne(int servoID, int Goal, int pTime, int iLed, bool is0601)
+void HerkulexClass::moveOne(int servoID, int Goal, int pTime, int iLed)
 {
-  int goalLimit = is0601 ? 2047 : 1023;
-
-  if (Goal > goalLimit || Goal < 0) return;              // speed (goal) non correct
-  if ((pTime < 0) || (pTime > 2856)) return;
 
   // Position definition
   int posLSB=Goal & 0X00FF;								// MSB Pos
@@ -618,7 +605,7 @@ void HerkulexClass::moveOne(int servoID, int Goal, int pTime, int iLed, bool is0
   data[2]=SetValue;                         // 10. Mode=0;
   data[3]=servoID;                    		// 11. ServoID
 
-    pID=servoID^playTime;
+  pID=servoID^playTime;
 
   lenghtString=4;             				// lenghtData
 
@@ -641,7 +628,6 @@ void HerkulexClass::moveOne(int servoID, int Goal, int pTime, int iLed, bool is0
   dataEx[11] = data[3];
 
   sendData(dataEx, pSize);
-
 }
 
 // write registry in the RAM: one byte 
