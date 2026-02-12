@@ -7,11 +7,13 @@ HerkulexMotor::HerkulexMotor(int id, MotorModel type){
     _type = type;
 
     //place holder: but assigning motor bounds from motor limit data (in steps)
-    _bounds[0] = ModelInfo[type][4];
-    _bounds[1] = ModelInfo[type][5]
+    // because we are using enum class instead of straight enum, we need to cast to an integer, it doesn't do so automatically
+    // if we had normal enum doing ModelInfo[type] works (i checked by deleting class from enum Class MotorModel)
+    _bounds[0] = ModelInfo[static_cast<int>(type)].minPhysicalDeg;
+    _bounds[1] = ModelInfo[static_cast<int>(type)].maxPhysicalDeg;
 }
 
-HerkulexMotor::HerkulexMotor(int id, MotorModel type, float lowerBoundDeg, float upperBoundDeg):{
+HerkulexMotor::HerkulexMotor(int id, MotorModel type, float lowerBoundDeg, float upperBoundDeg){
     _id = id;
     _type = type;
     // specific limits (in steps) -> motor steps implementaton for different motors goes here
