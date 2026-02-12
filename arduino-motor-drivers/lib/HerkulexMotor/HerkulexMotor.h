@@ -4,7 +4,7 @@
 #include "Arduino.h"
 
 // all motor models used
-enum class MotorModel{
+enum MotorModel{
     DRS_0201,
     DRS_0601,
     DRS_0602,
@@ -14,11 +14,11 @@ enum class MotorModel{
 // all specs that motors have
 // currently placeholders - look through documenations to determine most important params to include here
 struct HerkulexMotorSpec{
-    uint16_t maxRaw;
-    uint16_t centerRaw;
-    float degPerTick;
-    float minPhysicalDeg;
-    float maxPhysicalDeg;
+    uint16_t minSteps;
+    uint16_t maxSteps;
+    uint16_t zeroSteps;
+    uint16_t zeroPosOffset; // added because 0602 has a default calibration offset
+    float degPerStep;
 };
 
 
@@ -26,22 +26,24 @@ struct HerkulexMotorSpec{
 // dummy data for now
 const HerkulexMotorSpec ModelInfo[] = {
   // DRS_0201
-  {1023, 512, -160.0f, 160.0f, 0.325f},
+  {21, 1002, 512, 0, 0.325f},
 
   // DRS_0601
-  {2047, 512, -160.0f, 160.0f, 0.325f},
+  // bounds are recommended range from HerkuleX datasheet
+  {42, 2004, 1024, 0, 0.163f},
 
   // DRS_0602
-  {4095, 2048, -180.0f, 180.0f, 0.088f}
+  // bounds are for now full supported 16bit int range
+  {0, 65535, 16384, 9903, 0.02778f}
 };
 
 class HerkulexMotor{
     public:
         HerkulexMotor(int id, MotorModel type);
         HerkulexMotor(int id, MotorModel type, float lowerBoundDeg, float upperBoundDeg);
-        void setPos();
-        int getPos();
-        void queueMove();
+        void setPos(float posDeg);
+        float getPos();
+        void queueMove(float posDeg);
     private:
         int _id;
         MotorModel _type;

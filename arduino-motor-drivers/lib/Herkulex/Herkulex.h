@@ -107,10 +107,9 @@ public:
   void  queueMoves(int servoID, int Goal, int iLed);
   void  actionMoves(int pTime);
   
-  void  moveOne(int servoID, int Goal, int pTime, int iLed, bool is0601);
+  void  moveOne(int servoID, int Goal, int pTime, int iLed);
   
-  int   getPosition(int servoID, bool is0601);
-  float getAngle(int servoID, bool is0601);
+  uint16_t getPosition(int servoID);
   int   getSpeed(int servoID);
 		
   void  reboot(int servoID);
