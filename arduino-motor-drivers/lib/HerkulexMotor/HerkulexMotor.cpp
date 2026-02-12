@@ -27,7 +27,11 @@ HerkulexMotor::HerkulexMotor(int id, MotorModel type, float lowerBoundDeg, float
    
 
     _zeroPos   = ModelInfo[static_cast<int>(type)].zeroSteps;
-    _bounds[0] = int(upperBoundDeg / ModelInfo[static_cast<int>(type)].degPerStep
+
+
+
+
+    uint16_t upperBoundSteps = int(upperBoundDeg / ModelInfo[static_cast<int>(type)].degPerStep
          - ModelInfo[static_cast<int>(type)].zeroPosOffset);
     _bounds[1] = int(lowerBoundDeg / ModelInfo[static_cast<int>(type)].degPerStep
         - ModelInfo[static_cast<int>(type)].zeroPosOffset);
@@ -40,8 +44,7 @@ float HerkulexMotor::getPos(){
     uint16_t rawPos = Herkulex.getPosition(_id);
 
     float posDeg = ModelInfo[static_cast<int>(_type)].degPerStep *
-     (rawPos + ModelInfo[static_cast<int>(_type)].zeroPosOffset);
-
+     (rawPos - ModelInfo[static_cast<int>(_type)].zeroPosOffset - ModelInfo[static_cast<int>(_type)].zeroSteps);
     return posDeg;
 
 }
@@ -51,15 +54,15 @@ void HerkulexMotor::setPos(float posDeg){
     // calculate raw position from degrees
 
     uint16_t rawPos = int(posDeg / ModelInfo[static_cast<int>(_type)].degPerStep
-        - ModelInfo[static_cast<int>(_type)].zeroPosOffset);
-
+        + ModelInfo[static_cast<int>(_type)].zeroPosOffset + ModelInfo[static_cast<int>(_type)].zeroSteps);
 
     // bound raw position to motor limits
     rawPos = rawPos > _bounds[1] ? _bounds[1] : rawPos;
     rawPos = rawPos < _bounds[0] ? _bounds[0] : rawPos;
 
 
-    // send command to HerkuleX class
-    Herkulex.moveOne(_id, rawPos, 10, 0);
+    // send command to HerkulesX class
+    // last argument "1" sets LED to a nice blue color.
+    Herkulex.moveOne(_id, rawPos, 10, 1);
 
 }

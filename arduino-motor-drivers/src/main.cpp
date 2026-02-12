@@ -1,17 +1,16 @@
 #include <Herkulex.h>
 #include <HerkulexMotor.h>
-int n=12; //motor ID - verify your ID !!!!
-int is0601 = true;
+int n=5; //motor ID - verify your ID !!!!
 
 uint16_t startTime = 0;
 uint16_t elapsedTime = 0;
 boolean runTest = true;
 
-HerkulexMotor myMotor = HerkulexMotor(12, MotorModel::DRS_0601);
+HerkulexMotor myMotor = HerkulexMotor(5, MotorModel::DRS_0601);
 
 void setup(){
   delay(2000);  //a delay to have time for serial monitor opening
-  Serial.begin(115200);    // Open serial communications
+  Serial.begin(9600);    // Open serial communications
   Serial.println("Begin");
   Herkulex.beginSerial1(115200); //open serial port 1
   Herkulex.reboot(n); //reboot first motor
@@ -23,8 +22,8 @@ void setup(){
 }
 
 void loop(){
+  while(runTest){
   // this if statement makes sure that this only runs once at the beginning
-  if (runTest) {
     startTime = micros();
     myMotor.setPos(0.0);
     elapsedTime = micros() - startTime;
@@ -33,19 +32,27 @@ void loop(){
     Serial.print(elapsedTime);
     Serial.println(" microseconds");
 
-    delay(1200);
-    
-    // reading the time needed for the angle of the motor to get back
+    delay(300);
+
     startTime = micros();
-    myMotor.getPos();
+    myMotor.setPos(20.0);
     elapsedTime = micros() - startTime;
 
-    Serial.print("time to read position: ");
+    Serial.print("time to send moveOne cmd: ");
     Serial.print(elapsedTime);
     Serial.println(" microseconds");
 
-    myMotor.setPos(90);
-    delay(1200);
+    delay(300);
+
+    startTime = micros();
+    myMotor.setPos(50.0);
+    elapsedTime = micros() - startTime;
+
+    Serial.print("time to send moveOne cmd: ");
+    Serial.print(elapsedTime);
+    Serial.println(" microseconds");
+
+    runTest = false;
   }
-  runTest = false;
+  
 }
