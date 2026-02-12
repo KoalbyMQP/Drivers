@@ -39,14 +39,14 @@ class HerkulexMotor{
     public:
         HerkulexMotor(int id, MotorModel type);
         HerkulexMotor(int id, MotorModel type, float lowerBoundDeg, float upperBoundDeg);
-        void setPos();
-        int getPos();
+        void setPos(float goalPosDeg);
+        float getPos();
         void queueMove();
     private:
         int _id;
         MotorModel _type;
         int _zeroPos;
-        int _bounds[2];
+        int _bounds[2]; // we should consider whether we want these as raw values or keep them as degrees 
 };
 
 #endif
