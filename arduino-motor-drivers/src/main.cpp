@@ -28,13 +28,12 @@ void setup(){
 }
 
 void testingQueue(){
-  delay(1000);
   // queue two different motors
   myMotor.queueMove(-20);
-  myMotor2.setPos(-50);
+  myMotor2.queueMove(-50);
 
   delay(500);
-  Herkulex.actionMoves(100);
+  Herkulex.actionMoves(10);
 }
 
 
@@ -52,7 +51,7 @@ void loop(){
     delay(1200);
 
     startTime = micros();
-    myPos = myMotor.getPos();
+    float myPos = myMotor.getPos();
     elapsedTime = micros() - startTime;
 
     Serial.print("position: ");

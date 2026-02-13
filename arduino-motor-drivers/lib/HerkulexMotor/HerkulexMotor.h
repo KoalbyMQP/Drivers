@@ -48,8 +48,10 @@ class HerkulexMotor{
     private:
         int _id;
         MotorModel _type;
-        uint16_t _zeroPos;      // zero position in steps
         uint16_t _bounds[2];    // motor bounds, in steps
+        uint16_t _zeroPos;      // zero position in steps
+        int32_t degToSteps(float deg, MotorModel type);
+        float stepsToDeg(uint16_t steps, MotorModel type);
 };
 
 #endif
