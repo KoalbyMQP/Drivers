@@ -48,7 +48,7 @@ HerkulexMotor::HerkulexMotor(int id, MotorModel type, float lowerBoundDeg, float
 // these functions wrap the core Herkulex library functions and convert to degrees (usuable units) from raw HerkuleX motor information
 float HerkulexMotor::getPos(){
     
-    uint16_t rawPos = Herkulex.getPosition(_id);
+    uint16_t rawPos = Herkulex.getPosition(_id) & ModelInfo[static_cast<int>(_type)].posBitMask;
 
     float posDeg = ModelInfo[static_cast<int>(_type)].degPerStep *
      (rawPos - ModelInfo[static_cast<int>(_type)].zeroPosOffset - ModelInfo[static_cast<int>(_type)].zeroSteps);
@@ -58,7 +58,7 @@ float HerkulexMotor::getPos(){
 void HerkulexMotor::setPos(float posDeg){
     // calculate raw position from degrees
     uint16_t rawPos = int(posDeg / ModelInfo[static_cast<int>(_type)].degPerStep
-        + ModelInfo[static_cast<int>(_type)].zeroPosOffset + ModelInfo[static_cast<int>(_type)].zeroSteps);
+         + ModelInfo[static_cast<int>(_type)].zeroSteps);
 
     // bound raw position to motor limits
     rawPos = rawPos > _bounds[1] ? _bounds[1] : rawPos;

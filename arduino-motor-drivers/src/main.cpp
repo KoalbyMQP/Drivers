@@ -44,27 +44,47 @@ void loop(){
     myMotor.setPos(0.0);
     elapsedTime = micros() - startTime;
 
-    Serial.print("time to send moveOne cmd: ");
-    Serial.print(elapsedTime);
-    Serial.println(" microseconds");
-
-    delay(300);
-
-    startTime = micros();
-    myMotor.setPos(20.0);
-    elapsedTime = micros() - startTime;
 
     Serial.print("time to send moveOne cmd: ");
     Serial.print(elapsedTime);
     Serial.println(" microseconds");
 
-    delay(300);
+    delay(1200);
 
     startTime = micros();
-    myMotor.setPos(50.0);
+    myPos = myMotor.getPos();
     elapsedTime = micros() - startTime;
 
+    Serial.print("position: ");
+    Serial.print(myPos);
+    Serial.println(" degrees");
+
+    Serial.print("time to read one: ");
+    Serial.print(elapsedTime);
+    Serial.println(" microseconds");
+
+    delay(1200);
+
+    startTime = micros();
+    myMotor.setPos(90.0);
+    elapsedTime = micros() - startTime;
+
+
     Serial.print("time to send moveOne cmd: ");
+    Serial.print(elapsedTime);
+    Serial.println(" microseconds");
+
+    delay(1200);
+
+    startTime = micros();
+    myPos = myMotor.getPos();
+    elapsedTime = micros() - startTime;
+
+    Serial.print("position: ");
+    Serial.print(myPos);
+    Serial.println(" degrees");
+
+    Serial.print("time to read one: ");
     Serial.print(elapsedTime);
     Serial.println(" microseconds");
 
