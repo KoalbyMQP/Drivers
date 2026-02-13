@@ -11,13 +11,12 @@ enum MotorModel{
 };
 
 
-// all specs that motors have
-// currently placeholders - look through documenations to determine most important params to include here
+// all specs that motors have that make them different
 struct HerkulexMotorSpec{
     uint16_t minSteps;
     uint16_t maxSteps;
     uint16_t zeroSteps;
-    uint16_t zeroPosOffset; // added because 0602 has a default calibration offset
+    uint16_t zeroPosOffset; // added because 0602 has a default calibration offset (check 0602 documentation for more info)
     uint16_t posBitMask;
     float degPerStep;
 };
@@ -26,6 +25,7 @@ struct HerkulexMotorSpec{
 // actual lookup table for motors
 const HerkulexMotorSpec ModelInfo[] = {
   // DRS_0201
+  // bounds are reccomended range from HerkuleX datasheet
   {21, 1002, 512, 0, 0x03FF, 0.325f},
 
   // DRS_0601
@@ -33,7 +33,7 @@ const HerkulexMotorSpec ModelInfo[] = {
   {42, 2004, 1024, 0, 0x07FF, 0.163f},
 
   // DRS_0602
-  // bounds are for now full supported 16bit int range
+  // bounds are  full supported 16bit int range (max what 0602 can read)
   {0, 65535, 16384, 9903, 0xFFFF, 0.02778f}
 };
 
