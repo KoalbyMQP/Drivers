@@ -44,11 +44,12 @@ class HerkulexMotor{
         void setPos(float posDeg);
         float getPos();
         void queueMove(float posDeg);
+        // for exectuting all of the queues, Herkulex.actionMoves(x), x is in how many ms
     private:
         int _id;
         MotorModel _type;
-        uint16_t _zeroPos;
-        uint16_t _bounds[2];
+        uint16_t _zeroPos;      // zero position in steps
+        uint16_t _bounds[2];    // motor bounds, in steps
 };
 
 #endif

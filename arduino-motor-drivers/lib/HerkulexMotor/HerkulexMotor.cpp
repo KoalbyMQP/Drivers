@@ -27,13 +27,21 @@ HerkulexMotor::HerkulexMotor(int id, MotorModel type, float lowerBoundDeg, float
    
     _zeroPos   = ModelInfo[static_cast<int>(type)].zeroSteps;
 
-
-
-
+    // Upper and lower bounds based on the configuration of the motor, thes might be based on limb interferances and the such, not necessarily mechanical motor limits
+    // conversion to take from degrees to raw steps
     uint16_t upperBoundSteps = int(upperBoundDeg / ModelInfo[static_cast<int>(type)].degPerStep
          - ModelInfo[static_cast<int>(type)].zeroPosOffset);
-    _bounds[1] = int(lowerBoundDeg / ModelInfo[static_cast<int>(type)].degPerStep
+         
+    uint16_t lowerBoundSteps = int(lowerBoundDeg / ModelInfo[static_cast<int>(type)].degPerStep
         - ModelInfo[static_cast<int>(type)].zeroPosOffset);
+
+    // get the upper bounds specified to each othe actual motor (this is mechanical as opposed to limb-based)
+    uint16_t actualUpperBound = ModelInfo[static_cast<int>(type)].maxSteps;
+    uint16_t actualLowerBound = ModelInfo[static_cast<int>(type)].minSteps;
+    
+    // make sure that the custom bounds are not outside of the actual motor limits
+    _bounds[0] = upperBoundSteps > _bounds[1] ? _bounds[1] : upperBoundSteps;
+    _bounds[1] = lowerBoundSteps < _bounds[0] ? _bounds[0] : lowerBoundSteps;
 }
 
 
@@ -45,13 +53,10 @@ float HerkulexMotor::getPos(){
     float posDeg = ModelInfo[static_cast<int>(_type)].degPerStep *
      (rawPos - ModelInfo[static_cast<int>(_type)].zeroPosOffset - ModelInfo[static_cast<int>(_type)].zeroSteps);
     return posDeg;
-
 }
 
 void HerkulexMotor::setPos(float posDeg){
-    
     // calculate raw position from degrees
-
     uint16_t rawPos = int(posDeg / ModelInfo[static_cast<int>(_type)].degPerStep
         + ModelInfo[static_cast<int>(_type)].zeroPosOffset + ModelInfo[static_cast<int>(_type)].zeroSteps);
 
@@ -62,21 +67,15 @@ void HerkulexMotor::setPos(float posDeg){
 
     // send command to HerkulesX class
     // last argument "1" sets LED to a nice blue color.
+    //  Max are you sure that 1 wouldn't make the color green? since 2 is blue
     Herkulex.moveOne(_id, rawPos, 10, 1);
-
 }
 
+void HerkulexMotor::queueMove(float posDeg){
+    uint16_t rawPos = int(posDeg / ModelInfo[static_cast<int>(_type)].degPerStep
+        + ModelInfo[static_cast<int>(_type)].zeroPosOffset + ModelInfo[static_cast<int>(_type)].zeroSteps);
 
-
-// // Notes // //
-
-// How will this play with the structure we have? are we going to want to do this instead of individually setPos?
-// Do we have too many 
-
-// //queuing up movements for different motors
-// Herkulex.queueMoves(1, 200, LED_GREEN);  // Queue motor 1
-// Herkulex.queueMoves(2, 800, LED_GREEN);  // Queue motor 2
-// Herkulex.queueMoves(3, 512, LED_GREEN);  // Queue motor 3
-
-// //execute them all at once
-// Herkulex.actionMoves(1500);  // All motors move together, taking 1500ms
+    // use the Herkulex queuing system to add that movement to the list to be exectuted simultaneously
+    // 2 makes the LED blue
+    Herkulex.queueMoves(_id, rawPos, 2);
+}
