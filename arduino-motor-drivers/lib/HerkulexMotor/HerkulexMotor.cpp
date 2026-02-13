@@ -50,6 +50,7 @@ float HerkulexMotor::getPos(){
 
 void HerkulexMotor::setPos(float posDeg){
     // calculate raw position from degrees
+    // maybe switch to checking bounds in float value of posDeg instead of using rawPos.
     int32_t rawPos = degToSteps(posDeg, _type);
 
     // Serial.println(rawPos);
@@ -57,10 +58,6 @@ void HerkulexMotor::setPos(float posDeg){
     // which we know are within uint16_t range 0-65535
     rawPos = rawPos > _bounds[1] ? _bounds[1] : rawPos;
     rawPos = rawPos < _bounds[0] ? _bounds[0] : rawPos;
-
-
-    
-
 
     // send command to HerkulesX class
     // last argument "1" sets LED to a nice blue color.
