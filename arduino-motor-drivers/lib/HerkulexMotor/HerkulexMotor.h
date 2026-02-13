@@ -23,7 +23,6 @@ struct HerkulexMotorSpec{
 
 
 // actual lookup table for motors
-// dummy data for now
 const HerkulexMotorSpec ModelInfo[] = {
   // DRS_0201
   {21, 1002, 512, 0, 0.325f},

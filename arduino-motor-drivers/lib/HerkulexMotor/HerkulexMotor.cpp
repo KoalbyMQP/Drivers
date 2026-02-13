@@ -40,8 +40,8 @@ HerkulexMotor::HerkulexMotor(int id, MotorModel type, float lowerBoundDeg, float
     uint16_t actualLowerBound = ModelInfo[static_cast<int>(type)].minSteps;
     
     // make sure that the custom bounds are not outside of the actual motor limits
-    _bounds[0] = upperBoundSteps > _bounds[1] ? _bounds[1] : upperBoundSteps;
-    _bounds[1] = lowerBoundSteps < _bounds[0] ? _bounds[0] : lowerBoundSteps;
+    _bounds[0] = upperBoundSteps > actualUpperBound ? actualUpperBound : upperBoundSteps;
+    _bounds[1] = lowerBoundSteps < actualLowerBound ? actualLowerBound : lowerBoundSteps;
 }
 
 
@@ -68,14 +68,24 @@ void HerkulexMotor::setPos(float posDeg){
     // send command to HerkulesX class
     // last argument "1" sets LED to a nice blue color.
     //  Max are you sure that 1 wouldn't make the color green? since 2 is blue
-    Herkulex.moveOne(_id, rawPos, 10, 1);
+    Herkulex.moveOne(_id, rawPos, 10, 2);
 }
 
 void HerkulexMotor::queueMove(float posDeg){
     uint16_t rawPos = int(posDeg / ModelInfo[static_cast<int>(_type)].degPerStep
         + ModelInfo[static_cast<int>(_type)].zeroPosOffset + ModelInfo[static_cast<int>(_type)].zeroSteps);
 
+    // bound raw position to motor limits
+    rawPos = rawPos > _bounds[1] ? _bounds[1] : rawPos;
+    rawPos = rawPos < _bounds[0] ? _bounds[0] : rawPos;
+
+    Serial.print(_bounds[0]);
+    Serial.print(", ");
+    Serial.println(_bounds[1]);
+
+    Serial.println(rawPos);
+    
     // use the Herkulex queuing system to add that movement to the list to be exectuted simultaneously
-    // 2 makes the LED blue
-    Herkulex.queueMoves(_id, rawPos, 2);
+    // 3 makes the LED red, to differentiate
+    Herkulex.queueMoves(_id, rawPos, 3);
 }
