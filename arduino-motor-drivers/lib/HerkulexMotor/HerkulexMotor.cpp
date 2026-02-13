@@ -37,8 +37,8 @@ HerkulexMotor::HerkulexMotor(int id, MotorModel type, float lowerBoundDeg, float
     uint16_t actualLowerBound = ModelInfo[static_cast<int>(type)].minSteps;
     
     // make sure that the custom bounds are not outside of the actual motor limits
-    _bounds[0] = upperBoundSteps > actualUpperBound ? actualUpperBound : upperBoundSteps;
-    _bounds[1] = lowerBoundSteps < actualLowerBound ? actualLowerBound : lowerBoundSteps;
+    _bounds[1] = upperBoundSteps > actualUpperBound ? actualUpperBound : upperBoundSteps;
+    _bounds[0] = lowerBoundSteps < actualLowerBound ? actualLowerBound : lowerBoundSteps;
 }
 
 
@@ -73,6 +73,7 @@ void HerkulexMotor::queueMove(float posDeg){
     // which we know are within uint16_t range 0-65535
     rawPos = rawPos > _bounds[1] ? _bounds[1] : rawPos;
     rawPos = rawPos < _bounds[0] ? _bounds[0] : rawPos;
+
     
     // use the Herkulex queuing system to add that movement to the list to be exectuted simultaneously
     // 3 makes the LED red, to differentiate
