@@ -29,11 +29,8 @@ HerkulexMotor::HerkulexMotor(int id, MotorModel type, float lowerBoundDeg, float
 
     // Upper and lower bounds based on the configuration of the motor, thes might be based on limb interferances and the such, not necessarily mechanical motor limits
     // conversion to take from degrees to raw steps
-    uint16_t upperBoundSteps = int(upperBoundDeg / ModelInfo[static_cast<int>(type)].degPerStep
-         - ModelInfo[static_cast<int>(type)].zeroPosOffset);
-         
-    uint16_t lowerBoundSteps = int(lowerBoundDeg / ModelInfo[static_cast<int>(type)].degPerStep
-        - ModelInfo[static_cast<int>(type)].zeroPosOffset);
+    uint16_t upperBoundSteps = degToSteps(upperBoundDeg, type);
+    uint16_t lowerBoundSteps = degToSteps(lowerBoundDeg, type);
 
     // get the upper bounds specified to each othe actual motor (this is mechanical as opposed to limb-based)
     uint16_t actualUpperBound = ModelInfo[static_cast<int>(type)].maxSteps;
@@ -47,39 +44,55 @@ HerkulexMotor::HerkulexMotor(int id, MotorModel type, float lowerBoundDeg, float
 
 // these functions wrap the core Herkulex library functions and convert to degrees (usuable units) from raw HerkuleX motor information
 float HerkulexMotor::getPos(){
-    
     uint16_t rawPos = Herkulex.getPosition(_id) & ModelInfo[static_cast<int>(_type)].posBitMask;
-
-    float posDeg = ModelInfo[static_cast<int>(_type)].degPerStep *
-     (rawPos - ModelInfo[static_cast<int>(_type)].zeroPosOffset - ModelInfo[static_cast<int>(_type)].zeroSteps);
-    return posDeg;
+    return stepsToDeg(rawPos, _type);
 }
 
 void HerkulexMotor::setPos(float posDeg){
     // calculate raw position from degrees
-    uint16_t rawPos = int(posDeg / ModelInfo[static_cast<int>(_type)].degPerStep
-         + ModelInfo[static_cast<int>(_type)].zeroSteps);
+    // maybe switch to checking bounds in float value of posDeg instead of using rawPos.
+    int32_t rawPos = degToSteps(posDeg, _type);
 
+    // Serial.println(rawPos);
     // bound raw position to motor limits
+    // which we know are within uint16_t range 0-65535
     rawPos = rawPos > _bounds[1] ? _bounds[1] : rawPos;
     rawPos = rawPos < _bounds[0] ? _bounds[0] : rawPos;
-
 
     // send command to HerkulesX class
     // last argument "1" sets LED to a nice blue color.
     //  Max are you sure that 1 wouldn't make the color green? since 2 is blue
-    Herkulex.moveOne(_id, rawPos, 10, 2);
+    // Pau: 1 Max: 0
+    Herkulex.moveOne(_id, (uint16_t)rawPos, 10, 2);
 }
 
 void HerkulexMotor::queueMove(float posDeg){
-    uint16_t rawPos = int(posDeg / ModelInfo[static_cast<int>(_type)].degPerStep
-         + ModelInfo[static_cast<int>(_type)].zeroSteps);
+    int32_t rawPos = degToSteps(posDeg, _type);
 
     // bound raw position to motor limits
+    // which we know are within uint16_t range 0-65535
     rawPos = rawPos > _bounds[1] ? _bounds[1] : rawPos;
     rawPos = rawPos < _bounds[0] ? _bounds[0] : rawPos;
 
+    
     // use the Herkulex queuing system to add that movement to the list to be exectuted simultaneously
     // 3 makes the LED red, to differentiate
-    Herkulex.queueMoves(_id, rawPos, 3);
+    Herkulex.queueMoves(_id, (uint16_t)rawPos, 3);
+
+}
+
+
+
+// PRIVATE METHODS
+
+int32_t HerkulexMotor::degToSteps(float deg, MotorModel type){
+    const HerkulexMotorSpec& m = ModelInfo[static_cast<int>(type)];    
+    return int32_t(deg / m.degPerStep) + (int32_t(m.zeroSteps));
+
+}
+
+float HerkulexMotor::stepsToDeg(uint16_t steps, MotorModel type) {
+    const HerkulexMotorSpec& m = ModelInfo[static_cast<int>(type)];
+    int32_t centered = (int32_t)steps - (int32_t)m.zeroPosOffset - (int32_t)m.zeroSteps;
+    return m.degPerStep * (float)centered;
 }
