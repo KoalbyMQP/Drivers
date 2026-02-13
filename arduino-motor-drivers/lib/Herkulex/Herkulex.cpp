@@ -383,7 +383,6 @@ void HerkulexClass::queueMoves(int servoID, int Goal, int iLed)
 	  addData(posLSB, posMSB, SetValue, servoID);	//add servo data to list, pos mode
 }
 
-
 // move all servo with the same execution time
 void HerkulexClass::actionMoves(int pTime)
 {
@@ -571,7 +570,6 @@ int HerkulexClass::getSpeed(int servoID) {
 
 }
 
-
 // move one servo at goal position 0 - 1024
 void HerkulexClass::moveOne(int servoID, int Goal, int pTime, int iLed)
 {
@@ -711,7 +709,6 @@ int HerkulexClass::checksum1(byte* data, int lenghtString)
   }
   return XOR&0xFE;
 }
-
 
 // checksum2
 int HerkulexClass::checksum2(int XOR)
