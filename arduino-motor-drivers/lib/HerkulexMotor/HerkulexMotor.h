@@ -18,6 +18,7 @@ struct HerkulexMotorSpec{
     uint16_t maxSteps;
     uint16_t zeroSteps;
     uint16_t zeroPosOffset; // added because 0602 has a default calibration offset
+    uint16_t posBitMask;
     float degPerStep;
 };
 
@@ -26,15 +27,15 @@ struct HerkulexMotorSpec{
 // dummy data for now
 const HerkulexMotorSpec ModelInfo[] = {
   // DRS_0201
-  {21, 1002, 512, 0, 0.325f},
+  {21, 1002, 512, 0, 0x03FF, 0.325f},
 
   // DRS_0601
   // bounds are recommended range from HerkuleX datasheet
-  {42, 2004, 1024, 0, 0.163f},
+  {42, 2004, 1024, 0, 0x07FF, 0.163f},
 
   // DRS_0602
   // bounds are for now full supported 16bit int range
-  {0, 65535, 16384, 9903, 0.02778f}
+  {0, 65535, 16384, 9903, 0xFFFF, 0.02778f}
 };
 
 class HerkulexMotor{
