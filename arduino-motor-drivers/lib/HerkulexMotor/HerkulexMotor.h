@@ -47,8 +47,8 @@ class HerkulexMotor{
     private:
         int _id;
         MotorModel _type;
-        int _zeroPos;
-        int _bounds[2]; // we should consider whether we want these as raw values or keep them as degrees 
+        uint16_t _zeroPos;
+        uint16_t _bounds[2];
 };
 
 #endif

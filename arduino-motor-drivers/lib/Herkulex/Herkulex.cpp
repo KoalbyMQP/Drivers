@@ -595,7 +595,7 @@ void HerkulexClass::moveOne(int servoID, int Goal, int pTime, int iLed)
   }
   int SetValue=iGreen*4+iBlue*8+iRed*16;	//assign led value 
 
-  playTime=int((float)pTime/11.2);			// 8. Execution time
+  playTime= pTime;                       	// 8. Execution time
 
   pSize = 0x0C;          			    	// 3.Packet size 7-58
   cmd   = HSJOG;              				// 5. CMD
@@ -738,15 +738,12 @@ void HerkulexClass::sendData(byte* buffer, int lenght)
 			#if defined (__AVR_ATmega1280__) || defined (__AVR_ATmega128__) || defined (__AVR_ATmega2560__)
 			case HSerial1:
 				Serial1.write(buffer, lenght);
-				delay(1);
 				break;
 			case HSerial2:
 				Serial2.write(buffer, lenght);
-				delay(1);
 				break;
 			case HSerial3:
 				Serial3.write(buffer, lenght);
-				delay(1);
 				break;
 			#endif
 		}
