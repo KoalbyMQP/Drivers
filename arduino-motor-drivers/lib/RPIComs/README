@@ -1,0 +1,7 @@
+Hello!
+
+The RPIComs code was created for on-Arduino use for communications RaspberryPi -> Arduino. As of this moment, the Arduino strictly recieves data from the Pi and does not transmit data back.
+
+All you have to do is call RPIComs::uartRead() to read / listen from the RX GPIO pin from Serial1, and then getPacket() to recieve a packet from the queue.
+
+As of this moment, I queue up to 128 UART packets before I begin dropping packets.

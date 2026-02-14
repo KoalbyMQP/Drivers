@@ -1,5 +1,7 @@
 #include <Herkulex.h>
 #include <HerkulexMotor.h>
+#include <RPIComs.h>
+
 int n = 5; //motor ID - verify your ID !!!!
 int n2 = 12;
 
@@ -10,6 +12,7 @@ boolean testQueueBool = true;
 
 HerkulexMotor myMotor = HerkulexMotor(5, MotorModel::DRS_0601);
 HerkulexMotor myMotor2 = HerkulexMotor(12, MotorModel::DRS_0601);
+RPIComs rpi;
 
 void setup(){
   delay(2000);  //a delay to have time for serial monitor opening
@@ -113,6 +116,15 @@ void testingSetPos(){
 
 
 void loop(){
+  rpi.uartRead();
+
+  // If a packet arrived, handle it
+  const char* pkt = rpi.getPacket();
+  if (pkt != nullptr) {
+    Serial.print("Received: ");
+    Serial.println(pkt);
+  }
+
   while(testSetPosBool){
     testingSetPos();
     testSetPosBool = false;
