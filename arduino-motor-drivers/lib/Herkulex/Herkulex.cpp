@@ -349,7 +349,7 @@ void HerkulexClass::clearError(int servoID)
 }
 
 // move all servo at the same time to a position: servo list building
-void HerkulexClass::queueMoves(int servoID, int Goal, int iLed)
+void HerkulexClass::queueMoves(uint16_t servoID, uint16_t Goal, uint16_t iLed)
 {	  
 	uint8_t posLSB = (uint8_t)Goal;
     uint8_t posMSB = (uint8_t)(Goal >> 8);
