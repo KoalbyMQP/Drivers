@@ -351,33 +351,15 @@ void HerkulexClass::clearError(int servoID)
 // move all servo at the same time to a position: servo list building
 void HerkulexClass::queueMoves(int servoID, int Goal, int iLed)
 {	  
-	  int iMode=0;                   //mode=position
-	  int iStop=0;                   //stop=0
-	  
+	uint8_t posLSB = (uint8_t)Goal;
+    uint8_t posMSB = (uint8_t)(Goal >> 8);
 
-	  // Position definition
-	  int posLSB=Goal & 0X00FF;					// MSB Pos
-	  int posMSB=(Goal & 0XFF00) >> 8;			// LSB Pos
+    uint8_t setVal = 0;
+    if (iLed == 1) setVal |= (1 << 2);      // green
+    else if (iLed == 2) setVal |= (1 << 3); // blue
+    else if (iLed == 3) setVal |= (1 << 4); // red
 
-	  //led 
-	  int iBlue=0;
-	  int iGreen=0;
-	  int iRed=0;
-	  switch (iLed) {
-	  case 1:
-		iGreen=1;
-		break;
-	  case 2:
-		iBlue=1;
-		break;
-	  case 3:
-		iRed=1;
-		break;
-	  }
-	  
-	  int SetValue=iStop+iMode*2+iGreen*4+iBlue*8+iRed*16;	//assign led value
-
-	  addData(posLSB, posMSB, SetValue, servoID);	//add servo data to list, pos mode
+	addData(posLSB, posMSB, setVal, servoID);
 }
 
 // move all servo with the same execution time
@@ -714,7 +696,7 @@ int HerkulexClass::checksum2(int XOR)
 }
 
 // add data to variable list servo for syncro execution
-void HerkulexClass::addData(int GoalLSB, int GoalMSB, int set, int servoID)
+void HerkulexClass::addData(uint8_t GoalLSB, uint8_t GoalMSB, uint8_t set, uint8_t servoID)
 {
   moveData[conta++]=GoalLSB;  
   moveData[conta++]=GoalMSB;
