@@ -93,6 +93,6 @@ int32_t HerkulexMotor::degToSteps(float deg, MotorModel type){
 
 float HerkulexMotor::stepsToDeg(uint16_t steps, MotorModel type) {
     const HerkulexMotorSpec& m = ModelInfo[static_cast<int>(type)];
-    int32_t centered = (int32_t)steps - (int32_t)m.zeroPosOffset - (int32_t)m.zeroSteps;
+    int32_t centered = (int32_t)steps  - (int32_t)m.zeroSteps;
     return m.degPerStep * (float)centered;
 }

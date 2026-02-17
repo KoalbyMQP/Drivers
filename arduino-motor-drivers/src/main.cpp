@@ -10,9 +10,8 @@ uint16_t elapsedTime = 0;
 boolean testSetPosBool = false;    // when runTest is true, the moving motor will run once upon restart and when the arduino is uploaded.
 boolean testQueueBool = true;
 
-HerkulexMotor myMotor = HerkulexMotor(5, MotorModel::DRS_0601);
-HerkulexMotor myMotor2 = HerkulexMotor(12, MotorModel::DRS_0601);
-RPIComs rpi;
+HerkulexMotor myMotor = HerkulexMotor(7, MotorModel::DRS_0602);
+HerkulexMotor myMotor2 = HerkulexMotor(5, MotorModel::DRS_0601);
 
 void setup(){
   delay(2000);  //a delay to have time for serial monitor opening
