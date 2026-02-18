@@ -707,12 +707,11 @@ void HerkulexClass::addData(uint8_t GoalLSB, uint8_t GoalMSB, uint8_t set, uint8
 // Sending the buffer long lenght to Serial port
 void HerkulexClass::sendData(byte* buffer, int lenght)
 {
-		clearBuffer(); 		//clear the serialport buffer - try to do it!
+		// clearBuffer(); 		//clear the serialport buffer - try to do it!
         switch (port)
 		{
 			case SSerial:
 						SwSerial.write(buffer, lenght);
-						delay(1);
 						break;
 			#if defined (__AVR_ATmega1280__) || defined (__AVR_ATmega128__) || defined (__AVR_ATmega2560__)
 			case HSerial1:
@@ -734,6 +733,7 @@ void HerkulexClass::readData(int size)
 	int i = 0;
     int beginsave=0;
     int Time_Counter=0;
+
     switch (port)
 	{
 	case SSerial:

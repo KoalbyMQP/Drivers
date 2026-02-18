@@ -104,7 +104,7 @@ public:
   void  torqueOFF(int servoID);
   
   // // to do: add as desired methods for interacting
-  void  queueMoves(int servoID, int Goal, int iLed);
+  void  queueMoves(uint16_t servoID, uint16_t Goal, uint16_t iLed);
   void  actionMoves(int pTime);
   
   void  moveOne(int servoID, int Goal, int pTime, int iLed);
@@ -136,7 +136,7 @@ public:
 private:
   
   
-  void addData(int GoalLSB, int GoalMSB, int set, int servoID);
+  void addData(uint8_t GoalLSB, uint8_t GoalMSB, uint8_t set, uint8_t servoID);
   int  checksum1(byte* data, int lenghtString);
   
   void clearBuffer();

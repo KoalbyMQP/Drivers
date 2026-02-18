@@ -2,10 +2,6 @@
 #include "HerkulexMotor.h"
 #include "Herkulex.h"
 
-
-
-// TODO: implement zero position offset
-
 // constructor with normal motor bounds and no zero position offset
 HerkulexMotor::HerkulexMotor(int id, MotorModel type){
     _id = id;
@@ -82,6 +78,24 @@ void HerkulexMotor::queueMove(float posDeg){
 }
 
 
+// STATIC METHODS
+void HerkulexMotor::reboot(){
+    Herkulex.reboot(_id);
+}
+
+void HerkulexMotor::initialize(){
+    Herkulex.initialize();
+}
+
+void HerkulexMotor::actionMoves(int pTime){
+    Herkulex.actionMoves(pTime);
+}
+
+void HerkulexMotor::initSerialPorts(uint32_t baudRate){
+    Herkulex.beginSerial1(baudRate);
+}
+
+
 
 // PRIVATE METHODS
 
@@ -93,6 +107,6 @@ int32_t HerkulexMotor::degToSteps(float deg, MotorModel type){
 
 float HerkulexMotor::stepsToDeg(uint16_t steps, MotorModel type) {
     const HerkulexMotorSpec& m = ModelInfo[static_cast<int>(type)];
-    int32_t centered = (int32_t)steps  - (int32_t)m.zeroSteps;
+    int32_t centered = (int32_t)steps - (int32_t)m.zeroSteps;
     return m.degPerStep * (float)centered;
 }

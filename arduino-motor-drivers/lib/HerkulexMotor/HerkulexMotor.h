@@ -11,7 +11,7 @@ enum MotorModel{
 };
 
 
-// all specs that motors have that make them different
+// all differentiable specs for motors
 struct HerkulexMotorSpec{
     uint16_t minSteps;
     uint16_t maxSteps;
@@ -43,7 +43,10 @@ class HerkulexMotor{
         void setPos(float posDeg);
         float getPos();
         void queueMove(float posDeg);
-        // for exectuting all of the queues, Herkulex.actionMoves(x), x is in how many ms
+        void reboot();
+        static void initialize();
+        static void initSerialPorts(uint32_t baudRate); // one for now, we will add the other two later
+        static void actionMoves(int pTime); // here we can manage how we action the moves if we switch to multiple serial ports
     private:
         int _id;
         MotorModel _type;
