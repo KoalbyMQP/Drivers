@@ -3,11 +3,13 @@
 #include "Queue.h"
 // For use with Serial 0
 
-
-
 //Different buffers
 char rxBuf[RPIComs::RX_BUF_SIZE];
 char pktBuf[RPIComs::RX_BUF_SIZE];
+bool testing_serial = false;
+uint16_t startTimeRPI = 0;
+uint16_t elapsedTimeRPI = 0;
+
 
 // static PacketQueue<128, RPIComs::RX_BUF_SIZE> pktQueue; // why this PacketQueue and the private one in the method?
 
@@ -21,11 +23,13 @@ void RPIComs::uartRead(){
         char c = (char)Serial.read();
 
         // Check if newline character for packet completion
-
         if(c == '\n'){
             rxBuf[rxPos] = '\0';
 
             rxPos = 0;
+            if(testing_serial) {
+                startTimeRPI = micros();
+            }
             _packetQueue.enqueue(rxBuf);
             continue;
         }
@@ -49,6 +53,12 @@ const char* RPIComs::getPacket(){
     if(!_packetQueue.dequeue(pktBuf, sizeof(pktBuf))){
         return nullptr;
     } else {
+        if (testing_serial){
+            elapsedTimeRPI = micros() - startTimeRPI;
+            Serial.print("it took ");
+            Serial.print(elapsedTimeRPI);
+            Serial.println(" microseconds between enqueing the message and sending it back");
+        }
         return pktBuf;
     }
 }
