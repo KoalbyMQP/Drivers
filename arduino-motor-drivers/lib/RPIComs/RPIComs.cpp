@@ -2,6 +2,7 @@
 #include "RPIComs.h"
 #include "Queue.h"
 // For use with Serial 0
+// changing it to serial 3 so that serial 0 can be used by the usb 0 to monitor
 
 //Different buffers
 char rxBuf[RPIComs::RX_BUF_SIZE];
@@ -16,11 +17,10 @@ uint16_t elapsedTimeRPI = 0;
 uint16_t rxPos = 0;
 
 void RPIComs::uartRead(){
-    while(Serial.available() > 0){
+    while(Serial3.available() > 0){
         // should we update 0 with the expected packet size? if it will be constant... of course when we know what it is
         // Set temp char to the packets with .read
-
-        char c = (char)Serial.read();
+        char c = (char)Serial3.read();
 
         // Check if newline character for packet completion
         if(c == '\n'){
@@ -40,8 +40,8 @@ void RPIComs::uartRead(){
         } else {
             rxPos = 0;
             //handle overflow
-            while (Serial.available()) {
-                if (Serial.read() == '\n') break;
+            while (Serial3.available()) {
+                if (Serial3.read() == '\n') break;
             }
         }
 

@@ -20,6 +20,8 @@ void setup(){
   Serial.begin(9600);    // Open serial communications with computer
   Serial.println("Begin");
 
+  Serial3.begin(115200); //begin serial communication with the raspberry pic
+
   HerkulexMotor::initSerialPorts(115200); // begin serial communications with motor
 
   myMotor.reboot();
