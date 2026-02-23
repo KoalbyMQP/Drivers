@@ -8,10 +8,11 @@
 //Different buffers
 char rxBuf[RPIComs::RX_BUF_SIZE];
 char pktBuf[RPIComs::RX_BUF_SIZE];
+char txBuf[RPIComs::RX_BUF_SIZE];
 
-// static PacketQueue<128, RPIComs::RX_BUF_SIZE> pktQueue; // why this PacketQueue and the private one in the method?
 
 uint16_t rxPos = 0;
+uint16_t txPos = 0;
 
 void RPIComs::uartRead(){
     while(Serial.available() > 0){
@@ -50,5 +51,17 @@ const char* RPIComs::getPacket(){
         return nullptr;
     } else {
         return pktBuf;
+    }
+}
+
+void RPIComs::enqueueTXPacket(char* pkt){
+    _txPacketQueue.enqueue(pktBuf);
+
+}
+
+// Send uart packet to pi
+void RPIComs::uartSend(){
+    if(_txPacketQueue.dequeue(txBuf, sizeof(txBuf))){
+        Serial.write((byte*)txBuf, sizeof(txBuf));
     }
 }

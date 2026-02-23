@@ -14,6 +14,7 @@ class RPIComs{
         // RPIComs() = default;
 
         void uartRead();
+        void uartSend(char* packet);
         const char* getPacket();     // returns nullptr if none
 
         bool hasPacket() const { return !_packetQueue.isEmpty(); }
