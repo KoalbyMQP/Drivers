@@ -64,14 +64,14 @@ const char* RPIComs::getPacket(){
     }
 }
 
-void RPIComs::enqueueTXPacket(char* pkt){
-    _txPacketQueue.enqueue(pktBuf);
+// void RPIComs::enqueueTXPacket(char* pkt){
+//     _txPacketQueue.enqueue(pktBuf);
 
-}
+// }
 
-// Send uart packet to pi
-void RPIComs::uartSend(){
-    if(_txPacketQueue.dequeue(txBuf, sizeof(txBuf))){
-        Serial.write((byte*)txBuf, sizeof(txBuf));
-    }
-}
+// // Send uart packet to pi
+// void RPIComs::uartSend(){
+//     if(_txPacketQueue.dequeue(txBuf, sizeof(txBuf))){
+//         Serial.write((byte*)txBuf, sizeof(txBuf));
+//     }
+// }
