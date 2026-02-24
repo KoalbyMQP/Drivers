@@ -14,14 +14,16 @@ class RPIComs{
         // RPIComs() = default;
 
         void uartRead();
-        void uartSend(char* packet);
+        void uartSend();
         const char* getPacket();     // returns nullptr if none
 
+        void RPIComs::enqueueTXPacket(char* pkt);
         bool hasPacket() const { return !_packetQueue.isEmpty(); }
         uint16_t queuedCount() const { return _packetQueue.size(); }
 
         private:
         PacketQueue<MAX_PACKETS, RX_BUF_SIZE> _packetQueue;
+        PacketQueue<MAX_PACKETS, RX_BUF_SIZE> _txPacketQueue;
 
         char rxBuf[RX_BUF_SIZE] = {0};
         char pktBuf[RX_BUF_SIZE] = {0};
