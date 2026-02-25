@@ -27,10 +27,15 @@
   Please with Arduino UNO/2009 works with SoftwareSerial library modified with baud rate 57.600.
   Use this begin type:
 		begin(57600, int rx, int tx);
- 
   For Arduino Mega, please use baud rate 115.200
 
+  02/25/2026
+  The library has been edited from Arduino Uno/2009 - Arduino Mega to also work on Teensy 4.1
+  The Software Serial functionality has been removed due to the lat of necessity and the abundance of UART ports on the Teensy
+  Edits by Pau Alcolea Vila (Worcester Polytechnic Institute, 2026)
+
  *****************************************************************************
+ Original Author:
  Contact: alegiaco@gmail.com
  Web:     http://robottini.altervista.org
  Autor:   Alessandro Giacomel
@@ -40,14 +45,14 @@
 
 
 // Macro for the Serial port selection
-#define HSerial1     1 		// Write in Serial 1 port Arduino Mega - Pin 19(rx) - 18 (tx) 
-#define HSerial2     2   	// Write in Serial 2 port Arduino Mega - Pin 17(rx) - 16 (tx) 
-#define HSerial3     3   	// Write in Serial 3 port Arduino Mega - Pin 15(rx) - 14 (tx)
-#define HSerial4     4 		// Write in Serial 1 port Arduino Mega - Pin 19(rx) - 18 (tx) 
-#define HSerial5     5   	// Write in Serial 2 port Arduino Mega - Pin 17(rx) - 16 (tx) 
-#define HSerial6     6   	// Write in Serial 3 port Arduino Mega - Pin 15(rx) - 14 (tx)
-#define HSerial7     7 		// Write in Serial 1 port Arduino Mega - Pin 19(rx) - 18 (tx)
-#define HSerial8     8 		// Write in Serial 1 port Arduino Mega - Pin 19(rx) - 18 (tx)
+#define HSerial1     1 		// Write in Serial 1 port Teensy 4.1 - Pin 00(rx) - 01(tx) 
+#define HSerial2     2   	// Write in Serial 2 port Teensy 4.1 - Pin 07(rx) - 08(tx) 
+#define HSerial3     3   	// Write in Serial 3 port Teensy 4.1 - Pin 15(rx) - 14(tx)
+#define HSerial4     4 		// Write in Serial 4 port Teensy 4.1 - Pin 16(rx) - 17(tx) 
+#define HSerial5     5   	// Write in Serial 5 port Teensy 4.1 - Pin 21(rx) - 20(tx) 
+#define HSerial6     6   	// Write in Serial 6 port Teensy 4.1 - Pin 25(rx) - 24(tx)
+#define HSerial7     7 		// Write in Serial 7 port Teensy 4.1 - Pin 28(rx) - 29(tx)
+#define HSerial8     8 		// Write in Serial 8 port Teensy 4.1 - Pin 34(rx) - 35(tx)
 
 
 #if defined (__AVR_ATmega1280__) || defined (__AVR_ATmega128__) || defined (__AVR_ATmega2560__)
