@@ -1,5 +1,9 @@
 File information and how to run them
 
+Start_locomotion.py
+- Python script for Zara OS compatibility
+- Used as entry point for Docker container to execute run_policy.py
+
 Run_policy.py
 - Python script for the Raspberry Pi to communicate with the Arduino. Needs to be updated with final observations.
 - Loads TS model, gets readings from motors/sensors, puts them through the model as observations to be returned as actions, sends actions as joint positions back to the motors.
