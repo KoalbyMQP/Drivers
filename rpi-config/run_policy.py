@@ -2,6 +2,10 @@ import torch
 import numpy as np
 import serial
 import time
+import signal
+import sys
+import json
+import os
 
 # CONFIGURATION
 SERIAL_PORT = ""   # Pi GPIO UART: Identiy correct port
@@ -10,58 +14,38 @@ CONTROL_HZ = 100               # Policy updates per second
 DT = 1.0 / CONTROL_HZ
 
 POLICY_PATH = "/home/kfkartsen/avalocomotion/models/policy_ts.pt"
+HEALTH_PATH = "/tmp/locomotion_health.json" # Allows Zara OS to monitor container functioning
 
-''' DELETE ONCE MODEL FUNCTIONALITY CONFIRMED
-NUM_MOTORS = 27
-# Arduino expects joint positions in CSV order matching IDs on Mega
+running = True
+ser = None
+policy = None
+NUM_MOTORS = None
 
-JOINT_LIMITS = [
-    (-8, 8),      # chestturn
-    (-25, 25),    # waistlean
-    (-20, 10),    # Abdominalcrunch
-    (-15, 0),     # hiplift_left
-    (0, 15),      # hiplift_right
-    (-12, 12),    # hiprotate_left
-    (-12, 12),    # hiprotate_right
-    (-50, 30),    # thighlift_left
-    (-50, 30),    # thighlift_right
-    (0, 55),      # knee_left
-    (0, 55),      # knee_right
-    (-10, 8),     # ankle_left
-    (-10, 8),     # ankle_right
-    (-20, 20),    # neckturn
-    (-5, 10),     # headnod
-    (-60, 60),    # shoulderspin_left
-    (-60, 60),    # shoulderspin_right
-    (-50, 80),    # bicep_left
-    (-50, 80),    # bicep_right
-    (-90, 90),    # elbow_left
-    (-90, 90),    # elbow_right
-    (-60, 60),    # wristspin_left
-    (-60, 60),    # wristspin_right
-    (-90, 90),    # handcurl_left
-    (-90, 90),    # handcurl_right
-    (-1, 0),      # gripper_left
-    (-1, 0),      # gripper_right
-]
-'''
-phase = 0.0
-PHASE_SPEED = 1.5  # rad/sec
+# SIGNAL HANDLER-- allows Zara OS to stop container
+def handle_shutdown(signum, frame):
+    global running
+    print(f"Received signal {signum}. Shutting down.")
+    running = False
 
-# INITIALIZE SERIAL
-ser = serial.Serial(SERIAL_PORT, baudrate=BAUDRATE, timeout=0.01)
-time.sleep(2)  # Give Arduino time to reset on serial connect
+signal.signal(signal.SIGTERM, handle_shutdown)
+signal.signal(signal.SIGINT, handle_shutdown)
 
-# LOAD POLICY
-policy = torch.jit.load(POLICY_PATH)
-policy.eval()
+# INITIALIZATION
+def init_serial():
+    global ser
+    ser = serial.Serial(SERIAL_PORT, baudrate=BAUDRATE, timeout=0.01)
+    time.sleep(2)  # Give Arduino time to reset on serial connect
 
-# delete NUM_MOTORS from above when model fully set up
-with torch.no_grad():
-    dummy_obs = torch.zeros(1, policy.graph.input_list()[0].type().sizes()[1])  # 1 x obs_dim
-    dummy_action = policy(dummy_obs)
-NUM_MOTORS = dummy_action.numel()
+def init_policy():
+    global policy, NUM_MOTORS
+    policy = torch.jit.load(POLICY_PATH)
+    policy.eval()
 
+    # delete NUM_MOTORS from above when model fully set up
+    with torch.no_grad():
+        dummy_obs = torch.zeros(1, policy.graph.input_list()[0].type().sizes()[1])  # 1 x obs_dim
+        dummy_action = policy(dummy_obs)
+    NUM_MOTORS = dummy_action.numel()
 
 # HELPER FUNCTIONS
 def get_observation():
@@ -97,53 +81,75 @@ def send_motor_commands(joint_targets):
     csv_str = ",".join(f"{j:.3f}" for j in joint_targets) + "\n"
     ser.write(csv_str.encode('utf-8'))
 
-''' DELETE ONCE MODEL FUNCTIONALITY CONFIRMED
-def generate_placeholder_action():
+def send_hold_command():
+    """"
+    Sends current joint positions to Arduino Mega via UART.
+    Safety measure-- prevents unstable torques if container crashes while robot is moving.
+    TODO: Can update to move to standing position if standing joint positions given.
     """
-    Generates smooth sinusoidal motion within each joint's limits.
+    obs = get_observation()
+    current_positions = obs[:NUM_MOTORS].numpy()
+    send_motor_commands(current_positions)
+
+def write_health():
     """
-    global phase
-    phase += PHASE_SPEED * DT
-
-    action = []
-    for i, (low, high) in enumerate(JOINT_LIMITS):
-        center = (low + high) / 2.0
-        amplitude = (high - low) / 2.0
-
-        # Phase offset per joint so they don't all move together
-        value = center + amplitude * np.sin(phase + i * 0.2)
-        action.append(value)
-
-    return np.array(action, dtype=np.float32)
-'''
+    Writes whether container is active to json file.
+    Allows Zara OS to monitor health of container.
+    """
+    try:
+        with open(HEALTH_PATH, "w") as f:
+            json.dump({
+                "alive": True,
+                "timestamp": time.time()
+            }, f)
+    except:
+        pass
 
 # MAIN CONTROL LOOP
-print("Policy control started.")
-try:
-    while True:
-        t0 = time.time()
+def run():
+    global running
 
-        # Read observations
-        obs = get_observation()
+    init_serial()
+    init_policy()
+    print("Policy control started.")
+    next_time = time.time()
 
-        # Compute action from policy
-        with torch.no_grad():
-            action = policy(obs.unsqueeze(0)).squeeze(0).numpy()
-            # action should be joint positions in degrees or radians (match training)
-        
-        '''DELETE ONCE MODEL FUNCTIONALITY CONFIRMED
-        action = generate_placeholder_action()'''
+    while running:
+        try:
 
-        # Send action to Arduino
-        send_motor_commands(action)
+            # Read observations
+            obs = get_observation()
 
-        # Maintain control rate
-        elapsed = time.time() - t0
-        sleep_time = DT - elapsed
+            # Compute action from policy
+            with torch.no_grad():
+                action = policy(obs.unsqueeze(0)).squeeze(0).numpy()
+                # action should be joint positions in degrees or radians (match training)
+
+            # Send action to Arduino
+            send_motor_commands(action)
+
+            # Write health to health path
+            write_health()
+
+        except KeyboardInterrupt:
+            print("Exiting control loop")
+            ser.close()
+            
+        # Maintain control rate-- self-corrects for timing drifts
+        next_time += DT
+        sleep_time = next_time - time.time()
         if sleep_time > 0:
             time.sleep(sleep_time)
 
-except KeyboardInterrupt:
-    print("Exiting control loop")
-    ser.close()
+    # Exit
+    print("Policy control stopping.")
+    send_hold_command()
 
+    if ser is not None:
+        ser.close()
+
+    print("Shutdown completed.")
+
+# MAIN ENTRY
+if __name__ == "__main__":
+    run()
