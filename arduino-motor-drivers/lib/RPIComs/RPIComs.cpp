@@ -31,7 +31,7 @@ void RPIComs::uartRead(){
             if(testing_serial) {
                 startTimeRPI = micros();
             }
-            _packetQueue.enqueue(rxBuf);
+            _rxPacketQueue.enqueue(rxBuf);
             continue;
         }
 
@@ -51,7 +51,7 @@ void RPIComs::uartRead(){
 
 const char* RPIComs::getPacket(){
     // Successful dequeue will return true, which means there was a packet to recieve. Else, return a nullptr
-    if(!_packetQueue.dequeue(pktBuf, sizeof(pktBuf))){
+    if(!_rxPacketQueue.dequeue(pktBuf, sizeof(pktBuf))){
         return nullptr;
     } else {
         if (testing_serial){
@@ -64,14 +64,14 @@ const char* RPIComs::getPacket(){
     }
 }
 
-// void RPIComs::enqueueTXPacket(char* pkt){
-//     _txPacketQueue.enqueue(pktBuf);
+void RPIComs::enqueueTXPacket(char* pkt){
+    _txPacketQueue.enqueue(pktBuf);
 
-// }
+}
 
-// // Send uart packet to pi
-// void RPIComs::uartSend(){
-//     if(_txPacketQueue.dequeue(txBuf, sizeof(txBuf))){
-//         Serial.write((byte*)txBuf, sizeof(txBuf));
-//     }
-// }
+// Send uart packet to pi
+void RPIComs::uartSend(){
+    if(_txPacketQueue.dequeue(txBuf, sizeof(txBuf))){
+        Serial.write((byte*)txBuf, sizeof(txBuf));
+    }
+}
