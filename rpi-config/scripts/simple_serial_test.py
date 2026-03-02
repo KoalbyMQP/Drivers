@@ -17,31 +17,31 @@ NUM_MOTORS = 27 #23?
 JOINT_LIMITS = [
     (-8, 8),      # chestturn
     (-25, 25),    # waistlean
-    # (-20, 10),    # Abdominalcrunch
-    # (-15, 0),     # hiplift_left
-    # (0, 15),      # hiplift_right
-    # (-12, 12),    # hiprotate_left
-    # (-12, 12),    # hiprotate_right
-    # (-50, 30),    # thighlift_left
-    # (-50, 30),    # thighlift_right
-    # (0, 55),      # knee_left
-    # (0, 55),      # knee_right
-    # (-10, 8),     # ankle_left
-    # (-10, 8),     # ankle_right
-    # (-20, 20),    # neckturn
-    # (-5, 10),     # headnod
-    # (-60, 60),    # shoulderspin_left
-    # (-60, 60),    # shoulderspin_right
-    # (-50, 80),    # bicep_left
-    # (-50, 80),    # bicep_right
-    # (-90, 90),    # elbow_left
-    # (-90, 90),    # elbow_right
-    # (-60, 60),    # wristspin_left
-    # (-60, 60),    # wristspin_right
-    # (-90, 90),    # handcurl_left
-    # (-90, 90),    # handcurl_right
-    # (-1, 0),      # gripper_left
-    # (-1, 0),      # gripper_right
+    (-20, 10),    # Abdominalcrunch
+    (-15, 0),     # hiplift_left
+    (0, 15),      # hiplift_right
+    (-12, 12),    # hiprotate_left
+    (-12, 12),    # hiprotate_right
+    (-50, 30),    # thighlift_left
+    (-50, 30),    # thighlift_right
+    (0, 55),      # knee_left
+    (0, 55),      # knee_right
+    (-10, 8),     # ankle_left
+    (-10, 8),     # ankle_right
+    (-20, 20),    # neckturn
+    (-5, 10),     # headnod
+    (-60, 60),    # shoulderspin_left
+    (-60, 60),    # shoulderspin_right
+    (-50, 80),    # bicep_left
+    (-50, 80),    # bicep_right
+    (-90, 90),    # elbow_left
+    (-90, 90),    # elbow_right
+    (-60, 60),    # wristspin_left
+    (-60, 60),    # wristspin_right
+    (-90, 90),    # handcurl_left
+    (-90, 90),    # handcurl_right
+    (-1, 0),      # gripper_left
+    (-1, 0),      # gripper_right
 ]
 phase = 0.0
 PHASE_SPEED = 1.5  # rad/sec
