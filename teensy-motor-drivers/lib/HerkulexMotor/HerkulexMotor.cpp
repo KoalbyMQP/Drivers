@@ -92,7 +92,7 @@ void HerkulexMotor::actionMoves(int pTime){
 }
 
 void HerkulexMotor::initSerialPorts(uint32_t baudRate){
-    Herkulex.beginSerial1(baudRate);
+    Herkulex.beginSerial2(baudRate);
 }
 
 
