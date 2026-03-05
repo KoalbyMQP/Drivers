@@ -840,6 +840,42 @@ void HerkulexClass::readData(int size)
 			}
 		}
 		break;
+	case HSerial4:
+		while((Serial4.available() < size) & (Time_Counter < TIME_OUT)){
+			Time_Counter++;
+			delayMicroseconds(1000);
+		}
+		
+		while (Serial4.available() > 0){
+			byte inchar = (byte)Serial4.read();
+			if ( (inchar == 0xFF) & ((byte)Serial4.peek() == 0xFF) ){
+					beginsave=1;
+					i=0; 
+			}
+			if (beginsave==1 && i<size) {
+				   dataEx[i] = inchar;
+				   i++;
+			}
+		}
+		break;
+	case HSerial5:
+		while((Serial5.available() < size) & (Time_Counter < TIME_OUT)){
+			Time_Counter++;
+			delayMicroseconds(1000);
+		}
+		
+		while (Serial5.available() > 0){
+			byte inchar = (byte)Serial5.read();
+			if ( (inchar == 0xFF) & ((byte)Serial5.peek() == 0xFF) ){
+					beginsave=1;
+					i=0; 
+			}
+			if (beginsave==1 && i<size) {
+				   dataEx[i] = inchar;
+				   i++;
+			}
+		}
+		break;
 	#endif
 	}
 }
@@ -873,6 +909,22 @@ void HerkulexClass::clearBuffer()
 	            Serial3.flush();
 				while (Serial3.available()){
 					Serial3.read();
+					delayMicroseconds(200);
+				}
+
+		break;
+	case HSerial4:
+	            Serial4.flush();
+				while (Serial4.available()){
+					Serial4.read();
+					delayMicroseconds(200);
+				}
+
+		break;
+	case HSerial5:
+	            Serial5.flush();
+				while (Serial5.available()){
+					Serial5.read();
 					delayMicroseconds(200);
 				}
 
