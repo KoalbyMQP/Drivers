@@ -113,17 +113,17 @@ void loop(){
 
       // Convert from char to int
       int pos1, pos2;
-      sscanf(buffer, "%d,%d", &pos1, &pos2);
+      if (sscanf(buffer, "%d,%d", &pos1, &pos2) == 2) {
+        myMotor.queueMove(pos1);
+        myMotor2.queueMove(pos2);
 
-      myMotor.queueMove(pos1);
-      myMotor2.queueMove(pos2);
+        // Serial.print("queing motor 1 to: ");
+        // Serial.print(pos1);
+        // Serial.print(" and motor 2 to : ");
+        // Serial.println(pos2);
 
-      // Serial.print("queing motor 1 to: ");
-      // Serial.print(pos1);
-      // Serial.print(" and motor 2 to : ");
-      // Serial.println(pos2);
-
-      queuedMotors = true;
+        queuedMotors = true;
+      }
     }
     if (queuedMotors){
       Herkulex.actionMoves(10);
