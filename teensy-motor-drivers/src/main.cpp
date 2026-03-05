@@ -106,6 +106,10 @@ void loop(){
       // Serial.print("Received: ");
       // Serial.println(pkt);
 
+      // Convert from char to int
+      int pos1, pos2;
+      sscanf(pkt, "%d,%d", &pos1, &pos2);
+
       myMotor.queueMove(pkt[0]);
       myMotor2.queueMove(pkt[1]);
 
