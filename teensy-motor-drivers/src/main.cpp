@@ -106,17 +106,22 @@ void loop(){
       // Serial.print("Received: ");
       // Serial.println(pkt);
 
+      // copy packet to avoid buffer overwrite
+      char buffer[32];
+      strncpy(buffer, pkt, sizeof(buffer));
+      buffer[sizeof(buffer)-1] = '\0';
+
       // Convert from char to int
       int pos1, pos2;
-      sscanf(pkt, "%d,%d", &pos1, &pos2);
+      sscanf(buffer, "%d,%d", &pos1, &pos2);
 
-      myMotor.queueMove(pkt[0]);
-      myMotor2.queueMove(pkt[1]);
+      myMotor.queueMove(pos1);
+      myMotor2.queueMove(pos2);
 
       // Serial.print("queing motor 1 to: ");
-      // Serial.print(pkt[0]);
+      // Serial.print(pos1);
       // Serial.print(" and motor 2 to : ");
-      // Serial.println(pkt[1]);
+      // Serial.println(pos2);
 
       queuedMotors = true;
     }
