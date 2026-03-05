@@ -112,6 +112,12 @@ void HerkulexClass::end()
 	case HSerial3:
 		Serial3.end();
 		break;
+	case HSerial4:
+		Serial4.end();
+		break;
+	case HSerial5:
+		Serial5.end();
+		break;
 	#endif
 	}
 }
