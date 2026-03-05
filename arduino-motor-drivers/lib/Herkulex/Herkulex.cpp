@@ -44,7 +44,9 @@
 #define HSerial1     1 		// Write in Serial 1 port Arduino Mega - Pin 19(rx) - 18 (tx) 
 #define HSerial2     2   	// Write in Serial 2 port Arduino Mega - Pin 17(rx) - 16 (tx) 
 #define HSerial3     3   	// Write in Serial 3 port Arduino Mega - Pin 15(rx) - 14 (tx)
-#define SSerial      4   	// Write in SoftSerial Arduino with 328p or Mega
+#define HSerial4	 4      // NEW: Write in Serial 4
+#define HSerial5     5      // NEW: Write in Serial port 5
+#define SSerial      0   	// Write in SoftSerial Arduino with 328p or Mega
  
 extern SoftwareSerial SwSerial(0, 1);
 
@@ -722,6 +724,12 @@ void HerkulexClass::sendData(byte* buffer, int lenght)
 				break;
 			case HSerial3:
 				Serial3.write(buffer, lenght);
+				break;
+			case HSerial4:
+				Serial4.write(buffer, lenght);
+				break;
+			case HSerial5:
+				Serial5.write(buffer, lenght);
 				break;
 			#endif
 		}
