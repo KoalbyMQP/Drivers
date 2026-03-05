@@ -91,6 +91,8 @@ public:
   void  beginSerial1(long baud);
   void  beginSerial2(long baud);
   void  beginSerial3(long baud);
+  void  beginSerial4(long baud);
+  void  beginSerial5(long baud);
   void  end();
   
   void  initialize();

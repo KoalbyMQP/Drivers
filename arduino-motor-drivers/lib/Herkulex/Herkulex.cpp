@@ -80,6 +80,18 @@ void HerkulexClass::beginSerial3(long baud)
 	Serial3.begin(baud);
 	port = HSerial3;
 }
+
+void HerkulexClass::beginSerial4(long baud)
+{
+	Serial4.begin(baud);
+	port = HSerial4;
+}
+
+void HerkulexClass::beginSerial5(long baud)
+{
+	Serial5.begin(baud);
+	port = HSerial5;
+}
 #endif
 
 // Herkulex end
