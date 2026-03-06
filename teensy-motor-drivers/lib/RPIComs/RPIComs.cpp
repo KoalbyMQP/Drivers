@@ -18,10 +18,10 @@ uint16_t rxPos = 0;
 uint16_t txPos = 0;
 
 void RPIComs::uartRead(){
-    while(Serial3.available() > 0){
+    while(Serial1.available() > 0){
         // should we update 0 with the expected packet size? if it will be constant... of course when we know what it is
         // Set temp char to the packets with .read
-        char c = (char)Serial3.read();
+        char c = (char)Serial1.read();
 
         // Check if newline character for packet completion
         if(c == '\n'){
@@ -41,8 +41,8 @@ void RPIComs::uartRead(){
         } else {
             rxPos = 0;
             //handle overflow
-            while (Serial3.available()) {
-                if (Serial3.read() == '\n') break;
+            while (Serial1.available()) {
+                if (Serial1.read() == '\n') break;
             }
         }
 
