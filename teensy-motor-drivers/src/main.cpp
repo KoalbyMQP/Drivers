@@ -112,19 +112,21 @@ void loop(){
       buffer[sizeof(buffer)-1] = '\0';
 
       // Convert from char to int
-      int pos1, pos2;
-      if (sscanf(buffer, "%d,%d", &pos1, &pos2) == 2) {
-        myMotor.queueMove(pos1);
-        myMotor2.queueMove(pos2);
+      float pos1, pos2;
+      sscanf(buffer, "%f,%f", &pos1, &pos2);
 
-        // Serial.print("queing motor 1 to: ");
-        // Serial.print(pos1);
-        // Serial.print(" and motor 2 to : ");
-        // Serial.println(pos2);
+      myMotor.queueMove(pos1);
+      myMotor2.queueMove(pos2);
 
-        queuedMotors = true;
-      }
-    }
+      // Serial.print("queing motor 1 to: ");
+      // Serial.print(pos1);
+      // Serial.print(" and motor 2 to : ");
+      // Serial.println(pos2);
+
+      queuedMotors = true;
+      // myMotor.getPos();
+      // myMotor2.getPos();
+      } 
     if (queuedMotors){
       Herkulex.actionMoves(10);
       queuedMotors = false;
