@@ -6,8 +6,12 @@ import time
 # CONFIGURATION
 SERIAL_PORT = "/dev/ttyAMA0"   # Pi GPIO UART
 BAUDRATE = 9600              # Must match Arduino Mega Serial1
-CONTROL_HZ = 64               # Policy updates per second
+
+# The control Hz should consider how long it takes for the arduino to send the message so that it doesn't get clipped by a new readline
+# also play with the serial timeout in the serial initialization, you don't the message to get clipped.
+CONTROL_HZ = 2               # Policy updates per second
 DT = 1.0 / CONTROL_HZ
+BUFFER_SIZE = 0     #this should change to the buffer size of the messages, it is the threshold for reading a message
 
 #POLICY_PATH = "/home/kfkartsen/avalocomotion/models/policy_ts.pt"
 
@@ -85,12 +89,17 @@ def main():
     try:
         while True:
             t0 = time.time()
-
-
             action = generate_placeholder_action()
 
             # Send action to Arduino
             send_motor_commands(action)
+
+            # this is the receiving code:                                
+            if ser.in_waiting > BUFFER_SIZE:                              
+                line_bytes = ser.readline()
+                if line_bytes:
+                    line_str = line_bytes.decode('utf-8').strip()        # convert the bytes into a string
+                    print("Received: ", line_str)
 
             # Maintain control rate
             elapsed = time.time() - t0
