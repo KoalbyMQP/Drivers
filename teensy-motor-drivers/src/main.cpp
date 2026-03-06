@@ -107,7 +107,7 @@ void loop(){
       // Serial.println(pkt);
 
       // copy packet to avoid buffer overwrite
-      char buffer[32];
+      char buffer[32];        // change this depending on how many motors are being used, should be same number as later
       strncpy(buffer, pkt, sizeof(buffer));
       buffer[sizeof(buffer)-1] = '\0';
 
@@ -123,12 +123,20 @@ void loop(){
       // Serial.print(" and motor 2 to : ");
       // Serial.println(pos2);
 
-      queuedMotors = true;
-      // myMotor.getPos();
-      // myMotor2.getPos();
+      queuedMotors = true;      
       } 
     if (queuedMotors){
       Herkulex.actionMoves(10);
       queuedMotors = false;
+
+      //send the motor positions back to the raspberry pi
+      float pos1 = myMotor.getPos();
+      float pos2 = myMotor2.getPos();
+
+      char response[32];                        // this number will be dependent on how long the message will be (how many motors)
+      snprintf(response, sizeof(response), "%.2f, %.2f", pos1, pos2);
+
+      rpi.enqueueTXPacket(response);
+      rpi.uartSend();
     }
 }

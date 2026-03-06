@@ -16,7 +16,7 @@ class RPIComs{
         void uartRead();
         void uartSend();
         const char* getPacket();     // returns nullptr if none
-        void enqueueTXPacket(char* pkt);
+        void enqueueTXPacket(const char* pkt);  // const because we are only reading it
 
         bool hasPacket() const { return !_rxPacketQueue.isEmpty(); }
         uint16_t queuedCount() const { return _rxPacketQueue.size(); }
