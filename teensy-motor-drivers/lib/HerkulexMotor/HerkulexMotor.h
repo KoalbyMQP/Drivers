@@ -38,21 +38,28 @@ const HerkulexMotorSpec ModelInfo[] = {
 
 class HerkulexMotor{
     public:
-        HerkulexMotor(int id, MotorModel type);
-        HerkulexMotor(int id, MotorModel type, float lowerBoundDeg, float upperBoundDeg);
+
+        // OLD: replace with constructor with busID
+        // HerkulexMotor(int id, MotorModel type);
+        // HerkulexMotor(int id, MotorModel type, float lowerBoundDeg, float upperBoundDeg);
+
+        HerkulexMotor(int id, MotorModel type, uint8_t busId);
+        HerkulexMotor(int id, MotorModel type, uint8_t busId, float lowerBoundDeg, float upperBoundDeg);
+        
         void setPos(float posDeg);
         float getPos();
         void queueMove(float posDeg);
         void reboot();
-        static void initialize();
-        static void initSerialPorts(uint32_t baudRate); // one for now, we will add the other two later
-        static void actionMoves(int pTime); // here we can manage how we action the moves if we switch to multiple serial ports
+        static void actionMoves(int playTimeMs); // here we can manage how we action the moves if we switch to multiple serial ports
     private:
-        int _id;
+        uint8_t _id;
+        uint8_t _busId;
         MotorModel _type;
         uint16_t _bounds[2];    // motor bounds, in steps
         uint16_t _zeroPos;      // zero position in steps
+        
         int32_t degToSteps(float deg, MotorModel type);
+        uint16_t boundPos(int32_t rawPos);
         float stepsToDeg(uint16_t steps, MotorModel type);
 };
 

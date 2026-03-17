@@ -39,14 +39,16 @@
 
 #ifndef Herkulex_h
 #define Herkulex_h
-
-
-#if defined(ARDUINO) && ARDUINO >= 100  // Arduino IDE Version
 #include "Arduino.h"
-#else
-#include "WProgram.h"
-#endif
 
+
+// contains all motor movement information to send to servo
+struct motorMoveInfo {
+  uint16_t goalPos;   // raw goal position as defined in datasheets
+  uint8_t ledColor;   // LED colors as defined by datasheet
+  uint8_t servoID;    // ID of servo to communicate to
+  uint8_t playTime;   // how long the movement should last for: overridden by explicitly defined play time for a simultaneous movement (as done in actionMoves)
+};
 
 #define DATA_SIZE	 30		// buffer for input data
 #define DATA_MOVE  	 50		// max 10 servos <---- change this for more servos!
@@ -63,14 +65,18 @@
 #define HROLLBACK	 0x08 	//Back to factory value
 #define HREBOOT	 	 0x09 	//Reboot
 
+#define CONVERT_PLAYTIME_TO_MS 11.2 // conversion factor for turning a playtime duration sent to and used by the servo into a millisecond duration
+
+
+
 // HERKULEX LED - See Manual p29
-static int LED_GREEN =	 0x01;
-static int LED_BLUE  =   0x02;
-static int LED_CYAN  =   0x03;
-static int LED_RED   = 	 0x04;
-static int LED_GREEN2= 	 0x05;
-static int LED_PINK  =   0x06;
-static int LED_WHITE =   0x07;
+typedef enum { 
+  LED_OFF = 0x00,
+  LED_GREEN = 0x01,
+  LED_BLUE = 0x02,
+  LED_RED = 0x04,
+} LED_STATE;
+
 
 // HERKULEX STATUS ERROR - See Manual p39
 static byte H_STATUS_OK					= 0x00;
@@ -87,75 +93,67 @@ static byte BROADCAST_ID = 0xFE;
 
 class HerkulexClass {
 public:
-  void  beginSerial1(long baud);
-  void  beginSerial2(long baud);
-  void  beginSerial3(long baud);
-  void  beginSerial4(long baud);
-  void  beginSerial5(long baud);
-  void  beginSerial6(long baud);
-  void  beginSerial7(long baud);
-  void  beginSerial8(long baud);
+  HerkulexClass(uint8_t busID);
+  void beginSerialBus(long baud);
+
+
   void  end();
-  
+
   void  initialize();
   byte  stat(int servoID);
   void  setACKPolicy(int valueACK);
   byte  checkModel();
   void  setID(int ID_Old, int ID_New);
   void  clearError(int servoID);
-  
+
   void  torqueON(int servoID);
   void  torqueOFF(int servoID);
-  
-  // // to do: add as desired methods for interacting
-  void  queueMoves(uint16_t servoID, uint16_t Goal, uint16_t iLed);
-  void  actionMoves(int pTime);
-  
-  void  moveOne(int servoID, int Goal, int pTime, int iLed);
-  
+
+  void  queueMove(motorMoveInfo moveInfo);
+  void  actionMoves(uint8_t playTime);
+
+  void  moveOne(motorMoveInfo moveInfo);
+
   uint16_t getPosition(int servoID);
   int   getSpeed(int servoID);
-		
+    
   void  reboot(int servoID);
   void  setLed(int servoID, int valueLed);
- 
+
   void  writeRegistryRAM(int servoID, int address, int writeByte);
   void  writeRegistryEEP(int servoID, int address, int writeByte);
 
   void sendData(byte* buffer, int lenght);
   void readData(int size);
-  int  checksum2(int XOR);
-  
-  int pSize;
+
+
+  int packetSize;
   int pID;
   int cmd;
-  int lenghtString;
+  int packetLength;
   int ck1;
   int ck2;
   byte dataEx[DATA_MOVE+8];
   byte data[DATA_SIZE]; 
-  byte moveData[DATA_MOVE];
+  byte outputBuffer[DATA_MOVE];
 
 // private area  
 private:
-  
-  
-  void addData(uint8_t GoalLSB, uint8_t GoalMSB, uint8_t set, uint8_t servoID);
+
+
   int  checksum1(byte* data, int lenghtString);
+  int  checksum2(int XOR);
   
   void clearBuffer();
   void printHexByte(byte x);
 
-  int port;
+  int _serialPort;
   
   
-  int conta;
+  int queuedPacketCount;
   
   int XOR;
   int playTime;
- 
 };
 
-extern HerkulexClass Herkulex;
-
-#endif    // Herkulex_h
+#endif

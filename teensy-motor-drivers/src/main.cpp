@@ -1,6 +1,15 @@
 #include <Herkulex.h>
 #include <HerkulexMotor.h>
 #include <RPIComs.h>
+#include <SerialBusManager.h>
+
+typedef enum {
+    BUS_L_LEG = 1,
+    BUS_R_LEG = 2,
+    BUS_CHEST = 3,
+    BUS_L_ARM = 4,
+    BUS_R_ARM = 5
+} SERIAL_BUS;
 
 uint16_t startTime = 0;
 uint16_t elapsedTime = 0;
@@ -10,8 +19,8 @@ boolean testRPi = true;
 boolean latency_queuing = false;
 boolean queuedMotors = false;
 
-HerkulexMotor myMotor = HerkulexMotor(12, MotorModel::DRS_0601);
-HerkulexMotor myMotor2 = HerkulexMotor(5, MotorModel::DRS_0601);
+HerkulexMotor myMotor = HerkulexMotor(12, MotorModel::DRS_0601, SERIAL_BUS::BUS_L_LEG);
+HerkulexMotor myMotor2 = HerkulexMotor(5, MotorModel::DRS_0601, SERIAL_BUS::BUS_L_LEG);
 RPIComs rpi = RPIComs();
 
 
@@ -22,14 +31,11 @@ void setup(){
 
   Serial1.begin(9600); //begin serial communication with the raspberry pic
 
-  HerkulexMotor::initSerialPorts(115200); // begin serial communications with motor, these are on Serial 2
-
-  myMotor.reboot();
-  myMotor2.reboot();
+  SerialBusManager::createBus(BUS_L_LEG); // begin serial communications with motor, these are on Serial 2
+  SerialBusManager::startAllBuses(115200);
+  SerialBusManager::initAllMotors();
 
   delay(500);
-
-  HerkulexMotor::initialize(); // initialize all motors
 
   // set the motor positions to 0 to initialize
   myMotor.setPos(0.0);
@@ -73,7 +79,7 @@ void testingQueue(){
 
   startTime = micros();
   // execute all of the queued movements
-  Herkulex.actionMoves(10);
+  SerialBusManager::actionAll(10);
   elapsedTime = micros() - startTime;
 
   Serial.print("time to execute 1 movement: ");
@@ -126,7 +132,7 @@ void loop(){
       queuedMotors = true;      
       } 
     if (queuedMotors){
-      Herkulex.actionMoves(10);
+      SerialBusManager::actionAll(10);
       queuedMotors = false;
 
       //send the motor positions back to the raspberry pi

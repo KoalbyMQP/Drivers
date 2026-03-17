@@ -31,8 +31,8 @@ void setup()
   Serial.println("Move All to position");
   Serial.println("Move Position1: 200");
   Serial.println("Move Position2: 420");
-  Herkulex.queueMoves(1, 200, 2); //move to position 200
-  Herkulex.queueMoves(2, 420, 2); //move to position 820 
+  Herkulex.queueMove(1, 200, 2); //move to position 200
+  Herkulex.queueMove(2, 420, 2); //move to position 820 
   Herkulex.actionMoves(1000); //start movement in 1500 milliseconds
   delay(1100);
   Serial.print("Get Position servo 1:"); 
