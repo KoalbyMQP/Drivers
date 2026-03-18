@@ -8,12 +8,12 @@ import json
 import os
 
 # CONFIGURATION
-SERIAL_PORT = ""   # Pi GPIO UART: Identiy correct port
+SERIAL_PORT = ""   # Pi GPIO UART: run "ls /dev/tty*" to determine
 BAUDRATE = 115200              # Must match Arduino Mega Serial1
 CONTROL_HZ = 100               # Policy updates per second
 DT = 1.0 / CONTROL_HZ
 
-POLICY_PATH = "/home/kfkartsen/avalocomotion/models/policy_ts.pt"
+POLICY_PATH = "./policy_ts.pt"
 HEALTH_PATH = "/tmp/locomotion_health.json" # Allows Zara OS to monitor container functioning
 
 running = True
@@ -33,39 +33,45 @@ signal.signal(signal.SIGINT, handle_shutdown)
 # INITIALIZATION
 def init_serial():
     global ser
-    ser = serial.Serial(SERIAL_PORT, baudrate=BAUDRATE, timeout=0.01)
-    time.sleep(2)  # Give Arduino time to reset on serial connect
+    try:
+        ser = serial.Serial(SERIAL_PORT, baudrate=BAUDRATE, timeout=0.01)
+        time.sleep(2)  # Give Arduino time to reset on serial connect
+        print(f"Serial connection established on {SERIAL_PORT} at {BAUDRATE} baud.")
+    except Exception as e:
+        print(f"Error initializing serial connection: {e}")
+        sys.exit(1)
 
 def init_policy():
-    global policy, NUM_MOTORS
+    global policy, NUM_MOTORS, last_action
     policy = torch.jit.load(POLICY_PATH)
     policy.eval()
 
-    # delete NUM_MOTORS from above when model fully set up
     with torch.no_grad():
-        dummy_obs = torch.zeros(1, policy.graph.input_list()[0].type().sizes()[1])  # 1 x obs_dim
+        dummy_obs = torch.zeros(1, 93)  # 1 x obs_dim
         dummy_action = policy(dummy_obs)
+        
     NUM_MOTORS = dummy_action.numel()
+    print("NUM_MOTORS:", NUM_MOTORS)
+    last_action = np.zeros(NUM_MOTORS)
 
 # HELPER FUNCTIONS
 def get_observation():
     """
     Collect sensor data from the robot.
     Return as a NumPy array matching training obs:
-    [joint_pos, joint_vel, imu_orientation, imu_gyro, foot_contacts, velocity_command]
+    [base_lin_vel (3), base_ang_vel (3), proj_gravity (3), velocity_command (3), joint_pos (27), joint_vel (27), last_action (27)] = 93-dim obs
     
-    TODO: implement exact reads from IMU, foot contacts, joint encoders.
+    TODO: Replace zeros with real inputs
     """
-    # Example placeholders
-    joint_pos = np.zeros(NUM_MOTORS)       # e.g., degrees or radians
-    joint_vel = np.zeros(NUM_MOTORS)       # velocity of each joint
-    imu_orientation = np.zeros(3)          # roll, pitch, yaw
-    imu_gyro = np.zeros(3)                 # angular velocity x, y, z
-    #foot_contacts = np.zeros(4)            # Not doing foot sensors
-    velocity_command = np.zeros(3)         # target x, y, yaw
+    base_lin_vel = np.zeros(3)
+    base_ang_vel = np.zeros(3)
+    proj_gravity = np.array([0, 0, -1])
+    velocity_command = np.zeros(3)
+    joint_pos = np.zeros(NUM_MOTORS)
+    joint_vel = np.zeros(NUM_MOTORS)
 
     obs = np.concatenate([
-        joint_pos, joint_vel, imu_orientation, imu_gyro, velocity_command
+        base_lin_vel, base_ang_vel, proj_gravity, velocity_command, joint_pos, joint_vel, last_action
     ])
     return torch.tensor(obs, dtype=torch.float32)
 
@@ -79,7 +85,10 @@ def send_motor_commands(joint_targets):
         raise ValueError(f"Expected {NUM_MOTORS} joint_targets, got {len(joint_targets)}")
     
     csv_str = ",".join(f"{j:.3f}" for j in joint_targets) + "\n"
-    ser.write(csv_str.encode('utf-8'))
+    try:
+        ser.write(csv_str.encode('utf-8'))
+    except Exception as e:
+        print(f"Error sending motor commands: {e}")
 
 def send_hold_command():
     """"
@@ -107,24 +116,29 @@ def write_health():
 
 # MAIN CONTROL LOOP
 def run():
-    global running
+    global running, last_action
 
     init_serial()
     init_policy()
     print("Policy control started.")
     next_time = time.time()
 
+    send_hold_command()
+    time.sleep(1)
+
     while running:
         try:
 
             # Read observations
             obs = get_observation()
+            assert obs.shape[0] == 93, f"Obs wrong shape: {obs.shape}"
 
             # Compute action from policy
             with torch.no_grad():
                 action = policy(obs.unsqueeze(0)).squeeze(0).numpy()
-                # action should be joint positions in degrees or radians (match training)
 
+            last_action = action.copy()
+            
             # Send action to Arduino
             send_motor_commands(action)
 
