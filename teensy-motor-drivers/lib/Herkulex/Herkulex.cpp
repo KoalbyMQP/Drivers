@@ -54,7 +54,10 @@
 #define HSerial7     7 		// Write in Serial 7 port Teensy 4.1 - Pin 28(rx) - 29(tx)
 #define HSerial8     8 		// Write in Serial 8 port Teensy 4.1 - Pin 34(rx) - 35(tx)
 
-
+// The constructor now initializes the class as an instance with a specific serial port
+// This is instead of the old port, which had to be passed as an argument in beginSerialBus
+// this way, the instance is related to the port as opposed to having to pass it, 
+// this allows the function on the instance to be unaware of the serial port, which makes them simpler
 HerkulexClass::HerkulexClass(uint8_t busId){
 	_serialPort = busId;
 }

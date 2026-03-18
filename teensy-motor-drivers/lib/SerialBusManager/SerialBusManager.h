@@ -4,13 +4,11 @@
 #include "Herkulex.h"
 
 
-
-
-
-
 class SerialBusManager {
     public:
-        static constexpr uint8_t MAX_BUS_COUNT = 5;
+        // MAX_BUS_COUNT is 8 because that is the maximum number of serial ports the teensy can take
+        // not all of them will always be in use, it's up to the main to initialize each one
+        static constexpr uint8_t MAX_BUS_COUNT = 8; 
 
         static void createBus(uint8_t serialPort);
         static HerkulexClass& getBus(uint8_t serialPort);
@@ -25,8 +23,6 @@ class SerialBusManager {
         static void endAllBuses();
 
     private:
-        
-
 };
 
 #endif

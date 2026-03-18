@@ -3,12 +3,15 @@
 #include <RPIComs.h>
 #include <SerialBusManager.h>
 
+// start at serial 2 because the raspberry pi is connected through serial 1
 typedef enum {
-    BUS_L_LEG = 1,
-    BUS_R_LEG = 2,
-    BUS_CHEST = 3,
-    BUS_L_ARM = 4,
-    BUS_R_ARM = 5
+    BUS_L_LEG = 2,
+    BUS_R_LEG = 3,
+    BUS_CHEST = 4,
+    BUS_L_ARM = 5,
+    BUS_R_ARM = 6,
+    EXTRA_1 = 7,
+    EXTRA_2 = 8
 } SERIAL_BUS;
 
 uint16_t startTime = 0;
@@ -18,9 +21,12 @@ boolean testQueueBool = false;
 boolean testRPi = true;
 boolean latency_queuing = false;
 boolean queuedMotors = false;
+const int PACKET_SIZE = 32;   // change this depending on how many motors are being used, the more motors, the bigger this might have to be to include all of the information for each
 
+// initialize the motors, these include the bus that they are connected in
 HerkulexMotor myMotor = HerkulexMotor(12, MotorModel::DRS_0601, SERIAL_BUS::BUS_L_LEG);
 HerkulexMotor myMotor2 = HerkulexMotor(5, MotorModel::DRS_0601, SERIAL_BUS::BUS_L_LEG);
+HerkulexMotor myMotor3 = HerkulexMotor(11, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG);
 RPIComs rpi = RPIComs();
 
 
@@ -29,7 +35,7 @@ void setup(){
   Serial.begin(9600);    // Open serial communications with computer
   Serial.println("Begin");
 
-  Serial1.begin(9600); //begin serial communication with the raspberry pic
+  Serial1.begin(9600); //begin serial communication with the raspberry pi
 
   SerialBusManager::createBus(BUS_L_LEG); // begin serial communications with motor, these are on Serial 2
   SerialBusManager::startAllBuses(115200);
@@ -40,6 +46,7 @@ void setup(){
   // set the motor positions to 0 to initialize
   myMotor.setPos(0.0);
   myMotor2.setPos(0.0);
+  myMotor3.setPos(0.0);
   delay(500);
 }
 
@@ -113,7 +120,7 @@ void loop(){
       // Serial.println(pkt);
 
       // copy packet to avoid buffer overwrite
-      char buffer[32];        // change this depending on how many motors are being used, should be same number as later
+      char buffer[PACKET_SIZE];        
       strncpy(buffer, pkt, sizeof(buffer));
       buffer[sizeof(buffer)-1] = '\0';
 
@@ -132,6 +139,7 @@ void loop(){
       queuedMotors = true;      
       } 
     if (queuedMotors){
+      // direct all of the motors to move, this signals to send the serial commands
       SerialBusManager::actionAll(10);
       queuedMotors = false;
 
@@ -139,10 +147,20 @@ void loop(){
       float pos1 = myMotor.getPos();
       float pos2 = myMotor2.getPos();
 
-      char response[32];                        // this number will be dependent on how long the message will be (how many motors)
+      char response[PACKET_SIZE];                        // this number will be dependent on how long the message will be (how many motors)
       snprintf(response, sizeof(response), "%.2f, %.2f", pos1, pos2);
 
       rpi.enqueueTXPacket(response);
       rpi.uartSend();
     }
 }
+
+
+
+// Notes on how the different libraries work together (as is my undersanding):
+// in main.cpp, all of the functions are quite abstracted (as simple as possible to understand)
+// things with the raspberry pi deal with the functins in the RPIComs library, that deals with packet sending and receiving through serial with the pi
+// the motors are initialized with a specific serial and motor type
+// the functions are called on those motors instances, which use the HerkulexMotor class.
+// in the HerkulexMotor library, the functions use the SerialBusManager library so that every command/function gests called on the proper instance
+// each instance fo the SeiralBusManager will correspond to a bus, that way the same Herkulex functions can be used the same way
