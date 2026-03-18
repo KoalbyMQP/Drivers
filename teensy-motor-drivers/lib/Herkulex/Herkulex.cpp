@@ -32,7 +32,7 @@
   02/25/2026
   The library has been edited from Arduino Uno/2009 - Arduino Mega to also work on Teensy 4.1
   The Software Serial functionality has been removed due to the lat of necessity and the abundance of UART ports on the Teensy
-  Edits by Pau Alcolea Vila (Worcester Polytechnic Institute, 2026)
+  Edits by Max Inman and Pau Alcolea Vila (Worcester Polytechnic Institute, 2026)
 
  *****************************************************************************
  Original Author:
@@ -441,57 +441,83 @@ void HerkulexClass::actionMoves(uint8_t playTime)
 
 }
 
-// get Position
- uint16_t HerkulexClass::getPosition(int servoID) {
-	uint16_t Position  = 0;
+// Builds and sends the RAMREAD position-request packet then returns immediately.
+// The motor starts composing its reply; the hardware RX buffer fills on its own.
+// Call this on every bus BEFORE calling collectPosition on any bus so that all
+// motors can reply in parallel while the CPU is busy sending to the next bus.
+void HerkulexClass::requestPosition(int servoID) {
+    packetSize   = 0x09; 				// 3.Packet size 7-58
+    pID          = servoID;				// 4. Servo ID - 253=all servos
+    cmd          = HRAMREAD;			// 5. CMD
+    data[0]      = 0x3A;				// 8. Address
+    data[1]      = 0x02;				// 9. Length
+    packetLength = 2;					// lenghtData
 
-    packetSize = 0x09;               // 3.Packet size 7-58
-	pID   = servoID;     	    // 4. Servo ID - 253=all servos
-	cmd   = HRAMREAD;           // 5. CMD
-	data[0]=0x3A;               // 8. Address
-	data[1]=0x02;               // 9. Length
-	
-	packetLength=2;             // lenghtData
-  	
-	ck1=checksum1(data,packetLength);	//6. Checksum1
-	ck2=checksum2(ck1);					//7. Checksum2
+    ck1 = checksum1(data,packetLength);	//6. Checksum1
+	ck2 = checksum2(ck1);				//7. Checksum2
 
-	dataEx[0] = 0xFF;			// Packet Header
-	dataEx[1] = 0xFF;			// Packet Header	
-	dataEx[2] = packetSize;	 		// Packet Size
-	dataEx[3] = pID;			// Servo ID
-	dataEx[4] = cmd;			// Command Ram Write
-	dataEx[5] = ck1;			// Checksum 1
-	dataEx[6] = ck2;			// Checksum 2
-	dataEx[7] = data[0];      	// Address  
-	dataEx[8] = data[1]; 		// Length
-	
-	sendData(dataEx, packetSize);
+    dataEx[0] = 0xFF;					// Packet Header
+	dataEx[1] = 0xFF;					// Packet Header	
+	dataEx[2] = packetSize;	 			// Packet Size
+	dataEx[3] = pID;					// Servo ID
+	dataEx[4] = cmd;					// Command Ram Write
+	dataEx[5] = ck1;					// Checksum 1
+	dataEx[6] = ck2;					// Checksum 2
+	dataEx[7] = data[0];  		    	// Address  
+	dataEx[8] = data[1]; 				// Length
 
-    delayMicroseconds(100); // play with value
-	readData(13);
+    sendData(dataEx, packetSize);
+}
 
-        	
-	packetSize = dataEx[2];           // 3.Packet size 7-58
-	pID   = dataEx[3];           // 4. Servo ID
-	cmd   = dataEx[4];           // 5. CMD
-	data[0]=dataEx[7];
-    data[1]=dataEx[8];
-    data[2]=dataEx[9];
-    data[3]=dataEx[10];
-    data[4]=dataEx[11];
-    data[5]=dataEx[12];
-    packetLength=6;
+// collectPosition -- Phase 2 of the parallelized two-phase position read.
+// Reads and parses the 13-byte reply the motor sent after requestPosition.
+// Because all motors were requested before any read is attempted, most or all
+// of the reply bytes are already in the RX buffer by the time this is called,
+// so the blocking wait inside readData is near-zero for all but the first bus.
+//
+// Returns the raw 16-bit position value, or 0xFFFF on a checksum error.
+// Apply the model's posBitMask and stepsToDeg in HerkulexMotor as usual.
+uint16_t HerkulexClass::collectPosition(int servoID) {
+    // Re-arm class fields so checksum1() knows what packet we expect.
+    // These must match what requestPosition() set.
+    packetSize   = 0x09; 				// 3.Packet size 7-58
+    pID          = servoID;				// 4. Servo ID - 253=all servos
+    cmd          = HRAMREAD;			// 5. CMD
+    data[0]      = 0x3A;				// 8. Address
+    data[1]      = 0x02;				// 9. Length
+    packetLength = 2;					// lenghtData
 
-    ck1=checksum1(data,packetLength);	//6. Checksum1
-	ck2=checksum2(ck1);					//7. Checksum2
+    readData(GETPOS_RESPONSE_BYTES);    // blocks only as long as bytes are missing, right now it is 13 in Herkulex.h
 
-    if (ck1 != dataEx[5]) return -1;
-	if (ck2 != dataEx[6]) return -1;
+    // Parse response into data[]
+    packetSize   = dataEx[2];
+    pID          = dataEx[3];
+    cmd          = dataEx[4];
+    data[0]      = dataEx[7];
+    data[1]      = dataEx[8];
+    data[2]      = dataEx[9];
+    data[3]      = dataEx[10];
+    data[4]      = dataEx[11];
+    data[5]      = dataEx[12];
+    packetLength = 6;
 
-	Position = (dataEx[10] << 8) | dataEx[9];
-        return Position;
-	
+    ck1 = checksum1(data, packetLength);
+    ck2 = checksum2(ck1);
+
+    if (ck1 != dataEx[5]) return 0xFFFF;    // checksum error sentinel
+    if (ck2 != dataEx[6]) return 0xFFFF;
+
+    return (uint16_t)((dataEx[10] << 8) | dataEx[9]);
+}
+
+// getPosition -- original blocking API, preserved for single-motor or debug use.
+// Internally calls requestPosition then collectPosition back-to-back.
+// When querying multiple motors across different buses, prefer using
+// SerialBusManager::requestAllPositions() + collectAllPositions() instead.
+uint16_t HerkulexClass::getPosition(int servoID) {
+    requestPosition(servoID);
+    delayMicroseconds(100); // minimum turnaround time for motor to begin replying
+    return collectPosition(servoID);
 }
 
 // reboot single servo - pay attention 253 - all servos doesn't work!
