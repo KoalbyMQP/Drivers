@@ -68,3 +68,25 @@ static void actionAll(int playTimeMs){
         }
     }       
 }
+
+static void requestAllPositions(const MotorRef* motors, uint8_t count){
+    // iterate through all of the motors in the referece table (all motors we are using)
+    for (uint8_t i = 0; i < count; i++){
+        uint8_t busIndex = motors[i].busId - 1;  // _buses[] is 0-indexed; busId starts at 2
+        // it is busIndex and not i because i is used for all of the motors, we are not iterating through the buses like the other methods
+        if (SerialBusManager::_busesTracker[busIndex] == 1){
+            SerialBusManager::_buses[busIndex].requestPosition(motors[i].servoId);
+        }
+    }
+}
+
+static void collectAllPositions(const MotorRef* motors, uint16_t* results, uint8_t count){
+    for (uint8_t i = 0; i < count; i++){
+        uint8_t busIndex = motors[i].busId - 1;
+        if (SerialBusManager::_busesTracker[busIndex] == 1){
+            results[i] = SerialBusManager::_buses[busIndex].collectPosition(motors[i].servoId);
+        } else {
+            results[i] = 0xFFFF;    // bus not initialized
+        }
+    }
+}

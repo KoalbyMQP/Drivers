@@ -51,6 +51,8 @@ class HerkulexMotor{
         void queueMove(float posDeg);
         void reboot();
         static void actionMoves(int playTimeMs); // here we can manage how we action the moves if we switch to multiple serial ports
+        MotorRef getMotorRef() const;   // generate the MotorRef table itself so that it can be automated
+        float rawToDegs(uint16_t rawPos);
     private:
         uint8_t _id;
         uint8_t _busId;

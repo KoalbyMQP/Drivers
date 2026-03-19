@@ -53,6 +53,7 @@ struct motorMoveInfo {
 #define DATA_SIZE	 30		// buffer for input data
 #define DATA_MOVE  	 50		// max 10 servos <---- change this for more servos!
 #define TIME_OUT     5   	//timeout serial communication
+#define GETPOS_RESPONSE_BYTES 13  // bytes expected back from a RAMREAD position query
 
 // SERVO HERKULEX COMMAND - See Manual p40
 #define HEEPWRITE    0x01 	//Rom write
@@ -115,6 +116,9 @@ public:
   void  moveOne(motorMoveInfo moveInfo);
 
   uint16_t getPosition(int servoID);
+  void requestPosition(int servoID);
+  uint16_t collectPosition(int servoID);
+
   int   getSpeed(int servoID);
     
   void  reboot(int servoID);
