@@ -2,6 +2,7 @@
 #define HerkulexMotor_h
 
 #include "Arduino.h"
+#include "SerialBusManager.h"
 
 // all motor models used
 enum MotorModel{

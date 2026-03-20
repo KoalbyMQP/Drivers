@@ -94,6 +94,7 @@ static byte BROADCAST_ID = 0xFE;
 
 class HerkulexClass {
 public:
+  HerkulexClass();
   HerkulexClass(uint8_t busID);
   void beginSerialBus(long baud);
 
@@ -145,7 +146,7 @@ public:
 private:
 
 
-  int  checksum1(byte* data, int lenghtString);
+  int  checksum1(uint8_t* data, uint8_t packetLength, uint8_t _pID, uint8_t _cmd);
   int  checksum2(int XOR);
   
   void clearBuffer();

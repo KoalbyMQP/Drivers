@@ -85,7 +85,7 @@ void HerkulexMotor::reboot(){
 }
 
 MotorRef HerkulexMotor::getMotorRef() const {
-    return {_busId, _id};
+    return MotorRef{_busId, _id};
 }
 
 float HerkulexMotor::rawToDegs(uint16_t rawPos) {
