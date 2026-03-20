@@ -61,7 +61,7 @@ struct motorMoveInfo {
 #define HRAMWRITE	 0x03 	//Ram write
 #define HRAMREAD	 0x04 	//Ram read
 #define HIJOG		 0x05 	//Write n servo with different timing
-#define HSJOG		 0x06 	//Write n servo with same time
+// #define HSJOG		 0x06 	//Write n servo with same time
 #define HSTAT	 	 0x07 	//Read error
 #define HROLLBACK	 0x08 	//Back to factory value
 #define HREBOOT	 	 0x09 	//Reboot
@@ -77,6 +77,23 @@ typedef enum {
   LED_BLUE = 0x02,
   LED_RED = 0x04,
 } LED_STATE;
+
+
+typedef enum {
+  HSJOG_LENGTH = 0x0C,
+  HSJOG_DATA_LENGTH = 0x05,
+
+} PACKET_SIZE;
+
+typedef enum {
+  PACKET_HEADER = 0xFF,
+  ALL_SERVOS = 0xFE,
+} PACKET_CONSTS;
+
+typedef enum {
+  HSJOG = 0x06,
+
+} COMMAND;
 
 
 // HERKULEX STATUS ERROR - See Manual p39
@@ -132,33 +149,53 @@ public:
   void readData(int size);
 
 
-  int packetSize;
-  int pID;
-  int cmd;
-  int packetLength;
-  int ck1;
-  int ck2;
-  byte dataEx[DATA_MOVE+8];
-  byte data[DATA_SIZE]; 
-  byte outputBuffer[DATA_MOVE];
+  // int packetSize;
+  // int pID;
+  // int cmd;
+  // int packetLength;
+  // int ck1;
+  // int ck2;
+  // byte dataEx[DATA_MOVE+8];
+  // byte data[DATA_SIZE]; 
+  // byte outputBuffer[DATA_MOVE];
 
 // private area  
 private:
 
+  int _serialPort;
 
-  int  checksum1(uint8_t* data, uint8_t packetLength, uint8_t _pID, uint8_t _cmd);
-  int  checksum2(int XOR);
+  int  calcChecksumOne();
+  int  calcChecksumTwo();
   
   void clearBuffer();
   void printHexByte(byte x);
 
-  int _serialPort;
-  
-  
-  int queuedPacketCount;
-  
-  int XOR;
-  int playTime;
+
+  uint8_t queuedPacketCount;
+
+
+
+  // base packet info
+  uint8_t packetLength;
+  uint8_t pID;
+  uint8_t CMD;
+  uint8_t checksumOne;
+  uint8_t checksumTwo;
+
+  uint8_t packetSize;
+
+  uint8_t additionalDataLength; // length of additional data
+
+  // servo jog "optional data"
+  uint8_t playTime;
+  uint8_t goalLSB; // lower 8 bits of goal
+  uint8_t goalMSB; // upper 8 bits of goal :: in total 16 bit goal
+  uint8_t SET; // called in datasheet, it contains multiple bits of distinct info
+  uint8_t ID; // seperate from pID in datasheet but same for our use case
+
+  uint8_t dataEx[DATA_MOVE+8];
+  uint8_t checksumData[DATA_SIZE]; 
+  uint8_t outputBuffer[DATA_MOVE + 8];
 };
 
 #endif

@@ -182,16 +182,16 @@ byte HerkulexClass::stat(int servoID)
 	pID      = servoID;			//4.Servo ID - 0XFE=All servos
 	cmd      = HSTAT;			//5.CMD
 	
-	ck1=(packetSize^pID^cmd)&0xFE;
-        ck2=(~(packetSize^pID^cmd))&0xFE ; 
+	checksumOne=(packetSize^pID^cmd)&0xFE;
+        checksumTwo=(~(packetSize^pID^cmd))&0xFE ; 
   
 	dataEx[0] = 0xFF;			// Packet Header
 	dataEx[1] = 0xFF;			// Packet Header	
 	dataEx[2] = packetSize;	 		// Packet Size
 	dataEx[3] = pID;			// Servo ID
 	dataEx[4] = cmd;			// Command Ram Write
-	dataEx[5] = ck1;			// Checksum 1
-	dataEx[6] = ck2;			// Checksum 2
+	dataEx[5] = checksumOne;			// Checksum 1
+	dataEx[6] = checksumTwo;			// Checksum 2
 	     
 	sendData(dataEx, packetSize);
 	delay(2);
@@ -201,16 +201,16 @@ byte HerkulexClass::stat(int servoID)
 	packetSize = dataEx[2];           // 3.Packet size 7-58
 	pID   = dataEx[3];           // 4. Servo ID
 	cmd   = dataEx[4];           // 5. CMD
-	data[0]=dataEx[7];
-    data[1]=dataEx[8];
+	checksumData[0]=dataEx[7];
+    checksumData[1]=dataEx[8];
     packetLength=2;
 
 	
-    ck1 = (dataEx[2]^dataEx[3]^dataEx[4]^dataEx[7]^dataEx[8]) & 0xFE;
-	ck2=checksum2(ck1);			
+    checksumOne = (dataEx[2]^dataEx[3]^dataEx[4]^dataEx[7]^dataEx[8]) & 0xFE;
+	checksumTwo=calcChecksumTwo(checksumOne);			
 	
-	if (ck1 != dataEx[5]) return -1; //checksum verify
-	if (ck2 != dataEx[6]) return -2;
+	if (checksumOne != dataEx[5]) return -1; //checksum verify
+	if (checksumTwo != dataEx[6]) return -2;
 
 	return dataEx[7];			// return status
 }
@@ -227,24 +227,24 @@ void HerkulexClass::torqueON(int servoID)
 	packetSize = 0x0A;               // 3.Packet size 7-58
 	pID   = servoID;            // 4. Servo ID
 	cmd   = HRAMWRITE;          // 5. CMD
-	data[0]=0x34;               // 8. Address
-	data[1]=0x01;               // 9. Lenght
-	data[2]=0x60;               // 10. 0x60=Torque ON
+	packetData[0]=0x34;               // 8. Address
+	packetData[1]=0x01;               // 9. Lenght
+	packetData[2]=0x60;               // 10. 0x60=Torque ON
 	packetLength=3;             // lenghtData
   	
-	ck1=checksum1(data,packetLength, servoID, HRAMWRITE);	//6. Checksum1
-	ck2=checksum2(ck1);					//7. Checksum2
+	checksumOne=calcChecksumOne(packetData,packetLength, servoID, HRAMWRITE);	//6. Checksum1
+	checksumTwo=calcChecksumTwo(checksumOne);					//7. Checksum2
 
 	dataEx[0] = 0xFF;			// Packet Header
 	dataEx[1] = 0xFF;			// Packet Header	
 	dataEx[2] = packetSize;	 		// Packet Size
 	dataEx[3] = pID;			// Servo ID
 	dataEx[4] = HRAMWRITE;	    // Command Ram Write
-	dataEx[5] = ck1;			// Checksum 1
-	dataEx[6] = ck2;			// Checksum 2
-	dataEx[7] = data[0]; 		// Address 52
-	dataEx[8] = data[1]; 		// Length
-	dataEx[9] = data[2]; 		// Torque ON
+	dataEx[5] = checksumOne;			// Checksum 1
+	dataEx[6] = checksumTwo;			// Checksum 2
+	dataEx[7] = packetData[0]; 		// Address 52
+	dataEx[8] = packetData[1]; 		// Length
+	dataEx[9] = packetData[2]; 		// Torque ON
 
 	sendData(dataEx, packetSize);
 }
@@ -255,24 +255,24 @@ void HerkulexClass::torqueOFF(int servoID)
 	packetSize = 0x0A;               // 3.Packet size 7-58
 	pID   = servoID;            // 4. Servo ID
 	cmd   = HRAMWRITE;          // 5. CMD
-	data[0]=0x34;               // 8. Address
-	data[1]=0x01;               // 9. Lenght
-	data[2]=0x00;               // 10. 0x00=Torque Free
+	checksumData[0]=0x34;               // 8. Address
+	checksumData[1]=0x01;               // 9. Lenght
+	checksumData[2]=0x00;               // 10. 0x00=Torque Free
 	packetLength=3;             // lenghtData
   	
-	ck1=checksum1(data,packetLength, servoID, HRAMWRITE);	//6. Checksum1
-	ck2=checksum2(ck1);					//7. Checksum2
+	checksumOne=calcChecksumOne(checksumData,packetLength, servoID, HRAMWRITE);	//6. Checksum1
+	checksumTwo=calcChecksumTwo(checksumOne);					//7. Checksum2
 
 	dataEx[0] = 0xFF;			// Packet Header
 	dataEx[1] = 0xFF;			// Packet Header	
 	dataEx[2] = packetSize;	 		// Packet Size
 	dataEx[3] = pID;			// Servo ID
 	dataEx[4] = cmd;			// Command Ram Write
-	dataEx[5] = ck1;			// Checksum 1
-	dataEx[6] = ck2;			// Checksum 2
-	dataEx[7] = data[0]; 		// Address 52
-	dataEx[8] = data[1]; 		// Length
-	dataEx[9] = data[2]; 		// Torque Free
+	dataEx[5] = checksumOne;			// Checksum 1
+	dataEx[6] = checksumTwo;			// Checksum 2
+	dataEx[7] = checksumData[0]; 		// Address 52
+	dataEx[8] = checksumData[1]; 		// Length
+	dataEx[9] = checksumData[2]; 		// Torque Free
 
     sendData(dataEx, packetSize);
 
@@ -284,24 +284,24 @@ void HerkulexClass::setACKPolicy(int valueACK)
 	packetSize = 0x0A;               // 3.Packet size 7-58
 	pID   = 0xFE;	            // 4. Servo ID
 	cmd   = HRAMWRITE;          // 5. CMD
-	data[0]=0x34;               // 8. Address
-	data[1]=0x01;               // 9. Lenght
-	data[2]=valueACK;           // 10.Value. 0=No Replay, 1=Only reply to READ CMD, 2=Always reply
+	checksumData[0]=0x34;               // 8. Address
+	checksumData[1]=0x01;               // 9. Lenght
+	checksumData[2]=valueACK;           // 10.Value. 0=No Replay, 1=Only reply to READ CMD, 2=Always reply
 	packetLength=3;             // lenghtData
   	
-	ck1=checksum1(data,packetLength, 0xFE, HRAMWRITE);	//6. Checksum1
-	ck2=checksum2(ck1);					//7. Checksum2
+	checksumOne=calcChecksumOne(checksumData,packetLength, 0xFE, HRAMWRITE);	//6. Checksum1
+	checksumTwo=calcChecksumTwo(checksumOne);					//7. Checksum2
 
 	dataEx[0] = 0xFF;			// Packet Header
 	dataEx[1] = 0xFF;			// Packet Header	
 	dataEx[2] = packetSize;	 		// Packet Size
 	dataEx[3] = pID;			// Servo ID
 	dataEx[4] = cmd;			// Command Ram Write
-	dataEx[5] = ck1;			// Checksum 1
-	dataEx[6] = ck2;			// Checksum 2
-	dataEx[7] = data[0]; 		// Address 52
-	dataEx[8] = data[1]; 		// Length
-	dataEx[9] = data[2]; 		// Value
+	dataEx[5] = checksumOne;			// Checksum 1
+	dataEx[6] = checksumTwo;			// Checksum 2
+	dataEx[7] = checksumData[0]; 		// Address 52
+	dataEx[8] = checksumData[1]; 		// Length
+	dataEx[9] = checksumData[2]; 		// Value
 
  	sendData(dataEx, packetSize);
 }
@@ -312,22 +312,22 @@ byte HerkulexClass::checkModel()
 	packetSize = 0x09;               // 3.Packet size 7-58
 	pID   = 0xFE;	            // 4. Servo ID
 	cmd   = HEEPREAD;           // 5. CMD
-	data[0]=0x00;               // 8. Address
-	data[1]=0x01;               // 9. Lenght
+	checksumData[0]=0x00;               // 8. Address
+	checksumData[1]=0x01;               // 9. Lenght
 	packetLength=2;             // lenghtData
   	
-	ck1=checksum1(data,packetLength, 0xFE, HEEPREAD);	//6. Checksum1
-	ck2=checksum2(ck1);					//7. Checksum2
+	checksumOne=calcChecksumOne(checksumData,packetLength, 0xFE, HEEPREAD);	//6. Checksum1
+	checksumTwo=calcChecksumTwo(checksumOne);					//7. Checksum2
 
 	dataEx[0] = 0xFF;			// Packet Header
 	dataEx[1] = 0xFF;			// Packet Header	
 	dataEx[2] = packetSize;	 		// Packet Size
 	dataEx[3] = pID;			// Servo ID
 	dataEx[4] = cmd;			// Command Ram Write
-	dataEx[5] = ck1;			// Checksum 1
-	dataEx[6] = ck2;			// Checksum 2
-	dataEx[7] = data[0]; 		// Address
-	dataEx[8] = data[1]; 		// Length
+	dataEx[5] = checksumOne;			// Checksum 1
+	dataEx[6] = checksumTwo;			// Checksum 2
+	dataEx[7] = checksumData[0]; 		// Address
+	dataEx[8] = checksumData[1]; 		// Length
 
     sendData(dataEx, packetSize);
 
@@ -337,14 +337,14 @@ byte HerkulexClass::checkModel()
 	packetSize = dataEx[2];           // 3.Packet size 7-58
 	pID   = dataEx[3];           // 4. Servo ID
 	cmd   = dataEx[4];           // 5. CMD
-	data[0]=dataEx[7];           // 8. 1st byte
+	checksumData[0]=dataEx[7];           // 8. 1st byte
 	packetLength=1;              // lenghtData
   	
-	ck1=checksum1(data,packetLength, 0xFE, HEEPREAD);	//6. Checksum1
-	ck2=checksum2(ck1);					//7. Checksum2
+	checksumOne=calcChecksumOne(checksumData,packetLength, 0xFE, HEEPREAD);	//6. Checksum1
+	checksumTwo=calcChecksumTwo(checksumOne);					//7. Checksum2
 
-	if (ck1 != dataEx[5]) return -1; //checksum verify
-	if (ck2 != dataEx[6]) return -2;
+	if (checksumOne != dataEx[5]) return -1; //checksum verify
+	if (checksumTwo != dataEx[6]) return -2;
 		
 	return dataEx[7];			// return status
 
@@ -356,24 +356,24 @@ void HerkulexClass::setID(int ID_Old, int ID_New)
 	packetSize = 0x0A;               // 3.Packet size 7-58
 	pID   = ID_Old;		        // 4. Servo ID OLD - original servo ID
 	cmd   = HEEPWRITE;          // 5. CMD
-	data[0]=0x06;               // 8. Address
-	data[1]=0x01;               // 9. Lenght
-	data[2]=ID_New;             // 10. ServoID NEW
+	checksumData[0]=0x06;               // 8. Address
+	checksumData[1]=0x01;               // 9. Lenght
+	checksumData[2]=ID_New;             // 10. ServoID NEW
 	packetLength=3;             // lenghtData
   	
-	ck1=checksum1(data,packetLength, ID_Old, HEEPWRITE);	//6. Checksum1
-	ck2=checksum2(ck1);					//7. Checksum2
+	checksumOne=calcChecksumOne(checksumData,packetLength, ID_Old, HEEPWRITE);	//6. Checksum1
+	checksumTwo=calcChecksumTwo(checksumOne);					//7. Checksum2
 
 	dataEx[0] = 0xFF;			// Packet Header
 	dataEx[1] = 0xFF;			// Packet Header	
 	dataEx[2] = packetSize;	 		// Packet Size
 	dataEx[3] = pID;			// Servo ID
 	dataEx[4] = cmd;			// Command Ram Write
-	dataEx[5] = ck1;			// Checksum 1
-	dataEx[6] = ck2;			// Checksum 2
-	dataEx[7] = data[0]; 		// Address 52
-	dataEx[8] = data[1]; 		// Length
-	dataEx[9] = data[2]; 		// Value
+	dataEx[5] = checksumOne;			// Checksum 1
+	dataEx[6] = checksumTwo;			// Checksum 2
+	dataEx[7] = checksumData[0]; 		// Address 52
+	dataEx[8] = checksumData[1]; 		// Length
+	dataEx[9] = checksumData[2]; 		// Value
 
 	sendData(dataEx, packetSize);
 
@@ -385,27 +385,27 @@ void HerkulexClass::clearError(int servoID)
 	packetSize = 0x0B;               // 3.Packet size 7-58
 	pID   = servoID;     		// 4. Servo ID - 253=all servos
 	cmd   = HRAMWRITE;          // 5. CMD
-	data[0]=0x30;               // 8. Address
-	data[1]=0x02;               // 9. Lenght
-	data[2]=0x00;               // 10. Write error=0
-	data[3]=0x00;               // 10. Write detail error=0
+	checksumData[0]=0x30;               // 8. Address
+	checksumData[1]=0x02;               // 9. Lenght
+	checksumData[2]=0x00;               // 10. Write error=0
+	checksumData[3]=0x00;               // 10. Write detail error=0
 	
 	packetLength=4;             // lenghtData
   	
-	ck1=checksum1(data,packetLength, servoID, HRAMWRITE);	//6. Checksum1
-	ck2=checksum2(ck1);					//7. Checksum2
+	checksumOne=calcChecksumOne(checksumData,packetLength, servoID, HRAMWRITE);	//6. Checksum1
+	checksumTwo=calcChecksumTwo(checksumOne);					//7. Checksum2
 
 	dataEx[0] = 0xFF;			// Packet Header
 	dataEx[1] = 0xFF;			// Packet Header	
 	dataEx[2] = packetSize;	 		// Packet Size
 	dataEx[3] = pID;			// Servo ID
 	dataEx[4] = cmd;			// Command Ram Write
-	dataEx[5] = ck1;			// Checksum 1
-	dataEx[6] = ck2;			// Checksum 2
-	dataEx[7] = data[0]; 		// Address 52
-	dataEx[8] = data[1]; 		// Length
-	dataEx[9] = data[2]; 		// Value1
-	dataEx[10]= data[3]; 		// Value2
+	dataEx[5] = checksumOne;			// Checksum 1
+	dataEx[6] = checksumTwo;			// Checksum 2
+	dataEx[7] = checksumData[0]; 		// Address 52
+	dataEx[8] = checksumData[1]; 		// Length
+	dataEx[9] = checksumData[2]; 		// Value1
+	dataEx[10]= checksumData[3]; 		// Value2
 
 	sendData(dataEx, packetSize);
 }
@@ -427,8 +427,8 @@ void HerkulexClass::actionMoves(uint8_t playTime)
 	// packetsize is the intro packet length (8) + the queued packet length
     packetSize = 0x08 + queuedPacketCount;
  
-    ck1 = checksum1(outputBuffer, queuedPacketCount, 0xFE, HSJOG);	//6. Checksum1
-	ck2 = checksum2(ck1);				                //7. Checksum2
+    checksumOne = calcChecksumOne(outputBuffer, queuedPacketCount, 0xFE, HSJOG);	//6. Checksum1
+	checksumTwo = calcChecksumTwo(checksumOne);				                //7. Checksum2
 
 
 	// add HSJOG intro packet to the dataEx output buffer
@@ -437,8 +437,8 @@ void HerkulexClass::actionMoves(uint8_t playTime)
 	dataEx[2] = packetSize;	 	    // Packet Size
 	dataEx[3] = 0xFE;				// Servo ID: all servos
 	dataEx[4] = HSJOG;				// Command Ram Write CMD SJOG Write n servo with same execution time
-	dataEx[5] = ck1;				// Checksum 1
-	dataEx[6] = ck2;				// Checksum 2
+	dataEx[5] = checksumOne;				// Checksum 1
+	dataEx[6] = checksumTwo;				// Checksum 2
 	dataEx[7] = playTime;			// Execution time	
 
 	// copy outputBuffer into dataEx after the HSJOG intro packet
@@ -459,22 +459,22 @@ void HerkulexClass::requestPosition(int servoID) {
     packetSize   = 0x09; 				// 3.Packet size 7-58
     pID          = servoID;				// 4. Servo ID - 253=all servos
     cmd          = HRAMREAD;			// 5. CMD
-    data[0]      = 0x3A;				// 8. Address
-    data[1]      = 0x02;				// 9. Length
+    checksumData[0]      = 0x3A;				// 8. Address
+    checksumData[1]      = 0x02;				// 9. Length
     packetLength = 2;					// lenghtData
 
-    ck1 = checksum1(data,packetLength, servoID, HRAMREAD);	//6. Checksum1
-	ck2 = checksum2(ck1);				//7. Checksum2
+    checksumOne = calcChecksumOne(checksumData,packetLength, servoID, HRAMREAD);	//6. Checksum1
+	checksumTwo = calcChecksumTwo(checksumOne);				//7. Checksum2
 
     dataEx[0] = 0xFF;					// Packet Header
 	dataEx[1] = 0xFF;					// Packet Header	
 	dataEx[2] = packetSize;	 			// Packet Size
 	dataEx[3] = pID;					// Servo ID
 	dataEx[4] = cmd;					// Command Ram Write
-	dataEx[5] = ck1;					// Checksum 1
-	dataEx[6] = ck2;					// Checksum 2
-	dataEx[7] = data[0];  		    	// Address  
-	dataEx[8] = data[1]; 				// Length
+	dataEx[5] = checksumOne;					// Checksum 1
+	dataEx[6] = checksumTwo;					// Checksum 2
+	dataEx[7] = checksumData[0];  		    	// Address  
+	dataEx[8] = checksumData[1]; 				// Length
 
     sendData(dataEx, packetSize);
 }
@@ -493,8 +493,8 @@ uint16_t HerkulexClass::collectPosition(int servoID) {
     packetSize   = 0x09; 				// 3.Packet size 7-58
     pID          = servoID;				// 4. Servo ID - 253=all servos
     cmd          = HRAMREAD;			// 5. CMD
-    data[0]      = 0x3A;				// 8. Address
-    data[1]      = 0x02;				// 9. Length
+    checksumData[0]      = 0x3A;				// 8. Address
+    checksumData[1]      = 0x02;				// 9. Length
     packetLength = 2;					// lenghtData
 
     readData(GETPOS_RESPONSE_BYTES);    // blocks only as long as bytes are missing, right now it is 13 in Herkulex.h
@@ -503,19 +503,19 @@ uint16_t HerkulexClass::collectPosition(int servoID) {
     packetSize   = dataEx[2];
     pID          = dataEx[3];
     cmd          = dataEx[4];
-    data[0]      = dataEx[7];
-    data[1]      = dataEx[8];
-    data[2]      = dataEx[9];
-    data[3]      = dataEx[10];
-    data[4]      = dataEx[11];
-    data[5]      = dataEx[12];
+    checksumData[0]      = dataEx[7];
+    checksumData[1]      = dataEx[8];
+    checksumData[2]      = dataEx[9];
+    checksumData[3]      = dataEx[10];
+    checksumData[4]      = dataEx[11];
+    checksumData[5]      = dataEx[12];
     packetLength = 6;
 
-    ck1 = checksum1(data, packetLength, servoID, HRAMREAD);
-    ck2 = checksum2(ck1);
+    checksumOne = calcChecksumOne(checksumData, packetLength, servoID, HRAMREAD);
+    checksumTwo = calcChecksumTwo(checksumOne);
 
-    if (ck1 != dataEx[5]) return 0xFFFF;    // checksum error sentinel
-    if (ck2 != dataEx[6]) return 0xFFFF;
+    if (checksumOne != dataEx[5]) return 0xFFFF;    // checksum error sentinel
+    if (checksumTwo != dataEx[6]) return 0xFFFF;
 
     return (uint16_t)((dataEx[10] << 8) | dataEx[9]);
 }
@@ -536,16 +536,16 @@ void HerkulexClass::reboot(int servoID) {
     packetSize = 0x07;               // 3.Packet size 7-58
 	pID   = servoID;     	    // 4. Servo ID - 253=all servos
 	cmd   = HREBOOT;            // 5. CMD
-    ck1=(packetSize^pID^cmd)&0xFE;
-    ck2=(~(packetSize^pID^cmd))&0xFE ; ;	
+    checksumOne=(packetSize^pID^cmd)&0xFE;
+    checksumTwo=(~(packetSize^pID^cmd))&0xFE ; ;	
 
 	dataEx[0] = 0xFF;			// Packet Header
 	dataEx[1] = 0xFF;			// Packet Header	
 	dataEx[2] = packetSize;	 		// Packet Size
 	dataEx[3] = pID;			// Servo ID
 	dataEx[4] = cmd;			// Command Ram Write
-	dataEx[5] = ck1;			// Checksum 1
-	dataEx[6] = ck2;			// Checksum 2
+	dataEx[5] = checksumOne;			// Checksum 1
+	dataEx[6] = checksumTwo;			// Checksum 2
 	
 	sendData(dataEx, packetSize);
 
@@ -557,24 +557,24 @@ void HerkulexClass::setLed(int servoID, int valueLed)
 	packetSize   = 0x0A;               // 3.Packet size 7-58
 	pID     = servoID;            // 4. Servo ID
 	cmd     = HRAMWRITE;          // 5. CMD
-	data[0] = 0x35;               // 8. Address 53
-    data[1] = 0x01;               // 9. Lenght
-	data[2] = valueLed;           // 10.LedValue
+	checksumData[0] = 0x35;               // 8. Address 53
+    checksumData[1] = 0x01;               // 9. Lenght
+	checksumData[2] = valueLed;           // 10.LedValue
 	uint8_t _packetLength = 3;               // lenghtData
   	  	
-	ck1=checksum1(data, _packetLength, servoID, HRAMWRITE);	//6. Checksum1
-	ck2=checksum2(ck1);					//7. Checksum2
+	checksumOne=calcChecksumOne(checksumData, _packetLength, servoID, HRAMWRITE);	//6. Checksum1
+	checksumTwo=calcChecksumTwo(checksumOne);					//7. Checksum2
 
 	dataEx[0] = 0xFF;			// Packet Header
 	dataEx[1] = 0xFF;			// Packet Header	
 	dataEx[2] = packetSize;	 		// Packet Size
 	dataEx[3] = pID;			// Servo ID
 	dataEx[4] = cmd;			// Command Ram Write
-	dataEx[5] = ck1;			// Checksum 1
-	dataEx[6] = ck2;			// Checksum 2
-	dataEx[7] = data[0];        // Address
-	dataEx[8] = data[1];       	// Length
-	dataEx[9] = data[2];        // Value
+	dataEx[5] = checksumOne;			// Checksum 1
+	dataEx[6] = checksumTwo;			// Checksum 2
+	dataEx[7] = checksumData[0];        // Address
+	dataEx[8] = checksumData[1];       	// Length
+	dataEx[9] = checksumData[2];        // Value
 
 	sendData(dataEx, packetLength);
 }
@@ -586,23 +586,23 @@ int HerkulexClass::getSpeed(int servoID) {
   packetSize = 0x09;               // 3.Packet size 7-58
   pID   = servoID;     	   	  // 4. Servo ID 
   cmd   = HRAMREAD;           // 5. CMD
-  data[0]=0x40;               // 8. Address
-  data[1]=0x02;               // 9. Lenght
+  checksumData[0]=0x40;               // 8. Address
+  checksumData[1]=0x02;               // 9. Lenght
 
   uint8_t _packetLength = 2;             // lenghtData
 
-  ck1=checksum1(data, _packetLength, servoID, HRAMREAD);		//6. Checksum1
-  ck2=checksum2(ck1);					//7. Checksum2
+  checksumOne=calcChecksumOne(checksumData, _packetLength, servoID, HRAMREAD);		//6. Checksum1
+  checksumTwo=calcChecksumTwo(checksumOne);					//7. Checksum2
 
   dataEx[0] = 0xFF;			// Packet Header
   dataEx[1] = 0xFF;			// Packet Header	
   dataEx[2] = packetSize;		// Packet Size
   dataEx[3] = pID;			// Servo ID
   dataEx[4] = cmd;			// Command Ram Write
-  dataEx[5] = ck1;			// Checksum 1
-  dataEx[6] = ck2;			// Checksum 2
-  dataEx[7] = data[0]; 	    // Address  
-  dataEx[8] = data[1]; 		// Length
+  dataEx[5] = checksumOne;			// Checksum 1
+  dataEx[6] = checksumTwo;			// Checksum 2
+  dataEx[7] = checksumData[0]; 	    // Address  
+  dataEx[8] = checksumData[1]; 		// Length
 
   sendData(dataEx, packetSize);
 
@@ -613,19 +613,19 @@ int HerkulexClass::getSpeed(int servoID) {
   packetSize = dataEx[2];           // 3.Packet size 7-58
   pID   = dataEx[3];           // 4. Servo ID
   cmd   = dataEx[4];           // 5. CMD
-  data[0]=dataEx[7];
-  data[1]=dataEx[8];
-  data[2]=dataEx[9];
-  data[3]=dataEx[10];
-  data[4]=dataEx[11];
-  data[5]=dataEx[12];
+  checksumData[0]=dataEx[7];
+  checksumData[1]=dataEx[8];
+  checksumData[2]=dataEx[9];
+  checksumData[3]=dataEx[10];
+  checksumData[4]=dataEx[11];
+  checksumData[5]=dataEx[12];
   packetLength=6;
 
-  ck1=checksum1(data, _packetLength, servoID, HRAMREAD);	//6. Checksum1
-  ck2=checksum2(ck1);				//7. Checksum2
+  checksumOne=calcChecksumOne(checksumData, _packetLength, servoID, HRAMREAD);	//6. Checksum1
+  checksumTwo=calcChecksumTwo(checksumOne);				//7. Checksum2
 
-  if (ck1 != dataEx[5]) return -1;
-  if (ck2 != dataEx[6]) return -1;
+  if (checksumOne != dataEx[5]) return -1;
+  if (checksumTwo != dataEx[6]) return -1;
 
   speedy = ((dataEx[10]&0xFF)<<8) | dataEx[9];
   return speedy;
@@ -635,31 +635,51 @@ int HerkulexClass::getSpeed(int servoID) {
 // moves one motor with the set moveInfo of goal, ID, LED color, and playTime
 void HerkulexClass::moveOne(motorMoveInfo moveInfo)
 {
-	uint8_t posLowerBits = (uint8_t) (moveInfo.goalPos & 0X00FF);
-	uint8_t posUpperBits = (uint8_t) ((moveInfo.goalPos & 0XFF00) >> 8);
+	// set all the pre-initialized variables needed for packet building
 
-	uint8_t lenPacketData = 4; // as specified in datasheet
+	// NOTE: also, we do not need both dataEx and outputBuffer. dataEx is used as an output buffer
+	// when only one motor is commanded, and outputBuffer is used when commanding multiple motors. There's no
+	// need for both. But we should change last
+
+
+	// length of additional data (dataEx 7 -> 11)
+	additionalDataLength = PACKET_SIZE::HSJOG_DATA_LENGTH;
+
+	// these are needed for the base packet
+	packetSize = PACKET_SIZE::HSJOG_LENGTH;
+	pID = moveInfo.servoID;
+	CMD = COMMAND::HSJOG;
 	
-	uint8_t packetData[lenPacketData] = {posLowerBits, posUpperBits, moveInfo.ledColor, moveInfo.servoID};
+
+	// these are needed for the "optional data"
+	// that, for this command, tells the motor its goal and playtime
+	playTime = moveInfo.playTime;
+	goalLSB = (uint8_t) (moveInfo.goalPos & 0X00FF);
+	goalMSB = (uint8_t) ((moveInfo.goalPos & 0XFF00) >> 8);
+	SET = 0b00000000 || (moveInfo.ledColor >> 2);  // TODO: verify against S_JOG_TAG on pg 41 of 0601 datasheet
+	ID = moveInfo.servoID;
 
 
-	packetSize = 0x0C; // packet size of 12 as specified in datasheet S_JOG example
+	// base packet
+	dataEx[0] = PACKET_CONSTS::PACKET_HEADER;
+	dataEx[1] = PACKET_CONSTS::PACKET_HEADER;
+	dataEx[2] = packetSize;
+	dataEx[3] = pID;
+	dataEx[4] = CMD;
 
-	ck1=checksum1(packetData, lenPacketData, moveInfo.servoID, HSJOG);  // Checksum1
-	ck2=checksum2(ck1);			               // Checksum2
+	// optional data
+	dataEx[7] = playTime;
+	dataEx[8] = goalLSB; 
+	dataEx[9] = goalLSB; 
+	dataEx[10] = SET;
+	dataEx[11] = ID;
 
-	dataEx[0] = 0xFF;			    // Packet Header
-	dataEx[1] = 0xFF;			    // Packet Header	
-	dataEx[2] = packetSize;	        // Packet Size
-	dataEx[3] = moveInfo.servoID;   // Servo ID
-	dataEx[4] = HSJOG;		        // Command type
-	dataEx[5] = ck1;				// Checksum 1
-	dataEx[6] = ck2;			    // Checksum 2
-	dataEx[7] = moveInfo.playTime;  // Execution time	
-	dataEx[8] = posLowerBits;       // lower 8 bits of goal position
-	dataEx[9] = posUpperBits;       // upper 8 bits of goal position
-	dataEx[10] = moveInfo.ledColor;
-	dataEx[11] = moveInfo.servoID;
+	// checksum has to be calculated last, but belongs in base packet
+	checksumOne = calcChecksumOne();
+	checksumTwo = calcChecksumTwo();
+
+	dataEx[5] = checksumOne;
+	dataEx[6] = checksumTwo;
 
 	sendData(dataEx, packetSize);
 }
@@ -670,26 +690,26 @@ void HerkulexClass::writeRegistryRAM(int servoID, int address, int writeByte)
   packetSize = 0x0A;               	// 3.Packet size 7-58
   pID   = servoID;     			// 4. Servo ID - 253=all servos
   cmd   = HRAMWRITE;          	// 5. CMD
-  data[0]=address;              // 8. Address
-  data[1]=0x01;               	// 9. Lenght
-  data[2]=writeByte;            // 10. Write error=0
+  checksumData[0]=address;              // 8. Address
+  checksumData[1]=0x01;               	// 9. Lenght
+  checksumData[2]=writeByte;            // 10. Write error=0
  
   uint8_t _packetLength = 3;             	// lenghtData
 
-  ck1=checksum1(data, _packetLength, servoID, HRAMWRITE);	//6. Checksum1
-  ck2=checksum2(ck1);				//7. Checksum2
+  checksumOne=calcChecksumOne(checksumData, _packetLength, servoID, HRAMWRITE);	//6. Checksum1
+  checksumTwo=calcChecksumTwo(checksumOne);				//7. Checksum2
 
   dataEx[0] = 0xFF;			// Packet Header
   dataEx[1] = 0xFF;			// Packet Header	
   dataEx[2] = packetSize;	 	// Packet Size
   dataEx[3] = pID;			// Servo ID
   dataEx[4] = cmd;			// Command Ram Write
-  dataEx[5] = ck1;			// Checksum 1
-  dataEx[6] = ck2;			// Checksum 2
-  dataEx[7] = data[0]; 		// Address 52
-  dataEx[8] = data[1]; 		// Length
-  dataEx[9] = data[2]; 		// Value1
-  dataEx[10]= data[3]; 		// Value2
+  dataEx[5] = checksumOne;			// Checksum 1
+  dataEx[6] = checksumTwo;			// Checksum 2
+  dataEx[7] = checksumData[0]; 		// Address 52
+  dataEx[8] = checksumData[1]; 		// Length
+  dataEx[9] = checksumData[2]; 		// Value1
+  dataEx[10]= checksumData[3]; 		// Value2
 
   sendData(dataEx, packetSize);
 
@@ -701,26 +721,26 @@ void HerkulexClass::writeRegistryEEP(int servoID, int address, int writeByte)
   packetSize = 0x0A;                  // 3.Packet size 7-58
   pID   = servoID;     	         // 4. Servo ID - 253=all servos
   cmd   = HEEPWRITE;             // 5. CMD
-  data[0]=address;               // 8. Address
-  data[1]=0x01;                  // 9. Lenght
-  data[2]=writeByte;             // 10. Write error=0
+  checksumData[0]=address;               // 8. Address
+  checksumData[1]=0x01;                  // 9. Lenght
+  checksumData[2]=writeByte;             // 10. Write error=0
  
   uint8_t _packetLength = 3;           	 // lenghtData
 
-  ck1=checksum1(data, _packetLength, servoID, HEEPWRITE);	//6. Checksum1
-  ck2=checksum2(ck1);				//7. Checksum2
+  checksumOne=calcChecksumOne(checksumData, _packetLength, servoID, HEEPWRITE);	//6. Checksum1
+  checksumTwo=calcChecksumTwo(checksumOne);				//7. Checksum2
 
   dataEx[0] = 0xFF;			// Packet Header
   dataEx[1] = 0xFF;			// Packet Header	
   dataEx[2] = packetSize;		// Packet Sizes
   dataEx[3] = pID;			// Servo ID
   dataEx[4] = cmd;			// Command Ram Write
-  dataEx[5] = ck1;			// Checksum 1
-  dataEx[6] = ck2;			// Checksum 2
-  dataEx[7] = data[0]; 		// Address 52
-  dataEx[8] = data[1]; 		// Length
-  dataEx[9] = data[2]; 		// Value1
-  dataEx[10]= data[3]; 		// Value2
+  dataEx[5] = checksumOne;			// Checksum 1
+  dataEx[6] = checksumTwo;			// Checksum 2
+  dataEx[7] = checksumData[0]; 		// Address 52
+  dataEx[8] = checksumData[1]; 		// Length
+  dataEx[9] = checksumData[2]; 		// Value1
+  dataEx[10]= checksumData[3]; 		// Value2
 
   sendData(dataEx, packetSize);
 
@@ -731,23 +751,28 @@ void HerkulexClass::writeRegistryEEP(int servoID, int address, int writeByte)
 // Private Methods //////////////////////////////////////////////////////////////
 
 // calculated checksum1 as defined in datasheets
-int HerkulexClass::checksum1(uint8_t* data, uint8_t _packetLength, uint8_t _pID, uint8_t _cmd)
+int HerkulexClass::calcChecksumOne()
 {
-  XOR = 0;	
-  XOR = XOR ^ _packetLength;
-  XOR = XOR ^ _pID;
-  XOR = XOR ^ _cmd;
-  for (int i = 0; i < _packetLength; i++) 
+
+	// checksum base formula is XOR packetLength, pID, CMD, and all additional data
+  checksumOne = 0 ^ packetLength ^ pID ^ CMD;
+  for (int i = 0; i < additionalDataLength; i++)
   {
-    XOR = XOR ^ data[i];
+    checksumOne = checksumOne ^ dataEx[i + 7]; // 7 puts us at the start of the additional data
   }
-  return XOR&0xFE;
+  return checksumOne & 0xFE;
 }
 
 // checksum2
-int HerkulexClass::checksum2(int XOR)
+int HerkulexClass::calcChecksumTwo()
 {
-  return (~XOR)&0xFE;
+	checksumTwo = 0 ^ packetLength ^ pID ^ CMD;
+	for (int i = 0; i < additionalDataLength; i++) 
+	{
+		checksumTwo = checksumTwo ^ dataEx[i + 7]; // 7 puts us at the start of the additional data
+	}
+	return (~checksumTwo) & 0xFE;
+  
 }
 
 
