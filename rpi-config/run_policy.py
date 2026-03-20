@@ -55,6 +55,17 @@ def init_policy():
     last_action = np.zeros(NUM_MOTORS)
 
 # HELPER FUNCTIONS
+def read_serial():
+    """
+    Read from serial port and parse incoming data.
+    """
+    try:
+        line = ser.readline().decode('utf-8').strip()
+        if line:
+            return line
+    except:
+        return None
+
 def get_observation():
     """
     Collect sensor data from the robot.
@@ -63,6 +74,14 @@ def get_observation():
     
     TODO: Replace zeros with real inputs
     """
+    global last_action
+
+    line = read_serial()
+    if line is None:
+        return torch.zeros(93)  # Return zero obs if no data received
+    
+    data = np.array([float(x) for x in line.split(",")])
+    
     base_lin_vel = np.zeros(3)
     base_ang_vel = np.zeros(3)
     proj_gravity = np.array([0, 0, -1])
