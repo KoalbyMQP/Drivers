@@ -56,15 +56,15 @@ struct motorMoveInfo {
 #define GETPOS_RESPONSE_BYTES 13  // bytes expected back from a RAMREAD position query
 
 // SERVO HERKULEX COMMAND - See Manual p40
-#define HEEPWRITE    0x01 	//Rom write
-#define HEEPREAD     0x02 	//Rom read
-#define HRAMWRITE	 0x03 	//Ram write
-#define HRAMREAD	 0x04 	//Ram read
-#define HIJOG		 0x05 	//Write n servo with different timing
+// #define HEEPWRITE    0x01 	//Rom write
+// #define HEEPREAD     0x02 	//Rom read
+// #define HRAMWRITE	 0x03 	//Ram write
+// #define HRAMREAD	 0x04 	//Ram read
+// #define HIJOG		 0x05 	//Write n servo with different timing
 // #define HSJOG		 0x06 	//Write n servo with same time
-#define HSTAT	 	 0x07 	//Read error
-#define HROLLBACK	 0x08 	//Back to factory value
-#define HREBOOT	 	 0x09 	//Reboot
+// #define HSTAT	 	 0x07 	//Read error
+// #define HROLLBACK	 0x08 	//Back to factory value
+// #define HREBOOT	 	 0x09 	//Reboot
 
 #define CONVERT_PLAYTIME_TO_MS 11.2 // conversion factor for turning a playtime duration sent to and used by the servo into a millisecond duration
 
@@ -80,8 +80,52 @@ typedef enum {
 
 
 typedef enum {
+  //setID
+  HEEPWRITE_LENGTH_1 = 0x0A, 
+  HEEPWRITE_DATA_LENGTH_1 = 0x03,
+
+  //writeRegistryEEP
+  HEEPWRITE_LENGTH_2 = 0x0B,    //before it was 0x0A but for 4 optional data i see 0x0B in page 36 of datasheet
+  HEEPWRITE_DATA_LENGTH_2 = 0x04,
+
+  //checkModel
+  HEEPREAD_LENGTH = 0x09,
+  HEEPREAD_DATA_LENGTH = 0x02,
+ 
+  //clearError, writeRegistryRAM
+  HRAMWRITE_LENGTH = 0x0B,    //before it was also 0x0A, checked page 37 writeRegistryRAM
+  HRAMWRITE_DATA_LENGTH = 0x04,
+
+  //setLed, setACKPolicy, torqueOFF, torqueON
+  HRAMWRITE_LENGTH_2 = 0x0A,    //before it was also 0x0A, checked page 37 writeRegistryRAM
+  HRAMWRITE_DATA_LENGTH_2 = 0x03,
+
+  //getSpeed, requestPosition, 
+  HRAMREAD_LENGTH = 0x09, 
+  HRAMREAD_DATA_LENGTH = 0x02,
+
+  // not used
+  // HIJOG_LENGTH = 0x0A, 
+  // HIJOG_DATA_LENGTH = 0x04,
+
+  //moveOne
   HSJOG_LENGTH = 0x0C,
   HSJOG_DATA_LENGTH = 0x05,
+  
+  //actionMoves
+  HSJOG_LENGTH_2 = 0x08,
+  HSJOG_DATA_LENGTH_2 = 0x01,
+
+  HSTAT_LENGTH = 0x07,      // STRANGE, because it would seem like the datasheet, page 42, is wrong about this one. I think that first row should have no optional data
+  HSTAT_DATA_LENGTH = 0x00,
+
+  // not used
+  // HROLLBACK_LENGTH = 0x0A, 
+  // HROLLBACK_DATA_LENGTH = 0x04,
+
+  //reboot
+  HREBOOT_LENGTH = 0x07, 
+  HREBOOT_DATA_LENGTH = 0x00,
 
 } PACKET_SIZE;
 
@@ -91,8 +135,15 @@ typedef enum {
 } PACKET_CONSTS;
 
 typedef enum {
+  HEEPWRITE = 0x01,
+  HEEPREAD = 0x02,
+  HRAMWRITE = 0x03,
+  HRAMREAD = 0x04,
+  HIJOG = 0x05,
   HSJOG = 0x06,
-
+  HSTAT = 0x07,
+  HROLLBACK = 0x08,
+  HREBOOT = 0x09, 
 } COMMAND;
 
 
@@ -176,9 +227,9 @@ private:
 
 
   // base packet info
-  uint8_t packetLength;
-  uint8_t pID;
-  uint8_t CMD;
+  uint8_t packetLength; 
+  uint8_t pID;            // Servo ID
+  uint8_t CMD;            // Command Type
   uint8_t checksumOne;
   uint8_t checksumTwo;
 
