@@ -44,14 +44,13 @@ void setup(){
   Serial.println("Begin");
 
   Serial1.begin(9600); //begin serial communication with the raspberry pi
+  delay(2000);
+
 
   SerialBusManager::createBus(BUS_L_LEG); // begin serial communications with motor, these are on Serial 2
   SerialBusManager::createBus(BUS_R_LEG);
   SerialBusManager::startAllBuses(115200);
   SerialBusManager::initAllMotors();
-
-
-  delay(10000);
 
   // // MotorRef table — used by the parallelized position read.
   // // Each entry is {busId, servoId}. Order here determines order in rawPositions[], can mix and match serial buses
@@ -59,7 +58,7 @@ void setup(){
   for (int i = 0; i < MOTOR_COUNT; i++) motorRefs[i] = motors[i].getMotorRef();
 
   // // set the motor positions to 0 to initialize
-  for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(0.0);
+  for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(-40.0);
 
   Serial.println("at end");
 

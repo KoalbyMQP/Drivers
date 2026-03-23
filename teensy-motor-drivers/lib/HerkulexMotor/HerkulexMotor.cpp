@@ -53,7 +53,6 @@ void HerkulexMotor::setPos(float posDeg){
 
     int playTimeMs = 100;
     uint8_t playTime = (uint8_t) (playTimeMs / CONVERT_PLAYTIME_TO_MS);
-
     struct motorMoveInfo moveInfo = {boundedPos, LED_BLUE, _id, playTime};
 
     // send command to HerkulesX class

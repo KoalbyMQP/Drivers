@@ -50,10 +50,9 @@ struct motorMoveInfo {
   uint8_t playTime;   // how long the movement should last for: overridden by explicitly defined play time for a simultaneous movement (as done in actionMoves)
 };
 
-#define DATA_SIZE	 30		// buffer for input data
-#define DATA_MOVE  	 50		// max 10 servos <---- change this for more servos!
-#define TIME_OUT     5   	//timeout serial communication
-#define GETPOS_RESPONSE_BYTES 13  // bytes expected back from a RAMREAD position query
+#define DATA_SIZE	 30		               // buffer for input data
+#define DATA_MOVE  	 50		             // max 10 servos <---- change this for more servos!
+#define SERIAL_READ_TIMEOUT_US  2000   // timeout serial communication (microseconds)
 
 // SERVO HERKULEX COMMAND - See Manual p40
 // #define HEEPWRITE    0x01 	//Rom write
@@ -80,6 +79,8 @@ typedef enum {
 
 
 typedef enum {
+
+  BASE_LENGTH = 0x08,
   //setID
   HEEPWRITE_LENGTH_1 = 0x0A, 
   HEEPWRITE_DATA_LENGTH_1 = 0x03,
@@ -97,8 +98,8 @@ typedef enum {
   HRAMWRITE_DATA_LENGTH = 0x04,
 
   //setLed, setACKPolicy, torqueOFF, torqueON
-  HRAMWRITE_LENGTH_2 = 0x0A,    //before it was also 0x0A, checked page 37 writeRegistryRAM
-  HRAMWRITE_DATA_LENGTH_2 = 0x03,
+  SET_ACK_POLICY_RAMWRITE_LENGTH = 0x0A,    //before it was also 0x0A, checked page 37 writeRegistryRAM
+  SET_ACK_POLICY_RAMWRITE_DATA_LENGTH = 0x03,
 
   //getSpeed, requestPosition, 
   HRAMREAD_LENGTH = 0x09, 
@@ -109,12 +110,12 @@ typedef enum {
   // HIJOG_DATA_LENGTH = 0x04,
 
   //moveOne
-  HSJOG_LENGTH = 0x0C,
-  HSJOG_DATA_LENGTH = 0x05,
+  HSJOG_MOVEONE_LENGTH = 0x0C,
+  HSJOG_MOVEONE_DATA_LENGTH = 0x05,
   
   //actionMoves
-  HSJOG_LENGTH_2 = 0x08,
-  HSJOG_DATA_LENGTH_2 = 0x01,
+  HSJOG_MOVEMULTIPLE_LENGTH = 0x08,
+  HSJOG_MOVEMULTIPLE_DATA_LENGTH = 0x01,
 
   HSTAT_LENGTH = 0x07,      // STRANGE, because it would seem like the datasheet, page 42, is wrong about this one. I think that first row should have no optional data
   HSTAT_DATA_LENGTH = 0x00,
@@ -127,7 +128,11 @@ typedef enum {
   HREBOOT_LENGTH = 0x07, 
   HREBOOT_DATA_LENGTH = 0x00,
 
-} PACKET_SIZE;
+  
+  GETPOS_RESPONSE = 13       // bytes expected back from a RAMREAD position query
+
+
+} PACKET_LENGTH_BYTES;
 
 typedef enum {
   PACKET_HEADER = 0xFF,
@@ -147,6 +152,10 @@ typedef enum {
 } COMMAND;
 
 
+typedef enum {
+  CALIBRATED_POS = 0x3A,
+} REGISTER;
+
 // HERKULEX STATUS ERROR - See Manual p39
 static byte H_STATUS_OK					= 0x00;
 static byte H_ERROR_INPUT_VOLTAGE 		= 0x01;
@@ -157,17 +166,14 @@ static byte H_ERROR_OVERLOAD			= 0x10;
 static byte H_ERROR_DRIVER_FAULT  		= 0x20;
 static byte H_ERROR_EEPREG_DISTORT		= 0x40;
 
-// HERKULEX Broadcast Servo ID
-static byte BROADCAST_ID = 0xFE;
 
 class HerkulexClass {
 public:
   HerkulexClass();
-  HerkulexClass(uint8_t busID);
+  HerkulexClass(uint8_t serialPort);
+
   void beginSerialBus(long baud);
-
-
-  void  end();
+  void endSerialBus();
 
   void  initialize();
   byte  stat(int servoID);
@@ -185,7 +191,7 @@ public:
   void  moveOne(motorMoveInfo moveInfo);
 
   uint16_t getPosition(int servoID);
-  void requestPosition(int servoID);
+  void sendPosRequest(int servoID);
   uint16_t collectPosition(int servoID);
 
   int   getSpeed(int servoID);
@@ -196,27 +202,22 @@ public:
   void  writeRegistryRAM(int servoID, int address, int writeByte);
   void  writeRegistryEEP(int servoID, int address, int writeByte);
 
-  void sendData(byte* buffer, int lenght);
-  void readData(int size);
+  void sendData(uint8_t* buffer, uint8_t length);
+  void requestRead(uint8_t length);
+  void updateRead();
+  boolean isReplyReady();
+  
 
-
-  // int packetSize;
-  // int pID;
-  // int cmd;
-  // int packetLength;
-  // int ck1;
-  // int ck2;
-  // byte dataEx[DATA_MOVE+8];
-  // byte data[DATA_SIZE]; 
-  // byte outputBuffer[DATA_MOVE];
-
-// private area  
 private:
 
-  int _serialPort;
 
-  int  calcChecksumOne();
-  int  calcChecksumTwo();
+  int _serialPort;
+  HardwareSerial* _serial = nullptr; // store pointer to serial object
+
+  uint8_t calcChecksumOne();
+  uint8_t calcChecksumTwo();
+
+  void resetClassVals();
   
   void clearBuffer();
   void printHexByte(byte x);
@@ -225,6 +226,14 @@ private:
   uint8_t queuedPacketCount;
 
 
+  // serial reading logic helpers
+  boolean newDataInInputBuffer;
+  boolean readPending;
+  uint8_t inputLength;
+  uint32_t readStartTime;
+
+  void readBlocking(uint8_t length);
+  
 
   // base packet info
   uint8_t packetLength; 
@@ -234,19 +243,23 @@ private:
   uint8_t checksumTwo;
 
   uint8_t packetSize;
+  // TO DO: remove references to packetSize and switch to above packetLength
 
   uint8_t additionalDataLength; // length of additional data
 
   // servo jog "optional data"
   uint8_t playTime;
   uint8_t goalLSB; // lower 8 bits of goal
-  uint8_t goalMSB; // upper 8 bits of goal :: in total 16 bit goal
+  uint8_t goalMSB; // upper 8 bits of goal : in total 16 bit goal
   uint8_t SET; // called in datasheet, it contains multiple bits of distinct info
   uint8_t ID; // seperate from pID in datasheet but same for our use case
 
-  uint8_t dataEx[DATA_MOVE+8];
-  uint8_t checksumData[DATA_SIZE]; 
-  uint8_t outputBuffer[DATA_MOVE + 8];
+  uint8_t packet[DATA_MOVE + PACKET_LENGTH_BYTES::HSJOG_MOVEMULTIPLE_LENGTH]; // stores full packet to send
+
+  uint8_t packetQueue[DATA_MOVE];  // stores move packets for simulataneous jog
+
+  uint8_t inputBuffer[DATA_MOVE]; // stores input 
+  uint8_t checksumData[PACKET_LENGTH_BYTES::BASE_LENGTH];  // stores checksumdata for input validation 
 };
 
 #endif
