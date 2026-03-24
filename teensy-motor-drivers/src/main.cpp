@@ -1,4 +1,3 @@
-#include <Herkulex.h>
 #include <HerkulexMotor.h>
 #include <RPIComs.h>
 #include <SerialBusManager.h>
@@ -60,7 +59,7 @@ void setup(){
   for (int i = 0; i < MOTOR_COUNT; i++) motorRefs[i] = motors[i].getMotorRef();
 
   // // set the motor positions to 0 to initialize
-  for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(-20.0);
+  for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(20.0);
   delay(1000);
   
   uint32_t startTimeUs = micros();
@@ -72,7 +71,7 @@ void setup(){
   
   for (int i = 0; i < MOTOR_COUNT; i++){
     Serial.println("motor n: ");
-    Serial.println(rawPositions[i]);
+    Serial.println(rawPositions[i] & 0x07FF);
   };
 
   Serial.println("at end");
