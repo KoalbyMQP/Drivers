@@ -153,56 +153,72 @@ void SerialBusManager::getAllPositionsParallel(const MotorRef* motors, uint16_t*
     BusQueue queues[MAX_BUS_COUNT];
     memset(queues, 0, sizeof(queues));
 
+    // iterate through all of the motors sent as MotorRef objects
     for (uint8_t i = 0; i < count; i++) {
+
+        // get bus that the motor is on
         uint8_t busIndex = motors[i].busId - 1;
 
+        // if the bus isn't initiailized or the bus is out of range
         if (busIndex >= MAX_BUS_COUNT || _busesTracker[busIndex] != 1) {
-            results[i] = 0xFFFF;  // uninitialised or out-of-range bus
+            results[i] = 0xF0F0;  // preload results for motor with flag value
             continue;
         }
 
+        // if the bus is all good, then get the BusQueue object for the motor's bus
         BusQueue& q = queues[busIndex];
+        
+        // if there are more motors on the bus than the bus can handle
         if (q.total >= BusQueue::MAX_MOTORS_PER_BUS) {
-            results[i] = 0xFFFF;  // more motors on this bus than the hard cap
+            results[i] = 0xF1F1;  // preload results for motor with flag value
             continue;
         }
 
+        // if everything is fine, then set the motor data
         q.resultIndices[q.total] = i;
-        q.servoIds[q.total]      = motors[i].servoId;
+        q.servoIds[q.total] = motors[i].servoId;
         q.total++;
     }
 
-    // ------------------------------------------------------------------
-    // Round-robin state machine
-    // ------------------------------------------------------------------
+    // go through blocking state machine
+    
+    // we know all buses are active at beginning
     bool anyBusActive = true;
     while (anyBusActive) {
+
+        // lower active flag and let logic in the loop control the active flag
         anyBusActive = false;
 
+        // loop through all the serial buses
         for (uint8_t busIndex = 0; busIndex < MAX_BUS_COUNT; busIndex++) {
+
+            // store reference to bus in q
             BusQueue& q = queues[busIndex];
 
+            // exit if the bus is done (no more collects)
             if (q.allDone()) continue;
+
+            // if the bus isn't done, we have an active bus
             anyBusActive = true;
 
+            // if we are waiting for a response
             if (q.waiting) {
-                // Request is in flight — poll the UART buffer non-blocking.
-                // updateRead() latches bytes into inputBuffer once the full reply
-                // arrives, or clears readPending on timeout.
+
+                // update the uart read
                 _buses[busIndex].updateRead();
 
-                // Only collect once the reply has settled (data or timeout).
-                // If the bytes haven't arrived yet, leave waiting = true and
-                // revisit this bus on the next tick — meanwhile other buses
-                // make forward progress.
+                // if there is a reply sitting in the uart buffer
                 if (_buses[busIndex].isReplyReady()) {
+                    // resultIdx is the index of where to put the motor position back into results
                     uint8_t resultIdx = q.resultIndices[q.nextCollect];
                     uint8_t servoId   = q.servoIds[q.nextCollect];
+
                     results[resultIdx] = _buses[busIndex].collectPosition(servoId);
 
+
+                    // move onto the next motor to collect
                     q.nextCollect++;
-                    q.waiting = false;
-                    // Bus is now IDLE — next tick will send the following request.
+                    q.waiting = false; // no longer waiting for a response
                 }
 
             } else if (q.readyToSend()) {

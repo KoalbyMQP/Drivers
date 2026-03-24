@@ -25,10 +25,12 @@ boolean queuedMotors = false;
 const uint8_t MOTOR_COUNT = 3;
 const uint8_t PACKET_SIZE = 192;   // this depends on the number of motors used
 
+uint16_t motorResults[MOTOR_COUNT] = {0};
+
 
 HerkulexMotor motors[MOTOR_COUNT] = {
   HerkulexMotor(12, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG),
-  HerkulexMotor(5, MotorModel::DRS_0601, SERIAL_BUS::BUS_L_LEG),
+  HerkulexMotor(5, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG),
   HerkulexMotor(1, MotorModel::DRS_0601, SERIAL_BUS::BUS_L_LEG),
 };
 
@@ -58,7 +60,20 @@ void setup(){
   for (int i = 0; i < MOTOR_COUNT; i++) motorRefs[i] = motors[i].getMotorRef();
 
   // // set the motor positions to 0 to initialize
-  for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(-40.0);
+  for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(-20.0);
+  delay(1000);
+  
+  uint32_t startTimeUs = micros();
+  SerialBusManager::getAllPositionsParallel(motorRefs, rawPositions, MOTOR_COUNT);
+  uint32_t elapsed = micros() - startTimeUs;
+
+  Serial.print("elapsed read time:");
+  Serial.println(elapsed);
+  
+  for (int i = 0; i < MOTOR_COUNT; i++){
+    Serial.println("motor n: ");
+    Serial.println(rawPositions[i]);
+  };
 
   Serial.println("at end");
 

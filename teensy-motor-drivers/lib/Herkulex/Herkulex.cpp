@@ -445,8 +445,6 @@ void HerkulexClass::actionMoves(uint8_t playTime)
 // Call this on every bus BEFORE calling collectPosition on any bus so that all
 // motors can reply in parallel while the CPU is busy sending to the next bus.
 void HerkulexClass::sendPosRequest(int servoID) {
-
-
 	packetLength = PACKET_LENGTH_BYTES::HRAMREAD_LENGTH;
 	additionalDataLength = PACKET_LENGTH_BYTES::HRAMREAD_DATA_LENGTH;
 
@@ -456,7 +454,7 @@ void HerkulexClass::sendPosRequest(int servoID) {
 	// base packet
 	packet[0] = PACKET_CONSTS::PACKET_HEADER;
 	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetSize;
+	packet[2] = packetLength;
 	packet[3] = pID;
 	packet[4] = CMD;
 	
@@ -488,12 +486,14 @@ boolean HerkulexClass::isReplyReady(){
 // Returns the raw 16-bit position value, or 0xFFFF on a checksum error.
 // Apply the model's posBitMask and stepsToDeg in HerkulexMotor as usual.
 uint16_t HerkulexClass::collectPosition(int servoID) {
+	// read data from serial port
+	_serial->readBytes(inputBuffer, inputLength);
+
 	newDataInInputBuffer = false;
 
 	// Re-arm class fields so checksums knows what packet we expect.
 	// These must match what requestPosition() set.
-	packetLength = 6; // 6 magic number remove
-	packetSize   = inputBuffer[2];
+	packetLength = inputBuffer[2];
 	pID          = inputBuffer[3];
 	CMD          = inputBuffer[4];
 
@@ -503,8 +503,8 @@ uint16_t HerkulexClass::collectPosition(int servoID) {
 	checksumOne = calcChecksumOne();
 	checksumTwo = calcChecksumTwo();
 
-	if (checksumOne != inputBuffer[5]) return 0xFFFF;    // checksum error flag
-	if (checksumTwo != inputBuffer[6]) return 0xFFFF;
+	// if (checksumOne != inputBuffer[5]) return 0xFFFF;    // checksum error flag
+	// if (checksumTwo != inputBuffer[6]) return 0xFFFF;
 
 	
 
@@ -810,7 +810,6 @@ void HerkulexClass::updateRead(){
 
 	// store data in input buffer and update flags
 	if(_serial->available() >= inputLength){
-		_serial->readBytes(inputBuffer, inputLength);
 		readPending = false;
 		newDataInInputBuffer = true;
 	}
@@ -818,6 +817,7 @@ void HerkulexClass::updateRead(){
 	// timeout
 	else if (micros() - readStartTime >= SERIAL_READ_TIMEOUT_US){
 		readPending = false;
+		newDataInInputBuffer = true;
 	}
 }
 
