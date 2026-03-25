@@ -1,7 +1,10 @@
 #include <HerkulexMotor.h>
 #include <RPIComs.h>
 #include <SerialBusManager.h>
+#include <IMU.h>
 #include <debug.h>
+
+elapsedMillis imuTimer; 
 
 // start at serial 2 because the raspberry pi is connected through serial 1
 enum SERIAL_BUS {
@@ -39,6 +42,7 @@ MotorRef motorRefs[MOTOR_COUNT];
 
 RPIComs rpi = RPIComs();
 
+IMU imu1;  // uses sensorID=55 and address=0x28 automatically
 
 void setup(){
   delay(2000);  // a delay to have time for serial monitor opening on platformio after uploading
@@ -48,6 +52,10 @@ void setup(){
   Serial1.begin(9600); //begin serial communication with the raspberry pi
   delay(2000);
 
+  if (!imu1.begin()) {
+      Serial.println("ERROR: IMU not detected. Check wiring!");
+      while (1);
+  }
 
   SerialBusManager::createBus(SERIAL_BUS::BUS_L_LEG); // begin serial communications with motor, these are on Serial 2
   SerialBusManager::createBus(SERIAL_BUS::BUS_R_LEG);
@@ -86,6 +94,20 @@ void setup(){
 
 
 void loop(){
+
+
+  if (imuTimer >= 10) {  // 10ms = 100Hz, matches BNO055 fusion rate
+          imuTimer = 0;
+          imu1.update();
+
+          char buf[128];
+          imu1.formatPacket(buf, sizeof(buf));
+          // append to motor packet and send
+          Serial.println(buf);  // print to USB serial monitor
+        
+      }
+
+
   // // this loops
   // // while(testRPi){
   // //   testingRPi();
