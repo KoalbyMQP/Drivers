@@ -4,7 +4,7 @@
 #include <debug.h>
 
 // start at serial 2 because the raspberry pi is connected through serial 1
-typedef enum {
+enum SERIAL_BUS {
     BUS_L_LEG = 2,
     BUS_R_LEG = 3,
     BUS_CHEST = 4,
@@ -12,7 +12,7 @@ typedef enum {
     BUS_R_ARM = 6,
     EXTRA_1 = 7,
     EXTRA_2 = 8
-} SERIAL_BUS;
+};
 
 uint16_t startTime = 0;
 uint16_t elapsedTime = 0;
@@ -49,8 +49,8 @@ void setup(){
   delay(2000);
 
 
-  SerialBusManager::createBus(BUS_L_LEG); // begin serial communications with motor, these are on Serial 2
-  SerialBusManager::createBus(BUS_R_LEG);
+  SerialBusManager::createBus(SERIAL_BUS::BUS_L_LEG); // begin serial communications with motor, these are on Serial 2
+  SerialBusManager::createBus(SERIAL_BUS::BUS_R_LEG);
   SerialBusManager::startAllBuses(115200);
   SerialBusManager::initAllMotors();
 

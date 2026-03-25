@@ -28,39 +28,54 @@ static const char* modelName(MotorModel t) {
     }
 }
 
+static const char* busName(int b) {
+    switch (b) {
+        case 2:  return "Left_leg";
+        case 3:  return "Right_leg";
+        case 4:  return "Chest";
+        case 5:  return "Left_arm";
+        case 6:  return "Right_arm";
+        case 7:  return "Extra_1";
+        case 8:  return "Extra_2";
+        default: return "Unknown_bus";
+    }
+}
+
 // go through all of the motors and print the desired information
 void debug_motors(HerkulexMotor* motors, int motors_size) {
+    
+    // turn all the motors's leds off 
+    for (int j = 0; j < motors_size; j++) {
+        HerkulexMotor& motor = motors[j];    
+        SerialBusManager::getBus(motor.getBusId()).setLed(motor.getId(), LED_STATE::LED_OFF);
+    }
+
+    // divider
+    Serial.println("==========================================");
+
     for (int i = 0; i < motors_size; i ++) {
         
         // reference of the motor instead of just making a copy
         HerkulexMotor& motor = motors[i];
         
         // Turn on the LED green
-        SerialBusManager::getBus(motor.getBusId()).setLed(motor.getId(), LED_STATE::LED_GREEN); // GREEN
+        SerialBusManager::getBus(motor.getBusId()).setLed(motor.getId(), LED_STATE::LED_BLUE); // Blue
 
         Serial.print("Motor id:    "); Serial.println(motor.getId());
         Serial.print("Type:        "); Serial.println(modelName(motor.getType()));
-        Serial.print("Serial bus:  "); Serial.println(motor.getBusId());
+        Serial.print("Serial bus:  "); Serial.println(busName(motor.getBusId()));
         Serial.print("Position:    "); Serial.print(motor.getPos()); Serial.println(" deg");
         Serial.println("Press any key for next motor...");
         
         // Wait to press a key and then flush the input
         while (Serial.available() == 0) {}
         while (Serial.available() > 0) Serial.read();
+
+        Serial.println("==========================================");
         
         // turn off the LED
         SerialBusManager::getBus(motor.getBusId()).setLed(motor.getId(), LED_STATE::LED_OFF);
     }
-
-    // for (int j = 0; j < motors_size; j++) {
-    //     HerkulexMotor& motor = motors[j];    
-    //     SerialBusManager::getBus(motor.getBusId()).setLed(motor.getId(), LED_STATE::LED_OFF);
-    // }
-
-    // for (int k= 0; k < motors_size; k++) {
-    //     HerkulexMotor& motor = motors[k];    
-    //     SerialBusManager::getBus(motor.getBusId()).setLed(motor.getId(), LED_STATE::LED_OFF);
-    // }
 
     Serial.println("All motors tested.");
 }

@@ -552,7 +552,7 @@ void HerkulexClass::reboot(int servoID) {
 // LED  - see table of colors 
 void HerkulexClass::setLed(int servoID, int valueLed)
 {
-	packetSize = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_LENGTH;
+	packetLength = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_LENGTH;
 	additionalDataLength = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_DATA_LENGTH;
 
 	pID     = servoID;            
@@ -565,7 +565,7 @@ void HerkulexClass::setLed(int servoID, int valueLed)
 	// base packet
 	packet[0] = PACKET_CONSTS::PACKET_HEADER;
 	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetSize;
+	packet[2] = packetLength;
 	packet[3] = pID;
 	packet[4] = CMD;
 
