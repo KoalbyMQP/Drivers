@@ -1,6 +1,7 @@
 #include <HerkulexMotor.h>
 #include <RPIComs.h>
 #include <SerialBusManager.h>
+#include <debug.h>
 
 // start at serial 2 because the raspberry pi is connected through serial 1
 typedef enum {
@@ -76,6 +77,8 @@ void setup(){
 
   Serial.println("at end");
 
+  debug_motors(motors, MOTOR_COUNT);
+  for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(0.0);
   // delay(500);
 }
 

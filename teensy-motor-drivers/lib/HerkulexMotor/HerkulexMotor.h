@@ -54,6 +54,12 @@ class HerkulexMotor{
         static void actionMoves(int playTimeMs); // here we can manage how we action the moves if we switch to multiple serial ports
         MotorRef getMotorRef() const;   // generate the MotorRef table itself so that it can be automated
         float rawToDegs(uint16_t rawPos);
+
+        // getter functions
+        int getId()    const { return _id; }
+        int getBusId() const { return _busId; }
+        MotorModel getType() const { return _type; }
+
     private:
         uint8_t _id;
         uint8_t _busId;
