@@ -84,6 +84,7 @@ void loop(){
         robotState = SETTING_MOTOR_POS;
       }
       break;
+
     case(SETTING_MOTOR_POS):
       // queue all motors in a loop
       // does this line up with the correct motors?
@@ -92,19 +93,19 @@ void loop(){
       SerialBusManager::actionAll(10);
 
       robotState = READING_ROBOT_STATE;
-      //SerialBusManager::requestReads();
+      SerialBusManager::requestAllPositions(motorRefs, motorPositionsRaw, MOTOR_COUNT);
       //imu1::requestRead();
       break;
-    case(READING_ROBOT_STATE):
-      //SerialBusManager::tick(readBuffer, readBufferSize);
-      //imu1::tick(imuReadBuffer, imuReadBufferSize); // imuReadBufferSize should be a const, it's defined somewhere in the IMU stack
 
-      //if (SerialBusManager::readsAllDone() && imu1.readAllDone()){
+    case(READING_ROBOT_STATE):
+      SerialBusManager::tick(motorRefs, motorPositionsRaw, MOTOR_COUNT);
+      //imu1.tick(imuReadBuffer, imuReadBufferSize); // imuReadBufferSize should be a const, it's defined somewhere in the IMU stack
+
+      if (SerialBusManager::isDoneCollecting()){ // && imu1.doneCollecting()){
         // put data togehter into one packet
         // send packet to RPI
-        // robotState = READING_FROM_RPI;
-      // };
-      robotState = READING_FROM_RPI; // pl
+        robotState = READING_FROM_RPI;
+      };
       break;
   }
 }
