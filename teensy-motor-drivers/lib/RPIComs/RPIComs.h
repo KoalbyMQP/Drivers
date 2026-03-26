@@ -5,7 +5,6 @@
 #include "Queue.h"
 
 
-// I want to make this a static implementation... Not sure if that's the right instinct though. Because we don't need to do anything with objects. Theres only one RPIComs ever.
 class RPIComs{
     public:
         static constexpr size_t RX_BUF_SIZE   = 256; // shorten this when we know the constant packet size?

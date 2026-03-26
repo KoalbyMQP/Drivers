@@ -14,28 +14,27 @@ enum SERIAL_BUS {
     EXTRA_2 = 8
 };
 
-uint16_t startTime = 0;
-uint16_t elapsedTime = 0;
-boolean testSetPosBool = false;    // when runTest is true, the moving motor will run once upon restart and when the arduino is uploaded.
-boolean testQueueBool = false;
-boolean testRPi = true;
-boolean latency_queuing = false;
-boolean queuedMotors = false;
+enum STATE {
+  READING_FROM_RPI,
+  SETTING_MOTOR_POS,
+  READING_ROBOT_STATE,
+};
+
+uint8_t robotState = READING_FROM_RPI;
+
 
 const uint8_t MOTOR_COUNT = 3;
-const uint8_t PACKET_SIZE = 192;   // this depends on the number of motors used
-
-uint16_t motorResults[MOTOR_COUNT] = {0};
-
-
+const uint8_t PACKET_SIZE = 192;   // this depends on the number of motors used, HOW???
+MotorRef motorRefs[MOTOR_COUNT];
+float RPIMotorInputs[MOTOR_COUNT];
+uint16_t motorPositionsRaw[MOTOR_COUNT] = {0};
 HerkulexMotor motors[MOTOR_COUNT] = {
   HerkulexMotor(12, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG),
   HerkulexMotor(5, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG),
   HerkulexMotor(1, MotorModel::DRS_0601, SERIAL_BUS::BUS_L_LEG),
 };
 
-uint16_t rawPositions[MOTOR_COUNT] = {0};     // filled by collectAllPositions
-MotorRef motorRefs[MOTOR_COUNT];
+
 
 RPIComs rpi = RPIComs();
 
@@ -48,7 +47,7 @@ void setup(){
   Serial1.begin(9600); //begin serial communication with the raspberry pi
   delay(2000);
 
-
+  // initialize all serial buses
   SerialBusManager::createBus(SERIAL_BUS::BUS_L_LEG); // begin serial communications with motor, these are on Serial 2
   SerialBusManager::createBus(SERIAL_BUS::BUS_R_LEG);
   SerialBusManager::startAllBuses(115200);
@@ -59,115 +58,53 @@ void setup(){
   // // Add or remove entries to match the motors needed
   for (int i = 0; i < MOTOR_COUNT; i++) motorRefs[i] = motors[i].getMotorRef();
 
-  // // set the motor positions to 0 to initialize
-  for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(20.0);
-  delay(1000);
-  
-  uint32_t startTimeUs = micros();
-  SerialBusManager::getAllPositionsParallel(motorRefs, rawPositions, MOTOR_COUNT);
-  uint32_t elapsed = micros() - startTimeUs;
-
-  Serial.print("elapsed read time:");
-  Serial.println(elapsed);
-  
-  for (int i = 0; i < MOTOR_COUNT; i++){
-    Serial.println("motor n: ");
-    Serial.println(rawPositions[i] & 0x07FF);
-  };
-
-  Serial.println("at end");
-
-  debug_motors(motors, MOTOR_COUNT);
-  for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(0.0);
-  // delay(500);
 }
-
-
 
 
 void loop(){
-  // // this loops
-  // // while(testRPi){
-  // //   testingRPi();
-  // //   testRPi = true;
-  // // }
+  switch (robotState){
+    case(READING_FROM_RPI):
+      rpi.uartRead();
+      // If a packet arrived, handle it
+      const char* pkt = rpi.getPacket();
+      if (pkt != nullptr) {
 
-  // // Working on the control loop for moving the motors and everything
-  // rpi.uartRead();
-  //   // If a packet arrived, handle it
-  //   const char* pkt = rpi.getPacket();
-  //   if (pkt != nullptr) {
-  //     // Serial.print("Received: ");
-  //     // Serial.println(pkt);
+        // copy packet to avoid buffer overwrite
+        char buffer[PACKET_SIZE];        
+        strncpy(buffer, pkt, sizeof(buffer));
+        buffer[sizeof(buffer)-1] = '\0';
 
-  //     // copy packet to avoid buffer overwrite
-  //     char buffer[PACKET_SIZE];        
-  //     strncpy(buffer, pkt, sizeof(buffer));
-  //     buffer[sizeof(buffer)-1] = '\0';
 
-  //     float targets[MOTOR_COUNT];
-  //     char* token = strtok(buffer, ",");
-  //     for (int i = 0; i < MOTOR_COUNT && token != nullptr; i++) {
-  //         targets[i] = atof(token);
-  //         token = strtok(nullptr, ",");
-  //     }
+        char* token = strtok(buffer, ",");
+        for (int i = 0; i < MOTOR_COUNT && token != nullptr; i++) {
+            RPIMotorInputs[i] = atof(token);
+            token = strtok(nullptr, ",");
+        }
+        // done receiving packet now, we set position
+        robotState = SETTING_MOTOR_POS;
+      }
+      break;
+    case(SETTING_MOTOR_POS):
+      // queue all motors in a loop
+      // does this line up with the correct motors?
+      for (int i = 0; i < MOTOR_COUNT; i++) motors[i].queueMove(RPIMotorInputs[i]);
 
-  //     // then queue all motors in a loop
-  //     for (int i = 0; i < MOTOR_COUNT; i++) motors[i].queueMove(targets[i]);
+      SerialBusManager::actionAll(10);
 
-  //     // Serial.print("queing motor 1 to: ");
-  //     // Serial.print(pos1);
-  //     // Serial.print(" and motor 2 to : ");
-  //     // Serial.println(pos2);
+      robotState = READING_ROBOT_STATE;
+      //SerialBusManager::requestReads();
+      //imu1::requestRead();
+      break;
+    case(READING_ROBOT_STATE):
+      //SerialBusManager::tick(readBuffer, readBufferSize);
+      //imu1::tick(imuReadBuffer, imuReadBufferSize); // imuReadBufferSize should be a const, it's defined somewhere in the IMU stack
 
-  //     queuedMotors = true;      
-  //     } 
-  //   if (queuedMotors){
-  //     // direct all of the motors to move, this signals to send the serial commands
-  //     SerialBusManager::actionAll(10);
-  //     queuedMotors = false;
-
-  //     // Phase 1: fire RAMREAD requests to all motors without waiting, all motors start replying in parallel.
-  //     SerialBusManager::requestAllPositions(motorRefs, MOTOR_COUNT);
-
-  //     // we can do operations in the middle
-
-  //     // Phase 2: collect all replies.By now most/all bytes are already in the RX buffers, so this is fast.
-  //     SerialBusManager::collectAllPositions(motorRefs, rawPositions, MOTOR_COUNT);
-
-  //     //send the motor positions back to the raspberry pi
-  //     // float pos1 = myMotor.getPos();
-  //     // float pos2 = myMotor2.getPos();
-
-  //     char response[PACKET_SIZE];                        // this number will be dependent on how long the message will be (how many motors)
-  //     int offset = 0;
-  //     // sending the data like this makes it variable to the number of motors so that you don't have to update it everytime a new motor is added or removed
-  //     for (int i = 0; i < MOTOR_COUNT; i++) {
-  //         offset += snprintf(response + offset, sizeof(response) - offset,
-  //                           i < MOTOR_COUNT - 1 ? "%.2f," : "%.2f",
-  //                           motors[i].rawToDegs(rawPositions[i]));
-  //     }
-
-  //     rpi.enqueueTXPacket(response);
-  //     rpi.uartSend();
-  //   }
+      //if (SerialBusManager::readsAllDone() && imu1.readAllDone()){
+        // put data togehter into one packet
+        // send packet to RPI
+        // robotState = READING_FROM_RPI;
+      // };
+      robotState = READING_FROM_RPI; // pl
+      break;
+  }
 }
-
-
-
-// Notes on how the different libraries work together (as is my undersanding):
-// in main.cpp, all of the functions are quite abstracted (as simple as possible to understand)
-// things with the raspberry pi deal with the functins in the RPIComs library, that deals with packet sending and receiving through serial with the pi
-// the motors are initialized with a specific serial and motor type
-// the functions are called on those motors instances, which use the HerkulexMotor class.
-// in the HerkulexMotor library, the functions use the SerialBusManager library so that every command/function gests called on the proper instance
-// each instance fo the SeiralBusManager will correspond to a bus, that way the same Herkulex functions can be used the same way
-
-
-// Reading parallization
-// Why this is faster:
-    //   Old: send bus2 -> wait -> read bus2 -> send bus3 -> wait -> read bus3  (N × latency)
-    //   New: send bus2, send bus3, send busN -> read bus2, read bus3, read busN (~1 × latency)
-        
-// In requestAllPositions, Each sendData() call queues bytes into the hardware TX FIFO and returns immediately. The motor starts composing its reply right away. 
-// By the time we loop back around in collectAllPositions, most replies are already sitting in the corresponding RX buffers waiting to be read.
