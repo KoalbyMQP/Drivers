@@ -25,9 +25,11 @@ uint8_t robotState = READING_FROM_RPI;
 
 const uint8_t MOTOR_COUNT = 3;
 const uint8_t PACKET_SIZE = 192;   // this depends on the number of motors used, HOW???
-MotorRef motorRefs[MOTOR_COUNT];
+
 float RPIMotorInputs[MOTOR_COUNT];
 uint16_t motorPositionsRaw[MOTOR_COUNT] = {0};
+
+MotorRef motorRefs[MOTOR_COUNT];
 HerkulexMotor motors[MOTOR_COUNT] = {
   HerkulexMotor(12, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG),
   HerkulexMotor(5, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG),
@@ -94,7 +96,7 @@ void loop(){
 
       robotState = READING_ROBOT_STATE;
       SerialBusManager::requestAllPositions(motorRefs, motorPositionsRaw, MOTOR_COUNT);
-      //imu1::requestRead();
+      //imu1.requestRead();
       break;
 
     case(READING_ROBOT_STATE):

@@ -134,6 +134,7 @@ void SerialBusManager::tick(const MotorRef* motors, uint16_t* results, uint8_t c
     }
 }
 
+// we need to give the motorrefs and the results to insert error flags into position readings
 void SerialBusManager::requestAllPositions(const MotorRef* motors, uint16_t* results, uint8_t count){
     // iterate through all of the motors in the referece table (all motors we are using)
     for (uint8_t i = 0; i < count; i++){
@@ -177,7 +178,7 @@ void SerialBusManager::requestAllPositions(const MotorRef* motors, uint16_t* res
     doneCollecting = false;
 }
 
-
+// LEGACY
 // not needed, tick() collects all positions
 void SerialBusManager::collectAllPositions(const MotorRef* motors, uint16_t* results, uint8_t count){
     for (uint8_t i = 0; i < count; i++){
@@ -190,6 +191,8 @@ void SerialBusManager::collectAllPositions(const MotorRef* motors, uint16_t* res
     }
 }
 
+
+// LEGACY
 // getAllPositionsParallel — cross-bus parallel, per-bus serial position read.
 //
 // Each Herkulex bus is a shared half-duplex line: only one request/reply
