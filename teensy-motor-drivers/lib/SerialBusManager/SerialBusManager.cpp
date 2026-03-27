@@ -3,6 +3,7 @@
 HerkulexClass SerialBusManager::_buses[SerialBusManager::MAX_BUS_COUNT];
 int SerialBusManager::_busesTracker[SerialBusManager::MAX_BUS_COUNT];
 uint8_t SerialBusManager::busDoneCount = 0;
+uint8_t SerialBusManager::activeBusCount = 0;
 bool SerialBusManager::doneCollecting = false;
 SerialBusManager::BusQueue SerialBusManager::queues[SerialBusManager::MAX_BUS_COUNT];
 
@@ -98,7 +99,7 @@ void SerialBusManager::tick(const MotorRef* motors, uint16_t* results, uint8_t c
 
             // exit if the bus is done (no more collects)
             if (q.allDone()){
-                busDoneCount++;
+                if (q.total > 0) busDoneCount++;
                 continue;
             }
 
@@ -132,7 +133,7 @@ void SerialBusManager::tick(const MotorRef* motors, uint16_t* results, uint8_t c
             }
         }
 
-        if(busDoneCount >= MAX_BUS_COUNT){
+        if(busDoneCount >= activeBusCount){
             doneCollecting = true;
         }
     }
@@ -140,15 +141,6 @@ void SerialBusManager::tick(const MotorRef* motors, uint16_t* results, uint8_t c
 
 // we need to give the motorrefs and the results to insert error flags into position readings
 void SerialBusManager::requestAllPositions(const MotorRef* motors, uint16_t* results, uint8_t count){
-    // // iterate through all of the motors in the referece table (all motors we are using)
-    // for (uint8_t i = 0; i < count; i++){
-    //     uint8_t busIndex = motors[i].busId - 1;  // _buses[] is 0-indexed; busId starts at 2
-    //     // it is busIndex and not i because i is used for all of the motors, we are not iterating through the buses like the other methods
-    //     if (SerialBusManager::_busesTracker[busIndex] == 1){
-    //         SerialBusManager::_buses[busIndex].sendPosRequest(motors[i].servoId);
-    //     }
-    // }
-
     // build per-bus queues
     memset(queues, 0, sizeof(queues));
 
@@ -177,6 +169,11 @@ void SerialBusManager::requestAllPositions(const MotorRef* motors, uint16_t* res
         q.resultIndices[q.total] = i;
         q.servoIds[q.total] = motors[i].servoId;
         q.total++;
+    }
+
+    activeBusCount = 0;
+    for (uint8_t i = 0; i < MAX_BUS_COUNT; i++){
+        if (queues[i].total > 0) activeBusCount++;
     }
 
     doneCollecting = false;

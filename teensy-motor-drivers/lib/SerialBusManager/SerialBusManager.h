@@ -67,6 +67,7 @@ class SerialBusManager {
 
         static uint8_t busDoneCount;
         static bool doneCollecting;
+        static uint8_t activeBusCount;
 
         // Per-bus motor queue, used internally by getAllPositionsParallel.
         // Holds the ordered list of motors to request/collect on one bus, plus the

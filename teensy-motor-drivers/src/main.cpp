@@ -116,21 +116,20 @@ void loop(){
     }
     case(READING_ROBOT_STATE):
     {
-      count++;
-      delay(2000);
-      robotState = SETTING_MOTOR_POS;
-      // SerialBusManager::tick(motorRefs, motorPositionsRaw, MOTOR_COUNT);
-      //imu1.tick(imuReadBuffer, imuReadBufferSize); // imuReadBufferSize should be a const, it's defined somewhere in the IMU stack
+      SerialBusManager::tick(motorRefs, motorPositionsRaw, MOTOR_COUNT);
+      // imu1.tick(imuReadBuffer, imuReadBufferSize); // imuReadBufferSize should be a const, it's defined somewhere in the IMU stack
 
-      // if (SerialBusManager::isDoneCollecting()){ // && imu1.doneCollecting()){
-      //   // put data togehter into one packet
-      //   // send packet to RPI
-      //   for (int i = 0; i < MOTOR_COUNT; i++){
-      //     motorPositions[i] = motors[i].rawToDegs(motorPositionsRaw[i]);
-      //     Serial.println(motorPositions[i]);
-      //   }
-      //   robotState = SETTING_MOTOR_POS;
-      // };
+      if (SerialBusManager::isDoneCollecting()){ // && imu1.doneCollecting()){
+        // put data togehter into one packet
+        // send packet to RPI
+        for (int i = 0; i < MOTOR_COUNT; i++){
+          motorPositions[i] = motors[i].rawToDegs(motorPositionsRaw[i]);
+          Serial.println(motorPositions[i]);
+        }
+        delay(1000);
+        count++;
+        robotState = SETTING_MOTOR_POS;
+      };
       break;
     }
   }
