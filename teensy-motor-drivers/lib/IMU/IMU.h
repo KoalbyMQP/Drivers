@@ -7,20 +7,14 @@
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
 
-// Data structure holding all orientation output from the BNO055
 struct IMUData {
-    // Euler angles (degrees)
-    float heading;      // rotation about Z axis (yaw),   0–360°
-    float roll;         // rotation about X axis,         -180–180°
-    float pitch;        // rotation about Y axis,         -90–90°
-
-    // Quaternion components (unit quaternion)
+    float heading;
+    float roll;
+    float pitch;
     float qw;
     float qx;
     float qy;
     float qz;
-
-    // Calibration status (0 = uncalibrated, 3 = fully calibrated)
     uint8_t cal_sys;
     uint8_t cal_gyro;
     uint8_t cal_accel;
@@ -29,34 +23,39 @@ struct IMUData {
 
 class IMU {
     public:
-        // Constructor — sensorID is an arbitrary identifier, address is the I2C address (0x28 or 0x29)
         IMU(int32_t sensorID = 55, uint8_t address = BNO055_ADDRESS_A);
 
-        // Initialize the sensor; returns true on success
         bool begin();
 
-        // Read latest data from the sensor into internal state
-        void update();
+        // Phase 1: write register address to BNO055 TX buffer and send.
+        // endTransmission(false) sends without a STOP condition, keeping
+        // the bus held so the follow-up requestFrom can issue a restart.
+        void requestUpdate();
 
-        // Return the most recently read data
-        IMUData getData() const;
+        // Phase 2: read all bytes out of the RX buffer in one call.
+        // Call after other work has been done in the loop.
+        bool collectUpdate();
 
-        // Format the IMU data as a CSV string for serial transmission
-        // Output format: heading,roll,pitch,qw,qx,qy,qz,cal_sys,cal_gyro,cal_accel,cal_mag
-        // buf must be at least bufSize bytes; returns number of characters written
+        IMUData getData()  const;
         int formatPacket(char* buf, size_t bufSize) const;
-
-        // Returns true only once all four calibration values reach 3
         bool isCalibrated() const;
 
-        // Getters
         float getHeading() const { return _data.heading; }
         float getRoll()    const { return _data.roll;    }
         float getPitch()   const { return _data.pitch;   }
+        
+        bool isDoneCollecting() const { return !_requested; }
 
     private:
         Adafruit_BNO055 _bno;
         IMUData _data;
+        uint8_t _address;
+        bool _requested = false;
+
+        static constexpr uint8_t READ_LEN = 18;
+        static constexpr uint8_t START_REG = Adafruit_BNO055::BNO055_EULER_H_LSB_ADDR;
+
+        void parseBuffer(uint8_t* buf);
 };
 
 #endif

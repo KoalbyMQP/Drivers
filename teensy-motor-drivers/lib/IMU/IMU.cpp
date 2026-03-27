@@ -1,68 +1,93 @@
 #include "Arduino.h"
 #include "IMU.h"
 
-// Constructor — store sensorID and I2C address, pass them to the BNO055 driver
 IMU::IMU(int32_t sensorID, uint8_t address)
-    : _bno(sensorID, address, &Wire), _data{} {}
+    : _bno(sensorID, address, &Wire),
+      _data{},
+      _address(address),
+      _requested(false) {}
 
-
-// Initialize the BNO055 over I2C
-// Call once inside setup(). Returns false if the sensor is not detected.
 bool IMU::begin() {
+    Wire.setClock(1000000);
     if (!_bno.begin()) {
         return false;
     }
-
-    // Use the external 32.768 kHz crystal for better long-term timing accuracy
     _bno.setExtCrystalUse(true);
-
     return true;
 }
 
-
-// Read the latest Euler angles, quaternion, and calibration status from the sensor
-// Call this once per control loop iteration, alongside motor position reads
-void IMU::update() {
-    // Euler angles
-    sensors_event_t orientationData;
-    _bno.getEvent(&orientationData, Adafruit_BNO055::VECTOR_EULER);
-    _data.heading = orientationData.orientation.x;
-    _data.roll    = orientationData.orientation.y;
-    _data.pitch   = orientationData.orientation.z;
-
-    // Quaternion
-    imu::Quaternion quat = _bno.getQuat();
-    _data.qw = quat.w();
-    _data.qx = quat.x();
-    _data.qy = quat.y();
-    _data.qz = quat.z();
-
-    // Calibration status
-    _bno.getCalibration(&_data.cal_sys, &_data.cal_gyro, &_data.cal_accel, &_data.cal_mag);
+// Phase 1 — write the starting register address to the BNO055.
+// endTransmission(false) sends the address byte but holds the bus open
+// (no STOP condition). This primes the BNO055 to serve bytes from
+// START_REG onward when the read comes in Phase 2.
+void IMU::requestUpdate() {
+    Wire.beginTransmission(_address);
+    Wire.write(START_REG);
+    Wire.endTransmission(false);  // false = no STOP, keeps bus held
+    _requested = true;
 }
 
+// Phase 2 — issue the read request and pull all bytes from the RX buffer.
+// requestFrom() sends a repeated START, reads READ_LEN bytes into the
+// RX buffer, then issues a STOP. readBytes() then drains the buffer
+// in one memcpy rather than byte-by-byte.
+bool IMU::collectUpdate() {
+    if (!_requested) return false;
 
-// Return a copy of the most recently read IMUData struct
-IMUData IMU::getData() const {
-    return _data;
+    uint8_t count = Wire.requestFrom(_address, READ_LEN, (uint8_t)1);
+    if (count < READ_LEN) {
+        _requested = false;
+        return false;   // sensor did not return expected number of bytes
+    }
+
+    uint8_t buf[READ_LEN];
+    Wire.readBytes(buf, READ_LEN);  // drains entire RX buffer in one call
+
+    parseBuffer(buf);
+    _requested = false;
+    return true;
 }
 
+// Parse raw bytes from the RX buffer into _data.
+// BNO055 register map from START_REG (0x1A):
+// Bytes 0–1:   Euler Heading  (LSB, MSB) — units: 1/16 degree
+// Bytes 2–3:   Euler Roll     (LSB, MSB)
+// Bytes 4–5:   Euler Pitch    (LSB, MSB)
+// Bytes 6–7:   Quaternion W   (LSB, MSB) — units: 1/(2^14)
+// Bytes 8–9:   Quaternion X   (LSB, MSB)
+// Bytes 10–11: Quaternion Y   (LSB, MSB)
+// Bytes 12–13: Quaternion Z   (LSB, MSB)
+// Byte  14:    Calibration status register (packed nibbles)
+void IMU::parseBuffer(uint8_t* buf) {
+    const float EULER_SCALE = 1.0f / 16.0f;
+    _data.heading = (int16_t)((buf[1] << 8) | buf[0]) * EULER_SCALE;
+    _data.roll    = (int16_t)((buf[3] << 8) | buf[2]) * EULER_SCALE;
+    _data.pitch   = (int16_t)((buf[5] << 8) | buf[4]) * EULER_SCALE;
 
-// Format the current IMU state into a CSV string ready to append to the serial packet
-// Output: heading,roll,pitch,qw,qx,qy,qz,cal_sys,cal_gyro,cal_accel,cal_mag
-// This mirrors the motor position CSV format used in RPIComs so both can be concatenated
-// into a single packet before calling rpi.enqueueTXPacket()
+    const float QUAT_SCALE = 1.0f / (1 << 14);
+    _data.qw = (int16_t)((buf[7]  << 8) | buf[6])  * QUAT_SCALE;
+    _data.qx = (int16_t)((buf[9]  << 8) | buf[8])  * QUAT_SCALE;
+    _data.qy = (int16_t)((buf[11] << 8) | buf[10]) * QUAT_SCALE;
+    _data.qz = (int16_t)((buf[13] << 8) | buf[12]) * QUAT_SCALE;
+
+    // Calibration packed into one register — two bits per sensor
+    uint8_t cal = buf[14];
+    _data.cal_mag   = (cal >> 0) & 0x03;
+    _data.cal_accel = (cal >> 2) & 0x03;
+    _data.cal_gyro  = (cal >> 4) & 0x03;
+    _data.cal_sys   = (cal >> 6) & 0x03;
+}
+
+IMUData IMU::getData() const { return _data; }
+
 int IMU::formatPacket(char* buf, size_t bufSize) const {
     return snprintf(buf, bufSize,
         "%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%u,%u,%u,%u",
         _data.heading, _data.roll,  _data.pitch,
         _data.qw,      _data.qx,   _data.qy,   _data.qz,
-        _data.cal_sys, _data.cal_gyro, _data.cal_accel, _data.cal_mag
-    );
+        _data.cal_sys, _data.cal_gyro, _data.cal_accel, _data.cal_mag);
 }
 
-
-// Returns true when all four calibration values have reached 3 (fully calibrated)
 bool IMU::isCalibrated() const {
     return (_data.cal_sys   == 3 &&
             _data.cal_gyro  == 3 &&

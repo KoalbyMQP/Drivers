@@ -94,18 +94,28 @@ void setup(){
 
 
 void loop(){
+    if (imuTimer >= 10) {
+        imuTimer = 0;
 
+        // Phase 1 — time the write
+        uint32_t t1 = micros();
+        imu1.requestUpdate();
+        uint32_t t2 = micros();
 
-  if (imuTimer >= 10) {  // 10ms = 100Hz, matches BNO055 fusion rate
-          imuTimer = 0;
-          imu1.update();
-
-          char buf[128];
-          imu1.formatPacket(buf, sizeof(buf));
-          // append to motor packet and send
-          Serial.println(buf);  // print to USB serial monitor
+        // gap — in real firmware motor reads go here
         
-      }
+        // Phase 2 — time the read
+        uint32_t t3 = micros();
+        imu1.collectUpdate();
+        uint32_t t4 = micros();
+
+        // print as CSV for easy reading
+        Serial.print(t2 - t1);   // requestUpdate duration
+        Serial.print(",");
+        Serial.print(t4 - t3);   // collectUpdate duration
+        Serial.print(",");
+        Serial.println(t4 - t1); // total duration
+    }
 
 
   // // this loops
