@@ -1,8 +1,10 @@
 #include "SerialBusManager.h"
-#include "Herkulex.h"
 
 HerkulexClass SerialBusManager::_buses[SerialBusManager::MAX_BUS_COUNT];
 int SerialBusManager::_busesTracker[SerialBusManager::MAX_BUS_COUNT];
+uint8_t SerialBusManager::busDoneCount = 0;
+bool SerialBusManager::doneCollecting = false;
+SerialBusManager::BusQueue SerialBusManager::queues[SerialBusManager::MAX_BUS_COUNT];
 
 
 void SerialBusManager::createBus(uint8_t serialPort){
@@ -122,6 +124,8 @@ void SerialBusManager::tick(const MotorRef* motors, uint16_t* results, uint8_t c
 
             } else if (q.readyToSend()) {
                 // Bus is idle and has another motor to query.
+                Serial.print("Sending position request from: ");
+                Serial.println();
                 _buses[busIndex].sendPosRequest(q.servoIds[q.nextSend]);
                 q.nextSend++;
                 q.waiting = true;
@@ -136,14 +140,14 @@ void SerialBusManager::tick(const MotorRef* motors, uint16_t* results, uint8_t c
 
 // we need to give the motorrefs and the results to insert error flags into position readings
 void SerialBusManager::requestAllPositions(const MotorRef* motors, uint16_t* results, uint8_t count){
-    // iterate through all of the motors in the referece table (all motors we are using)
-    for (uint8_t i = 0; i < count; i++){
-        uint8_t busIndex = motors[i].busId - 1;  // _buses[] is 0-indexed; busId starts at 2
-        // it is busIndex and not i because i is used for all of the motors, we are not iterating through the buses like the other methods
-        if (SerialBusManager::_busesTracker[busIndex] == 1){
-            SerialBusManager::_buses[busIndex].sendPosRequest(motors[i].servoId);
-        }
-    }
+    // // iterate through all of the motors in the referece table (all motors we are using)
+    // for (uint8_t i = 0; i < count; i++){
+    //     uint8_t busIndex = motors[i].busId - 1;  // _buses[] is 0-indexed; busId starts at 2
+    //     // it is busIndex and not i because i is used for all of the motors, we are not iterating through the buses like the other methods
+    //     if (SerialBusManager::_busesTracker[busIndex] == 1){
+    //         SerialBusManager::_buses[busIndex].sendPosRequest(motors[i].servoId);
+    //     }
+    // }
 
     // build per-bus queues
     memset(queues, 0, sizeof(queues));

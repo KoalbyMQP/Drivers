@@ -2,14 +2,16 @@
 #define SerialBusManager_h
 #include "Arduino.h"
 #include "Herkulex.h"
+#include "MotorModel.h"
 
 // MotorRef — lightweight descriptor used by requestAllPositions / collectAllPositions.
 // Each active motor that you want to read should be registered here.
 // This avoids the SerialBusManager needing to know about HerkulexMotor internals.
-struct MotorRef {
-    uint8_t busId;      // which serial bus this motor lives on
-    uint8_t servoId;    // the motor's hardware ID on that bus
-};
+// struct MotorRef {
+//     uint8_t busId;      // which serial bus this motor lives on
+//     uint8_t servoId;    // the motor's hardware ID on that bus
+//     MotorModel type;       // DRS 0601, DRS 0602... etc.,
+// };
 
 class SerialBusManager {
     public:

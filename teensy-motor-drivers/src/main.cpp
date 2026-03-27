@@ -20,20 +20,25 @@ enum STATE {
   READING_ROBOT_STATE,
 };
 
-uint8_t robotState = READING_FROM_RPI;
+uint8_t robotState = SETTING_MOTOR_POS;
 
 
 const uint8_t MOTOR_COUNT = 3;
 const uint8_t PACKET_SIZE = 192;   // this depends on the number of motors used, HOW???
 
-float RPIMotorInputs[MOTOR_COUNT];
+float RPIMotorInputs[MOTOR_COUNT] = {0};
+float dummyMotorInputs[MOTOR_COUNT] = {40.0, 40.0, 40.0};
+float dummyMotorInputsTwo[MOTOR_COUNT] = {-40.0, -40.0, -40.0};
+int count = 0 ;
 uint16_t motorPositionsRaw[MOTOR_COUNT] = {0};
+float motorPositions[MOTOR_COUNT] = {0};
 
 MotorRef motorRefs[MOTOR_COUNT];
 HerkulexMotor motors[MOTOR_COUNT] = {
   HerkulexMotor(12, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG),
   HerkulexMotor(5, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG),
   HerkulexMotor(1, MotorModel::DRS_0601, SERIAL_BUS::BUS_L_LEG),
+  
 };
 
 
@@ -59,6 +64,8 @@ void setup(){
   // // Each entry is {busId, servoId}. Order here determines order in rawPositions[], can mix and match serial buses
   // // Add or remove entries to match the motors needed
   for (int i = 0; i < MOTOR_COUNT; i++) motorRefs[i] = motors[i].getMotorRef();
+  for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(-20.0);
+  delay(2000);
 
 }
 
@@ -66,6 +73,7 @@ void setup(){
 void loop(){
   switch (robotState){
     case(READING_FROM_RPI):
+    {
       rpi.uartRead();
       // If a packet arrived, handle it
       const char* pkt = rpi.getPacket();
@@ -86,28 +94,44 @@ void loop(){
         robotState = SETTING_MOTOR_POS;
       }
       break;
-
+    }
     case(SETTING_MOTOR_POS):
+    {
       // queue all motors in a loop
       // does this line up with the correct motors?
-      for (int i = 0; i < MOTOR_COUNT; i++) motors[i].queueMove(RPIMotorInputs[i]);
-
+      for (int i = 0; i < MOTOR_COUNT; i++) {
+        if (count % 2){
+          motors[i].queueMove(dummyMotorInputs[i]);
+        } else {
+          motors[i].queueMove(dummyMotorInputsTwo[i]);
+        }
+      }
       SerialBusManager::actionAll(10);
 
       robotState = READING_ROBOT_STATE;
       SerialBusManager::requestAllPositions(motorRefs, motorPositionsRaw, MOTOR_COUNT);
       //imu1.requestRead();
+      
       break;
-
+    }
     case(READING_ROBOT_STATE):
-      SerialBusManager::tick(motorRefs, motorPositionsRaw, MOTOR_COUNT);
+    {
+      count++;
+      delay(2000);
+      robotState = SETTING_MOTOR_POS;
+      // SerialBusManager::tick(motorRefs, motorPositionsRaw, MOTOR_COUNT);
       //imu1.tick(imuReadBuffer, imuReadBufferSize); // imuReadBufferSize should be a const, it's defined somewhere in the IMU stack
 
-      if (SerialBusManager::isDoneCollecting()){ // && imu1.doneCollecting()){
-        // put data togehter into one packet
-        // send packet to RPI
-        robotState = READING_FROM_RPI;
-      };
+      // if (SerialBusManager::isDoneCollecting()){ // && imu1.doneCollecting()){
+      //   // put data togehter into one packet
+      //   // send packet to RPI
+      //   for (int i = 0; i < MOTOR_COUNT; i++){
+      //     motorPositions[i] = motors[i].rawToDegs(motorPositionsRaw[i]);
+      //     Serial.println(motorPositions[i]);
+      //   }
+      //   robotState = SETTING_MOTOR_POS;
+      // };
       break;
+    }
   }
 }
