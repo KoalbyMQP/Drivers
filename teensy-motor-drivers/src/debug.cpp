@@ -18,7 +18,7 @@
 #include <HerkulexMotor.h>
 #include <Herkulex.h>
 
-// Helper function that makes the motor type readible
+// Helper function that makes the motor type readable
 static const char* modelName(MotorModel t) {
     switch (t) {
         case DRS_0201: return "DRS-0201";
@@ -38,6 +38,46 @@ static const char* busName(int b) {
         case 7:  return "Extra_1";
         case 8:  return "Extra_2";
         default: return "Unknown_bus";
+    }
+}
+
+// function that goes through every motor and tests latency for getting and sending position
+void test_motor_latency(HerkulexMotor* motors, int motors_size){
+    for (int i = 0; i < motors_size; i++){
+        HerkulexMotor& motor = motors[i];
+
+        unsigned long start = micros();
+        float pos = motor.getPos();
+        unsigned long stop = micros();
+
+        unsigned long elapsed = stop - start;
+        unsigned long totalElapsed = elapsed;
+
+        Serial.print("Total time to read Motor ");
+        Serial.print(motor.getId());
+        Serial.print(" position: ");
+        Serial.print(elapsed);
+        Serial.println(" us");
+
+        start = micros();
+        motor.setPos(0.0);
+        stop = micros();
+        elapsed = stop - start;
+        totalElapsed += elapsed;
+        Serial.print("Total time to set Motor ");
+        Serial.print(motor.getId());
+        Serial.print(" position: ");
+        Serial.print(elapsed);
+        Serial.println(" us");
+
+        Serial.println("");
+        Serial.print("Estimated Round Trip Time: "); Serial.println(totalElapsed);
+
+        Serial.println("Press any key to continue to next motor...");
+        while (Serial.available() == 0) {}
+        while (Serial.available() > 0) Serial.read();
+
+        Serial.println("==========================================");
     }
 }
 
