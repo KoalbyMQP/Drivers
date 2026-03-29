@@ -41,6 +41,23 @@ static const char* busName(int b) {
     }
 }
 
+
+//find_all_motors_on_bus
+
+void find_all_motors_on_bus(int busID, HerkulexMotor* motor_out){
+    // loop through all possible pIDs (0-253), every time a motor is found, print and add to motor out
+    // packet = data for servos (50) + 8 for move multiple length. See herkulex.h for more details.
+    HerkulexClass Herkulex;
+    for (uint8_t pID = 0; pID < 0xFE; pID++){
+        // send packet with current pID and wait for ACK packet
+
+       byte status = Herkulex.stat(pID);
+        
+
+    }
+}
+
+
 // function that goes through every motor and tests latency for getting and sending position
 void test_motor_latency(HerkulexMotor* motors, int motors_size){
     for (int i = 0; i < motors_size; i++){
