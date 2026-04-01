@@ -18,6 +18,17 @@
 #include <HerkulexMotor.h>
 #include <Herkulex.h>
 
+
+MotorModel decodeModel(int rawModel)
+{
+    switch (rawModel) {
+        case 0x0201: return DRS_0201;
+        case 0x0601: return DRS_0601;
+        case 0x0602: return DRS_0602;
+        default:     return UNKNOWN_MODEL;
+    }
+}
+
 // Helper function that makes the motor type readable
 static const char* modelName(MotorModel t) {
     switch (t) {
@@ -44,17 +55,49 @@ static const char* busName(int b) {
 
 //find_all_motors_on_bus
 
-void find_all_motors_on_bus(int busID, HerkulexMotor* motor_out){
+int find_all_motors_on_bus(int busID, HerkulexMotor* motors_out){
     // loop through all possible pIDs (0-253), every time a motor is found, print and add to motor out
     // packet = data for servos (50) + 8 for move multiple length. See herkulex.h for more details.
     HerkulexClass Herkulex;
+    byte status;
+    int motorCount = 0;
+
     for (uint8_t pID = 0; pID < 0xFE; pID++){
         // send packet with current pID and wait for ACK packet
 
-       byte status = Herkulex.stat(pID);
-        
+        status = Herkulex.stat(pID);
+        if(status == 0xFD){
+            Serial.print("Broadcast on ID ");
+            Serial.print(pID);
+            Serial.println(" failed to find motor.");
+            continue;
+        } else if(status == 0xFE){
+            Serial.print("Broadcast on ID ");
+            Serial.print(pID);
+            Serial.println(" failed checksum 2.");
+            continue;
+        } else if(status == 0xFF){
+            Serial.print("Broadcast on ID ");
+            Serial.print(pID);
+            Serial.println(" failed checksum 1.");
+            continue;
+        } else {
+            Serial.print("Motor found on bus ");
+            Serial.print(busID);
+            Serial.print(" at ID: ");
+            Serial.println(pID);
 
+            int modelNo = Herkulex.checkModelWithID(pID);
+            MotorModel model = decodeModel(modelNo)
+
+            Serial.print("Motor model: ");
+            Serial.println(modelName(modelNo));
+
+            motors_out[motorCount] = HerkulexMotor(pID, modelNo);
+            motorCount++;
+        }
     }
+    return motorCount;
 }
 
 

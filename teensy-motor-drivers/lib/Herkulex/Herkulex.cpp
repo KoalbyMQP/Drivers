@@ -152,7 +152,7 @@ byte HerkulexClass::stat(int servoID)
 	     
 	sendData(packet, packetSize);
 	delay(2);
-	readBlocking(9); 				// read 9 bytes from serial
+	if(!readBlocking(9)) return -3; 	// read 9 bytes from serial, return -3 if nothing
 
 	// second part of the function where it reads the data
 	packetSize = packet[2];       
@@ -312,7 +312,6 @@ byte HerkulexClass::checkModel()
 	checksumData[0] = packet[7];         
 	packetLength = 1;      
   	
-	// TODO: I am unsure if these are correct
 	checksumOne = calcChecksumOne();	
 	checksumTwo = calcChecksumTwo();			
 
@@ -321,6 +320,59 @@ byte HerkulexClass::checkModel()
 		
 	return packet[7];			// return status
 
+}
+
+byte HerkulexClass::checkModelWithID(uint8_t pID)
+{
+	packetSize = PACKET_LENGTH_BYTES::HEEPREAD_LENGTH;
+	additionalDataLength = PACKET_LENGTH_BYTES::HEEPREAD_DATA_LENGTH;
+
+		           
+	CMD   = COMMAND::HEEPREAD;
+
+	checksumData[0]=0x00;               // 8. Address
+	checksumData[1]=0x01;               // 9. Lenght
+  	
+	// base packet
+	packet[0] = PACKET_CONSTS::PACKET_HEADER;
+	packet[1] = PACKET_CONSTS::PACKET_HEADER;
+	packet[2] = packetSize;
+	packet[3] = pID;
+	packet[4] = CMD;
+	
+	// optional data
+	packet[7] = checksumData[0]; 		// Address
+	packet[8] = checksumData[1]; 		// Length
+
+	// checksum
+	checksumOne = calcChecksumOne();	
+	checksumTwo = calcChecksumTwo();					
+
+	packet[5] = checksumOne;		
+	packet[6] = checksumTwo;
+
+    sendData(packet, packetSize);
+
+	delay(1);
+	if (!readBlocking(11)) return -3;
+
+    packetSize = packet[2];
+    pID = packet[3];
+    CMD = packet[4];
+
+    checksumData[0] = packet[7];
+    checksumData[1] = packet[8];
+    checksumData[2] = packet[9];
+    checksumData[3] = packet[10];
+    packetLength = 4;
+
+    checksumOne = calcChecksumOne();
+    checksumTwo = calcChecksumTwo();
+
+    if (checksumOne != packet[5]) return -1;
+    if (checksumTwo != packet[6]) return -2;
+
+    return packet[9] | (packet[10] << 8);
 }
 
 // setID - Need to restart the servo

@@ -179,6 +179,7 @@ public:
   byte  stat(int servoID);
   void  setACKPolicy(int valueACK);
   byte  checkModel();
+  int checkModelWithID(uint8_t pID);
   void  setID(int ID_Old, int ID_New);
   void  clearError(int servoID);
 
