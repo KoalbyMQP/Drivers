@@ -80,6 +80,15 @@ void HerkulexMotor::reboot(){
     SerialBusManager::getBus(_busId).reboot(_id);
 }
 
+// setBaudRate — writes the baud rate to the servo's EEP and reboots it.
+// The bus baud rate itself is NOT changed here; call SerialBusManager::startAllBuses()
+// with the new baud rate after all servos on the bus have been updated.
+void HerkulexMotor::setBaudRate(HerkulexBaudRate baudRate){
+    SerialBusManager::getBus(_busId).setBaudRate(_id, baudRate);
+    delay(100);   // EEP write settling time before reboot
+    SerialBusManager::getBus(_busId).reboot(_id);
+}
+
 MotorRef HerkulexMotor::getMotorRef() const {
     return MotorRef{_busId, _id, _type};
 }

@@ -179,6 +179,59 @@ void SerialBusManager::requestAllPositions(const MotorRef* motors, uint16_t* res
     doneCollecting = false;
 }
 
+// setBaudRateAllMotors — updates the baud rate register in EEP for every motor in
+// the MotorRef table, reboots each servo, then reinitialises all bus UARTs at the
+// new baud rate so communication is immediately restored.
+//
+// Each motor gets its own Serial report line showing bus, servo ID, and outcome.
+// A motor is skipped (with a warning) if its bus is not initialised.
+//
+// After this call the host-side buses are already running at newBaud — no need to
+// call startAllBuses() again unless you restart the Teensy.
+void SerialBusManager::setBaudRateAllMotors(const MotorRef* motors, uint8_t count, HerkulexBaudRate baudRate, long newBaud)
+{
+    Serial.println("--- setBaudRateAllMotors start ---");
+
+    for (uint8_t i = 0; i < count; i++) {
+        uint8_t busIndex = motors[i].busId - 1;
+
+        Serial.print("  Motor ");
+        Serial.print(i);
+        Serial.print(" | bus ");
+        Serial.print(motors[i].busId);
+        Serial.print(" | servoId ");
+        Serial.print(motors[i].servoId);
+        Serial.print(" ... ");
+
+        if (busIndex >= MAX_BUS_COUNT || _busesTracker[busIndex] != 1) {
+            Serial.println("SKIP — bus not initialised");
+            continue;
+        }
+
+        // Write baud rate to EEP and reboot. The servo will be unresponsive for
+        // ~500 ms after reboot while it reinitialises its EEP.
+        _buses[busIndex].setBaudRate(motors[i].servoId, baudRate);
+        delay(100);   // EEP write settling time
+        _buses[busIndex].reboot(motors[i].servoId);
+        delay(500);   // wait for servo to come back up
+
+        Serial.println("OK — baud written, servo rebooted");
+    }
+
+    // Reinitialise all bus UARTs at the new baud rate so the Teensy can
+    // communicate with the freshly-rebooted servos immediately.
+    Serial.print("Reconfiguring all buses to ");
+    Serial.print(newBaud);
+    Serial.println(" baud...");
+    for (uint8_t i = 0; i < MAX_BUS_COUNT; i++) {
+        if (_busesTracker[i] == 1) {
+            _buses[i].beginSerialBus(newBaud);
+        }
+    }
+
+    Serial.println("--- setBaudRateAllMotors done ---");
+}
+
 // LEGACY
 // not needed, tick() collects all positions
 void SerialBusManager::collectAllPositions(const MotorRef* motors, uint16_t* results, uint8_t count){

@@ -361,6 +361,44 @@ void HerkulexClass::setID(int ID_Old, int ID_New)
 
 }
 
+// setBaudRate — writes the baud rate register in EEP (ROM) address 4.
+// The servo must be rebooted after this call for the new baud rate to take effect.
+// Valid values are defined in the HerkulexBaudRate enum.
+// Pattern mirrors setID: HEEPWRITE_LENGTH_1, 3 optional data bytes (address, length, value).
+void HerkulexClass::setBaudRate(int servoID, HerkulexBaudRate baudRate)
+{
+	packetSize = PACKET_LENGTH_BYTES::HEEPWRITE_LENGTH_1;
+	additionalDataLength = PACKET_LENGTH_BYTES::HEEPWRITE_DATA_LENGTH_1;
+
+	pID = servoID;
+	CMD = COMMAND::HEEPWRITE;
+
+	checksumData[0] = 0x04;             // EEP address 4 — Baud Rate register
+	checksumData[1] = 0x01;             // length: writing 1 byte
+	checksumData[2] = (uint8_t)baudRate;// baud rate register value
+
+	// base packet
+	packet[0] = PACKET_CONSTS::PACKET_HEADER;
+	packet[1] = PACKET_CONSTS::PACKET_HEADER;
+	packet[2] = packetSize;
+	packet[3] = pID;
+	packet[4] = CMD;
+
+	// optional data
+	packet[7] = checksumData[0];        // address
+	packet[8] = checksumData[1];        // length
+	packet[9] = checksumData[2];        // value
+
+	// checksum
+	checksumOne = calcChecksumOne();
+	checksumTwo = calcChecksumTwo();
+
+	packet[5] = checksumOne;
+	packet[6] = checksumTwo;
+
+	sendData(packet, packetSize);
+}
+
 // clearError
 void HerkulexClass::clearError(int servoID)
 {	

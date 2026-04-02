@@ -31,6 +31,12 @@ class SerialBusManager {
         static void initAllMotors();
         static void endAllBuses();
 
+        // setBaudRateAllMotors — writes the baud rate register to every motor described
+        // in the MotorRef table, reboots each one, then reconfigures all bus UARTs to
+        // the new baud rate.  Prints a per-motor result to Serial.
+        // Call startAllBuses() with the matching long baud value after this returns.
+        static void setBaudRateAllMotors(const MotorRef* motors, uint8_t count, HerkulexBaudRate baudRate, long newBaud);
+
         static void tick(const MotorRef* motors, uint16_t* results, uint8_t count); // updates all collection variables
         static bool isDoneCollecting(); // if all buses are done collecting
         static void requestAllPositions(const MotorRef* motors, uint16_t* results, uint8_t count);

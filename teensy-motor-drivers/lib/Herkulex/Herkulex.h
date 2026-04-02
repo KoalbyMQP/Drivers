@@ -166,6 +166,20 @@ static byte H_ERROR_OVERLOAD			= 0x10;
 static byte H_ERROR_DRIVER_FAULT  		= 0x20;
 static byte H_ERROR_EEPREG_DISTORT		= 0x40;
 
+// Valid baud rate register values for setBaudRate().
+// Write to EEP address 4; servo must be rebooted for change to take effect.
+// Default from factory is BAUD_115200 (0x10).
+typedef enum {
+  BAUD_1000000 = 0x01,
+  BAUD_666666  = 0x02,
+  BAUD_500000  = 0x03,
+  BAUD_400000  = 0x04,
+  BAUD_250000  = 0x07,
+  BAUD_200000  = 0x09,
+  BAUD_115200  = 0x10,
+  BAUD_57600   = 0x22,
+} HerkulexBaudRate;
+
 
 class HerkulexClass {
 public:
@@ -180,6 +194,7 @@ public:
   void  setACKPolicy(int valueACK);
   byte  checkModel();
   void  setID(int ID_Old, int ID_New);
+  void  setBaudRate(int servoID, HerkulexBaudRate baudRate);
   void  clearError(int servoID);
 
   void  torqueON(int servoID);
