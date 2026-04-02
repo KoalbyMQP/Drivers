@@ -179,7 +179,7 @@ public:
   byte  stat(int servoID);
   void  setACKPolicy(int valueACK);
   byte  checkModel();
-  int checkModelWithID(uint8_t pID);
+  byte checkModelWithID(uint8_t pID);
   void  setID(int ID_Old, int ID_New);
   void  clearError(int servoID);
 
@@ -233,7 +233,7 @@ private:
   uint8_t inputLength;
   uint32_t readStartTime;
 
-  void readBlocking(uint8_t length);
+  bool readBlocking(uint8_t length);
   
 
   // base packet info
@@ -242,8 +242,6 @@ private:
   uint8_t CMD;            // Command Type
   uint8_t checksumOne;
   uint8_t checksumTwo;
-
-  uint8_t packetSize;
   // TO DO: remove references to packetSize and switch to above packetLength
 
   uint8_t additionalDataLength; // length of additional data

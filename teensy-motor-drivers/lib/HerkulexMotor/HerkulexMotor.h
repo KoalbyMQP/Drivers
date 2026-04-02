@@ -9,6 +9,7 @@ enum MotorModel{
     DRS_0201,
     DRS_0601,
     DRS_0602,
+    UNKNOWN_MODEL,
 };
 
 
