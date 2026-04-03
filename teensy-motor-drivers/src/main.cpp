@@ -80,37 +80,6 @@ void setup(){
 
 
 void loop(){
-<<<<<<< HEAD
-    if (imuTimer >= 10) {
-        imuTimer = 0;
-
-        // Phase 1 — time the write
-        uint32_t t1 = micros();
-        imu1.requestUpdate();
-        uint32_t t2 = micros();
-
-        // gap — in real firmware motor reads go here
-        
-        // Phase 2 — time the read
-        uint32_t t3 = micros();
-        imu1.collectUpdate();
-        uint32_t t4 = micros();
-
-        // print as CSV for easy reading
-        Serial.print(t2 - t1);   // requestUpdate duration
-        Serial.print(",");
-        Serial.print(t4 - t3);   // collectUpdate duration
-        Serial.print(",");
-        Serial.println(t4 - t1); // total duration
-    }
-
-
-  // // this loops
-  // // while(testRPi){
-  // //   testingRPi();
-  // //   testRPi = true;
-  // // }
-=======
   switch (robotState){
     case(READING_FROM_RPI):
     {
@@ -118,7 +87,6 @@ void loop(){
       // If a packet arrived, handle it
       const char* pkt = rpi.getPacket();
       if (pkt != nullptr) {
->>>>>>> top-level-parallel
 
         // copy packet to avoid buffer overwrite
         char buffer[PACKET_SIZE];        
