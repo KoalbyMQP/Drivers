@@ -448,7 +448,7 @@ void HerkulexClass::queueMove(motorMoveInfo moveInfo)
 {	  
 	packetQueue[queuedPacketCount++] = (uint8_t) (moveInfo.goalPos & 0xFF);        // add 8 lower bits of 16 bit goal
 	packetQueue[queuedPacketCount++] = (uint8_t) (moveInfo.goalPos >> 8 & 0xFF);   // add 8 higher bits of 16 bit goal
-	packetQueue[queuedPacketCount++] = moveInfo.ledColor;                          // add LED value
+	packetQueue[queuedPacketCount++] = (moveInfo.ledColor << 2);                   // add LED value
 	packetQueue[queuedPacketCount++] = moveInfo.servoID;                           // add id of servo
 }
 
@@ -460,6 +460,7 @@ void HerkulexClass::actionMoves(uint8_t playTime)
 	additionalDataLength = PACKET_LENGTH_BYTES::HSJOG_MOVEMULTIPLE_DATA_LENGTH;
 
 	// length is the intro packet length (8) + the queued packet length
+	additionalDataLength = HSJOG_MOVEMULTIPLE_DATA_LENGTH + queuedPacketCount;
 	packetLength = PACKET_LENGTH_BYTES::HSJOG_MOVEMULTIPLE_LENGTH + queuedPacketCount;
 	pID = PACKET_CONSTS::ALL_SERVOS;
     CMD = COMMAND::HSJOG;
@@ -474,6 +475,8 @@ void HerkulexClass::actionMoves(uint8_t playTime)
 
 	// optional data
 	packet[7] = playTime;			// Execution time	
+	
+	memcpy(&packet[8], packetQueue, queuedPacketCount);
 
 	// checksum
 	checksumOne = calcChecksumOne();
@@ -483,7 +486,6 @@ void HerkulexClass::actionMoves(uint8_t playTime)
 	packet[6] = checksumTwo;
 
 	// copy packetQueue into packet after the HSJOG intro packet
-	memcpy(&packet[8], packetQueue, queuedPacketCount);
 	
 	// send dataEx out onto the bus
 	sendData(packet, packetLength);
@@ -557,9 +559,8 @@ uint16_t HerkulexClass::collectPosition(int servoID) {
 	// if (checksumOne != inputBuffer[5]) return 0xFFFF;    // checksum error flag
 	// if (checksumTwo != inputBuffer[6]) return 0xFFFF;
 
-	
-
-	return (uint16_t)((packet[10] << 8) | packet[9]);
+	uint16_t raw_position = (uint16_t)((packet[10] << 8) | packet[9]);
+	return raw_position;
 }
 
 // getPosition -- original blocking API, preserved for single-motor or debug use.
