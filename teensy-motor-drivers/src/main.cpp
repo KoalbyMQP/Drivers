@@ -8,13 +8,13 @@ elapsedMillis imuTimer;
 
 // start at serial 2 because the raspberry pi is connected through serial 1
 enum SERIAL_BUS {
-    BUS_L_LEG = 2,
-    BUS_R_LEG = 3,
-    BUS_CHEST = 4,
-    BUS_L_ARM = 5,
-    BUS_R_ARM = 6,
-    EXTRA_1 = 7,
-    EXTRA_2 = 8
+    BUS_L_LEG = 1,
+    BUS_R_LEG = 2,
+    BUS_CHEST = 3,
+    BUS_L_ARM = 4,
+    BUS_R_ARM = 5,
+    EXTRA_1 = 6,
+    EXTRA_2 = 7,
 };
 
 enum STATE {
@@ -40,8 +40,7 @@ MotorRef motorRefs[MOTOR_COUNT];
 HerkulexMotor motors[MOTOR_COUNT] = {
   HerkulexMotor(12, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG),
   HerkulexMotor(5, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG),
-  HerkulexMotor(1, MotorModel::DRS_0601, SERIAL_BUS::BUS_L_LEG),
-  
+  HerkulexMotor(1, MotorModel::DRS_0601, SERIAL_BUS::BUS_L_LEG)
 };
 
 
@@ -55,7 +54,7 @@ void setup(){
   Serial.begin(9600);    // Open serial communications with computer
   Serial.println("Begin");
 
-  Serial1.begin(9600); //begin serial communication with the raspberry pi
+  Serial8.begin(9600); //begin serial communication with the raspberry pi, this has been changed to Serial 8 instead of 1
   delay(2000);
 
   if (!imu1.begin()) {
