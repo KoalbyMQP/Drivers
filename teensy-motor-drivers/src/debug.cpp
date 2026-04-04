@@ -17,8 +17,19 @@
 #include <debug.h>
 #include <HerkulexMotor.h>
 #include <Herkulex.h>
+#include <MotorModel.h>
 
-// Helper function that makes the motor type readible
+MotorModel decodeModel(int rawModel)
+{
+    switch (rawModel) {
+        case 0x0201: return DRS_0201;
+        case 0x0601: return DRS_0601;
+        case 0x0602: return DRS_0602;
+        default:     return UNKNOWN_MODEL;
+    }
+}
+
+// Helper function that makes the motor type readable
 static const char* modelName(MotorModel t) {
     switch (t) {
         case DRS_0201: return "DRS-0201";
@@ -38,6 +49,92 @@ static const char* busName(int b) {
         case 7:  return "Extra_1";
         case 8:  return "Extra_2";
         default: return "Unknown_bus";
+    }
+}
+
+
+//find_all_motors_on_bus
+int find_all_motors_on_bus(int busID){
+    // loop through all possible pIDs (0-253), every time a motor is found, print and add to motor out
+    // packet = data for servos (50) + 8 for move multiple length. See herkulex.h for more details.
+    HerkulexClass Herkulex;
+    byte status;
+    int motorCount = 0;
+
+    for (uint8_t pID = 0; pID < 0xFE; pID++){
+        // send packet with current pID and wait for ACK packet
+        // comments for debugging
+
+        status = Herkulex.stat(pID);
+        if(status == 0xFD){
+            // Serial.print("Broadcast on ID ");
+            // Serial.print(pID);
+            // Serial.println(" failed to find motor.");
+            continue;
+        } else if(status == 0xFE){
+            // Serial.print("Broadcast on ID ");
+            // Serial.print(pID);
+            // Serial.println(" failed checksum 2.");
+            continue;
+        } else if(status == 0xFF){
+            // Serial.print("Broadcast on ID ");
+            // Serial.print(pID);
+            // Serial.println(" failed checksum 1.");
+            continue;
+        } else {
+            Serial.print("Motor found on bus ");
+            Serial.print(busID);
+            Serial.print(" at ID: ");
+            Serial.println(pID);
+
+            int modelNo = Herkulex.checkModelWithID(pID);
+            MotorModel model = decodeModel(modelNo);
+
+            Serial.print("Motor model: ");
+            Serial.println(modelName(model));
+        }
+    }
+    return motorCount;
+}
+
+
+// function that goes through every motor and tests latency for getting and sending position
+void test_motor_latency(HerkulexMotor* motors, int motors_size){
+    for (int i = 0; i < motors_size; i++){
+        HerkulexMotor& motor = motors[i];
+
+        unsigned long start = micros();
+        float pos = motor.getPos();
+        unsigned long stop = micros();
+
+        unsigned long elapsed = stop - start;
+        unsigned long totalElapsed = elapsed;
+
+        Serial.print("Total time to read Motor ");
+        Serial.print(motor.getId());
+        Serial.print(" position: ");
+        Serial.print(elapsed);
+        Serial.println(" us");
+
+        start = micros();
+        motor.setPos(0.0);
+        stop = micros();
+        elapsed = stop - start;
+        totalElapsed += elapsed;
+        Serial.print("Total time to set Motor ");
+        Serial.print(motor.getId());
+        Serial.print(" position: ");
+        Serial.print(elapsed);
+        Serial.println(" us");
+
+        Serial.println("");
+        Serial.print("Estimated Round Trip Time: "); Serial.println(totalElapsed);
+
+        Serial.println("Press any key to continue to next motor...");
+        while (Serial.available() == 0) {}
+        while (Serial.available() > 0) Serial.read();
+
+        Serial.println("==========================================");
     }
 }
 

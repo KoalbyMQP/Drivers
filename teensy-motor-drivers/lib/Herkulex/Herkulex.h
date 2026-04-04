@@ -179,6 +179,7 @@ public:
   byte  stat(int servoID);
   void  setACKPolicy(int valueACK);
   byte  checkModel();
+  byte checkModelWithID(uint8_t pID);
   void  setID(int ID_Old, int ID_New);
   void  clearError(int servoID);
 
@@ -232,7 +233,7 @@ private:
   uint8_t inputLength;
   uint32_t readStartTime;
 
-  void readBlocking(uint8_t length);
+  bool readBlocking(uint8_t length);
   
 
   // base packet info
