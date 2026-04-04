@@ -17,7 +17,7 @@
 #include <debug.h>
 #include <HerkulexMotor.h>
 #include <Herkulex.h>
-
+#include <MotorModel.h>
 
 MotorModel decodeModel(int rawModel)
 {
