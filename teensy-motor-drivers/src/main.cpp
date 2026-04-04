@@ -24,7 +24,7 @@ enum STATE {
 };
 
 uint8_t robotState = SETTING_MOTOR_POS;
-
+const bool DEBUG_FLAG = true;
 
 const uint8_t MOTOR_COUNT = 3;
 const uint8_t PACKET_SIZE = 192;   // this depends on the number of motors used, HOW???
