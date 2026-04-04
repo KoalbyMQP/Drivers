@@ -116,16 +116,6 @@ void test_motor_latency(HerkulexMotor* motors, int motors_size){
         Serial.print(elapsed);
         Serial.println(" us");
 
-        start = micros();
-        motor.setPos(0.0);
-        stop = micros();
-        elapsed = stop - start;
-        totalElapsed += elapsed;
-        Serial.print("Total time to set Motor ");
-        Serial.print(motor.getId());
-        Serial.print(" position: ");
-        Serial.print(elapsed);
-        Serial.println(" us");
 
         Serial.println("");
         Serial.print("Estimated Round Trip Time: "); Serial.println(totalElapsed);
