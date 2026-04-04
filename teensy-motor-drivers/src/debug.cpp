@@ -41,13 +41,13 @@ static const char* modelName(MotorModel t) {
 
 static const char* busName(int b) {
     switch (b) {
-        case 2:  return "Left_leg";
-        case 3:  return "Right_leg";
-        case 4:  return "Chest";
-        case 5:  return "Left_arm";
-        case 6:  return "Right_arm";
-        case 7:  return "Extra_1";
-        case 8:  return "Extra_2";
+        case 1:  return "Left_leg";
+        case 2:  return "Right_leg";
+        case 3:  return "Chest";
+        case 4:  return "Left_arm";
+        case 5:  return "Right_arm";
+        case 6:  return "Extra_1";
+        case 7:  return "Extra_2";
         default: return "Unknown_bus";
     }
 }
@@ -111,17 +111,6 @@ void test_motor_latency(HerkulexMotor* motors, int motors_size){
         unsigned long totalElapsed = elapsed;
 
         Serial.print("Total time to read Motor ");
-        Serial.print(motor.getId());
-        Serial.print(" position: ");
-        Serial.print(elapsed);
-        Serial.println(" us");
-
-        start = micros();
-        motor.setPos(0.0);
-        stop = micros();
-        elapsed = stop - start;
-        totalElapsed += elapsed;
-        Serial.print("Total time to set Motor ");
         Serial.print(motor.getId());
         Serial.print(" position: ");
         Serial.print(elapsed);
