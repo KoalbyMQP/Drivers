@@ -1,10 +1,11 @@
 #include <HerkulexMotor.h>
+#include <Herkulex.h>
 #include <RPIComs.h>
 #include <SerialBusManager.h>
 #include <IMU.h>
 #include <debug.h>
 
-elapsedMillis imuTimer; 
+elapsedMillis imuTimer;
 
 // start at serial 2 because the raspberry pi is connected through serial 1
 enum SERIAL_BUS {
@@ -43,7 +44,13 @@ HerkulexMotor motors[MOTOR_COUNT] = {
   HerkulexMotor(1, MotorModel::DRS_0601, SERIAL_BUS::BUS_L_LEG)
 };
 
+uint8_t getMotorStatus(const HerkulexMotor& motor) {
+    uint8_t busId = motor.getMotorRef().busId;
+    uint8_t servoId = motor.getMotorRef().servoId;
 
+    HerkulexClass& bus = SerialBusManager::getBus(busId);
+    return bus.stat(servoId);
+}
 
 RPIComs rpi = RPIComs();
 
@@ -57,10 +64,10 @@ void setup(){
   Serial8.begin(9600); //begin serial communication with the raspberry pi, this has been changed to Serial 8 instead of 1
   delay(2000);
 
-  if (!imu1.begin()) {
-      Serial.println("ERROR: IMU not detected. Check wiring!");
-      while (1);
-  }
+  //if (!imu1.begin()) {
+  //    Serial.println("ERROR: IMU not detected. Check wiring!");
+  //    while (1);
+  //}
 
   // initialize all serial buses
   SerialBusManager::createBus(SERIAL_BUS::BUS_L_LEG); // begin serial communications with motor, these are on Serial 2
@@ -108,6 +115,11 @@ void loop(){
       // queue all motors in a loop
       // does this line up with the correct motors?
       for (int i = 0; i < MOTOR_COUNT; i++) {
+        //if(DEBUG_FLAG){
+        //  HerkulexClass Herkulex;
+        //  int servoID = motors[i].getId();
+        //  Serial.print(Herkulex.stat(servoID));
+        //}
         if (count % 2){
           motors[i].queueMove(dummyMotorInputs[i]);
         } else {
