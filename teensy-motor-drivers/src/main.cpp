@@ -115,11 +115,15 @@ void loop(){
       // queue all motors in a loop
       // does this line up with the correct motors?
       for (int i = 0; i < MOTOR_COUNT; i++) {
-        //if(DEBUG_FLAG){
-        //  HerkulexClass Herkulex;
-        //  int servoID = motors[i].getId();
-        //  Serial.print(Herkulex.stat(servoID));
-        //}
+        
+        if(DEBUG_FLAG){
+        uint8_t status = getMotorStatus(motors[i]);
+
+          Serial.print("Motor ");
+          Serial.print(motors[i].getId());
+          Serial.print(" status: 0x");
+          Serial.println(status, HEX);
+        }
         if (count % 2){
           motors[i].queueMove(dummyMotorInputs[i]);
         } else {
