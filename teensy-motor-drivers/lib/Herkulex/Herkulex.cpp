@@ -118,11 +118,11 @@ void HerkulexClass::endSerialBus(){
 void HerkulexClass::initialize(){
 		resetClassVals();
         delay(100);       
-        clearError(PACKET_CONSTS::ALL_SERVOS);	// clear error for all servos
-        delay(10);
         setACKPolicy(1);						// set ACK
         delay(10);
         torqueON(PACKET_CONSTS::ALL_SERVOS);		// torqueON for all servos
+        delay(10);
+        clearError(PACKET_CONSTS::ALL_SERVOS);	// clear error for all servos
         delay(10);
 }
 
@@ -256,7 +256,7 @@ void HerkulexClass::setACKPolicy(int valueACK)
 	packet[4] = CMD;
 	
 	//optional data
-	packet[7] = 0x34; 		// Address 52
+	packet[7] = 0x0E; 		// Address 52 - page 26 of the datsheet, this value was changed from 0x34 with no seeming effect
 	packet[8] = 0x01; 		// Length
 	packet[9] = valueACK; 	// Value 0=No reply, 1= Only reply to READ CMD, 2 = Always reply
 	

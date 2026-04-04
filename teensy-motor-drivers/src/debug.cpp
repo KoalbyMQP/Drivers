@@ -54,7 +54,7 @@ static const char* busName(int b) {
 
 
 //find_all_motors_on_bus
-int find_all_motors_on_bus(int busID){
+int find_all_motors_on_bus(){
     // loop through all possible pIDs (0-253), every time a motor is found, print and add to motor out
     // packet = data for servos (50) + 8 for move multiple length. See herkulex.h for more details.
     HerkulexClass Herkulex;
@@ -82,9 +82,7 @@ int find_all_motors_on_bus(int busID){
             // Serial.println(" failed checksum 1.");
             continue;
         } else {
-            Serial.print("Motor found on bus ");
-            Serial.print(busID);
-            Serial.print(" at ID: ");
+            Serial.print("Motor at ID: ");
             Serial.println(pID);
 
             int modelNo = Herkulex.checkModelWithID(pID);
