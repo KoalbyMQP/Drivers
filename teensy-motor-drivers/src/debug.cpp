@@ -54,7 +54,6 @@ static const char* busName(int b) {
 
 
 //find_all_motors_on_bus
-
 int find_all_motors_on_bus(int busID){
     // loop through all possible pIDs (0-253), every time a motor is found, print and add to motor out
     // packet = data for servos (50) + 8 for move multiple length. See herkulex.h for more details.

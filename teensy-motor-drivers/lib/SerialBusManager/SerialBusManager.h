@@ -2,14 +2,16 @@
 #define SerialBusManager_h
 #include "Arduino.h"
 #include "Herkulex.h"
+#include "MotorModel.h"
 
 // MotorRef — lightweight descriptor used by requestAllPositions / collectAllPositions.
 // Each active motor that you want to read should be registered here.
 // This avoids the SerialBusManager needing to know about HerkulexMotor internals.
-struct MotorRef {
-    uint8_t busId;      // which serial bus this motor lives on
-    uint8_t servoId;    // the motor's hardware ID on that bus
-};
+// struct MotorRef {
+//     uint8_t busId;      // which serial bus this motor lives on
+//     uint8_t servoId;    // the motor's hardware ID on that bus
+//     MotorModel type;       // DRS 0601, DRS 0602... etc.,
+// };
 
 class SerialBusManager {
     public:
@@ -29,7 +31,9 @@ class SerialBusManager {
         static void initAllMotors();
         static void endAllBuses();
 
-        static void requestAllPositions(const MotorRef* motors, uint8_t count);
+        static void tick(const MotorRef* motors, uint16_t* results, uint8_t count); // updates all collection variables
+        static bool isDoneCollecting(); // if all buses are done collecting
+        static void requestAllPositions(const MotorRef* motors, uint16_t* results, uint8_t count);
         static void collectAllPositions(const MotorRef* motors, uint16_t* results, uint8_t count);
 
                 // getAllPositionsParallel — reads positions from all motors across all buses
@@ -59,8 +63,13 @@ class SerialBusManager {
         //   count   – number of entries in both arrays
         static void getAllPositionsParallel(const MotorRef* motors, uint16_t* results, uint8_t count);
     private:
+    
 
-            // Per-bus motor queue, used internally by getAllPositionsParallel.
+        static uint8_t busDoneCount;
+        static bool doneCollecting;
+        static uint8_t activeBusCount;
+
+        // Per-bus motor queue, used internally by getAllPositionsParallel.
         // Holds the ordered list of motors to request/collect on one bus, plus the
         // state needed by the round-robin loop.
         struct BusQueue {
@@ -79,8 +88,9 @@ class SerialBusManager {
             bool readyToSend() const { return !waiting && nextSend < total; }
         };
 
+        static BusQueue queues[MAX_BUS_COUNT];
+
         
 };
-
 
 #endif

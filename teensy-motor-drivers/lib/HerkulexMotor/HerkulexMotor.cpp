@@ -1,7 +1,4 @@
-#include "Arduino.h"
 #include "HerkulexMotor.h"
-#include "Herkulex.h"
-#include "SerialBusManager.h"
 
 // the functions that before were just Herkulex.function are now SerialBusManager::getBus(_busId).function
 // what this does is it calls the Serial Bus Manager class, which, with the motor's id, looks at the proper bus instance and calls the function properly on that
@@ -74,7 +71,7 @@ void HerkulexMotor::queueMove(float posDeg){
     uint16_t boundedPos = boundPos(rawPos);
 
     // playTime is set to 0 as playTime is set when actionMoves is called
-    struct motorMoveInfo moveInfo = {boundedPos, LED_RED, _id, 0};
+    struct motorMoveInfo moveInfo = {boundedPos, LED_BLUE, _id, 0};
 
     SerialBusManager::getBus(_busId).queueMove(moveInfo);
 }
@@ -84,7 +81,7 @@ void HerkulexMotor::reboot(){
 }
 
 MotorRef HerkulexMotor::getMotorRef() const {
-    return MotorRef{_busId, _id};
+    return MotorRef{_busId, _id, _type};
 }
 
 float HerkulexMotor::rawToDegs(uint16_t rawPos) {

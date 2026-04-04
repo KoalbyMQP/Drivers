@@ -242,6 +242,8 @@ private:
   uint8_t CMD;            // Command Type
   uint8_t checksumOne;
   uint8_t checksumTwo;
+
+  uint8_t packetSize;
   // TO DO: remove references to packetSize and switch to above packetLength
 
   uint8_t additionalDataLength; // length of additional data
