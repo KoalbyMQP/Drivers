@@ -69,11 +69,11 @@ void setup(){
   SerialBusManager::startAllBuses(115200);
   SerialBusManager::initAllMotors();
 
+  delay(2000);
+
   for (int i = 0; i < MOTOR_COUNT; i++){
     motors[i].setLed(LED_STATE::LED_BLUE);
   }
-
-  // SerialBusManager::initAllMotors();
 
   // // // MotorRef table — used by the parallelized position read.
   // // // Each entry is {busId, servoId}. Order here determines order in rawPositions[], can mix and match serial buses

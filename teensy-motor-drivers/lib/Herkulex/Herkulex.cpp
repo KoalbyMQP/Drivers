@@ -118,7 +118,7 @@ void HerkulexClass::endSerialBus(){
 void HerkulexClass::initialize(){
 		resetClassVals();
         delay(100);       
-        setACKPolicy(1);						// set ACK
+        setACKPolicy(ACK_POLICY_TYPE::REPLY_TO_READ);
         delay(10);
         torqueON(PACKET_CONSTS::ALL_SERVOS);		// torqueON for all servos
         delay(10);
@@ -174,99 +174,22 @@ byte HerkulexClass::stat(int servoID)
 // torque on - 
 void HerkulexClass::torqueON(int servoID)
 {
-	packetLength = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_LENGTH;
-	additionalDataLength = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_DATA_LENGTH;
-
-	pID   = servoID;
-	CMD   = COMMAND::HRAMWRITE;          
-	  	
-	// base packet
-	packet[0] = PACKET_CONSTS::PACKET_HEADER;
-	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetLength;
-	packet[3] = pID;
-	packet[4] = CMD;
-	
-	// optional data
-	packet[7] = 0x34; 		// Address 52
-	packet[8] = 0x01; 		// Length
-	packet[9] = 0x60; 		// Torque ON
-	
-	// checksum
-	checksumOne=calcChecksumOne();
-	checksumTwo=calcChecksumTwo();
-
-	packet[5] = checksumOne;
-	packet[6] = checksumTwo;			
-
-	sendData(packet, packetLength);
+	uint8_t byteArray[1] = {TORQUE_MODE::TORQUE_ON};
+	writeToRamRegister(servoID, REGISTER::TORQUE_CONTROL, byteArray, 1);
 }
 
 // torque off - the torque is FREE, not Break
 void HerkulexClass::torqueOFF(int servoID)
 {
-	packetLength = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_LENGTH;
-	additionalDataLength = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_DATA_LENGTH;
-
-	pID   = servoID;
-	CMD   = COMMAND::HRAMWRITE;          
-	
-	checksumData[0]=0x34;               // 8. Address
-	checksumData[1]=0x01;               // 9. Lenght
-	checksumData[2]=0x00;               // 10. 0x00=Torque Free
-  	
-	// base packet
-	packet[0] = PACKET_CONSTS::PACKET_HEADER;
-	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetLength;
-	packet[3] = pID;
-	packet[4] = CMD;
-	
-	// optional data
-	packet[7] = checksumData[0]; 		// Address 52
-	packet[8] = checksumData[1]; 		// Length
-	packet[9] = checksumData[2]; 		// Torque Free
-	
-	// checksum
-	checksumOne=calcChecksumOne();
-	checksumTwo=calcChecksumTwo();		
-
-	packet[5] = checksumOne;			
-	packet[6] = checksumTwo;	
-
-    sendData(packet, packetLength);
+	uint8_t byteArray[1] = {TORQUE_MODE::TORQUE_FREE};
+	writeToRamRegister(servoID, REGISTER::TORQUE_CONTROL, byteArray, 1);
 }
 
 // ACK  - 0=No Replay, 1=Only reply to READ CMD, 2=Always reply
 void HerkulexClass::setACKPolicy(int valueACK)
-{
-	packetLength = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_LENGTH;
-	additionalDataLength = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_DATA_LENGTH;
-
-	pID   = PACKET_CONSTS::ALL_SERVOS;   
-	CMD   = COMMAND::HRAMWRITE;      
-	
-  	
-	// base packet
-	packet[0] = PACKET_CONSTS::PACKET_HEADER;
-	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetLength;
-	packet[3] = pID;
-	packet[4] = CMD;
-	
-	//optional data
-	packet[7] = 0x0E; 		// Address 52 - page 26 of the datsheet, this value was changed from 0x34 with no seeming effect
-	packet[8] = 0x01; 		// Length
-	packet[9] = valueACK; 	// Value 0=No reply, 1= Only reply to READ CMD, 2 = Always reply
-	
-	// checksum
-	checksumOne=calcChecksumOne();	
-	checksumTwo=calcChecksumTwo();					
-
-	packet[5] = checksumOne;		
-	packet[6] = checksumTwo;	
-
- 	sendData(packet, packetLength);
+{	
+	uint8_t byteArray[1] = {ACK_POLICY_TYPE::REPLY_TO_READ};
+	writeToRamRegister(PACKET_CONSTS::ALL_SERVOS, REGISTER::ACK_POLICY, byteArray, 1);
 }
 
 // model - 1=0101 - 2=0201
@@ -415,34 +338,9 @@ void HerkulexClass::setID(int ID_Old, int ID_New)
 
 // clearError
 void HerkulexClass::clearError(int servoID)
-{	
-	packetLength = PACKET_LENGTH_BYTES::HRAMWRITE_LENGTH;
-	additionalDataLength = PACKET_LENGTH_BYTES::HRAMWRITE_DATA_LENGTH;
-
-	pID   = servoID;     		
-	CMD   = COMMAND::HRAMWRITE;      
-	
-	// base packet
-	packet[0] = PACKET_CONSTS::PACKET_HEADER;
-	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetLength;
-	packet[3] = pID;
-	packet[4] = CMD;
-	
-	// optional data
-	packet[7] = 0x30;		// Address 48
-	packet[8] = 0x02;		// Length
-	packet[9] = 0x00; 		// Value1
-	packet[10]= 0x00; 		// Value2
-	
-	// checksum
-	checksumOne=calcChecksumOne();
-	checksumTwo=calcChecksumTwo();
-
-	packet[5] = checksumOne;			
-	packet[6] = checksumTwo;	
-
-	sendData(packet, packetLength);
+{
+	uint8_t byteArray[2] = {0x00, 0x00}; // 0s clears servo errors
+	writeToRamRegister(servoID, REGISTER::STATUS_ERROR, byteArray, 2);
 }
 
 void HerkulexClass::queueMove(motorMoveInfo moveInfo)
@@ -598,41 +496,10 @@ void HerkulexClass::reboot(int servoID) {
 
 }
 
-
-void HerkulexClass::setLed(uint8_t servoID, uint8_t valueLed)
+void HerkulexClass::setLed(uint8_t servoID, LED_STATE valueLed)
 {
 	uint8_t byteArray[1] = {valueLed};
 	writeToRamRegister(servoID, REGISTER::LED_CONTROL, byteArray, 1);
-	// packetLength = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_LENGTH;
-	// additionalDataLength = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_DATA_LENGTH;
-
-	// pID     = servoID;            
-	// CMD     = COMMAND::HRAMWRITE;          
-
-	// checksumData[0] = 0x35;               // 8. Address 53
-    // checksumData[1] = 0x01;               // 9. Lenght
-	// checksumData[2] = valueLed;           // 10.LedValue
-  	  	
-	// // base packet
-	// packet[0] = PACKET_CONSTS::PACKET_HEADER;
-	// packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	// packet[2] = packetLength;
-	// packet[3] = pID;
-	// packet[4] = CMD;
-
-	// // optional data
-	// packet[7] = checksumData[0];        // Address
-	// packet[8] = checksumData[1];       	// Length
-	// packet[9] = checksumData[2];        // Value
-
-	// // checksum
-	// checksumOne=calcChecksumOne();	
-	// checksumTwo=calcChecksumTwo();	
-
-	// packet[5] = checksumOne;			// Checksum 1
-	// packet[6] = checksumTwo;			// Checksum 2
-	
-	// sendData(packet, packetLength);
 }
 
 // get the speed for one servo - values betweeb -1023 <--> 1023

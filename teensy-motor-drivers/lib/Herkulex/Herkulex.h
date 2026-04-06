@@ -142,6 +142,18 @@ typedef enum {
 } PACKET_CONSTS;
 
 typedef enum {
+  NO_REPLY = 0x00,
+  REPLY_TO_READ = 0x01, // normal operating mode
+  REPLY_TO_ALL = 0x02,
+} ACK_POLICY_TYPE;
+
+typedef enum {
+  BREAK_ON = 0x40,
+  TORQUE_ON = 0x60,
+  TORQUE_FREE = 0x00,
+} TORQUE_MODE;
+
+typedef enum {
   HEEPWRITE = 0x01,
   HEEPREAD = 0x02,
   HRAMWRITE = 0x03,
@@ -155,6 +167,9 @@ typedef enum {
 
 
 typedef enum {
+  ACK_POLICY = 0x01,
+  STATUS_ERROR = 0x30,
+  TORQUE_CONTROL = 0x34,
   LED_CONTROL = 0x35,
   CALIBRATED_POS = 0x3A,
 } REGISTER;
@@ -201,7 +216,7 @@ public:
   int   getSpeed(int servoID);
     
   void  reboot(int servoID);
-  void  setLed(uint8_t servoID, uint8_t valueLed);
+  void  setLed(uint8_t servoID, LED_STATE valueLed);
 
   void  writeRegistryRAM(int servoID, int address, int writeByte);
   void  writeRegistryEEP(int servoID, int address, int writeByte);
