@@ -89,6 +89,10 @@ float HerkulexMotor::rawToDegs(uint16_t rawPos) {
     return stepsToDeg(masked, _type);
 }
 
+void HerkulexMotor::setLed(uint8_t ledColor){
+    SerialBusManager::getBus(_busId).setLed(_id, ledColor);
+}
+
 
 // PRIVATE METHODS
 uint16_t HerkulexMotor::boundPos(int32_t rawPos){

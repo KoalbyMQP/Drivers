@@ -21,9 +21,10 @@ enum STATE {
   READING_FROM_RPI,
   SETTING_MOTOR_POS,
   READING_ROBOT_STATE,
+  IDLE // allows us to not run code in main
 };
 
-uint8_t robotState = SETTING_MOTOR_POS;
+uint8_t robotState = IDLE;
 
 
 const uint8_t MOTOR_COUNT = 3;
@@ -57,10 +58,10 @@ void setup(){
   Serial8.begin(9600); //begin serial communication with the raspberry pi, this has been changed to Serial 8 instead of 1
   delay(2000);
 
-  if (!imu1.begin()) {
-      Serial.println("ERROR: IMU not detected. Check wiring!");
-      while (1);
-  }
+  // if (!imu1.begin()) {
+  //     Serial.println("ERROR: IMU not detected. Check wiring!");
+  //     while (1);
+  // }
 
   // initialize all serial buses
   SerialBusManager::createBus(SERIAL_BUS::BUS_L_LEG); // begin serial communications with motor, these are on Serial 2
@@ -68,12 +69,18 @@ void setup(){
   SerialBusManager::startAllBuses(115200);
   SerialBusManager::initAllMotors();
 
-  // // MotorRef table — used by the parallelized position read.
-  // // Each entry is {busId, servoId}. Order here determines order in rawPositions[], can mix and match serial buses
-  // // Add or remove entries to match the motors needed
-  for (int i = 0; i < MOTOR_COUNT; i++) motorRefs[i] = motors[i].getMotorRef();
-  for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(-20.0);
-  delay(2000);
+  for (int i = 0; i < MOTOR_COUNT; i++){
+    motors[i].setLed(LED_STATE::LED_BLUE);
+  }
+
+  // SerialBusManager::initAllMotors();
+
+  // // // MotorRef table — used by the parallelized position read.
+  // // // Each entry is {busId, servoId}. Order here determines order in rawPositions[], can mix and match serial buses
+  // // // Add or remove entries to match the motors needed
+  // for (int i = 0; i < MOTOR_COUNT; i++) motorRefs[i] = motors[i].getMotorRef();
+  // for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(-20.0);
+  // delay(2000);
 
 }
 
@@ -138,6 +145,11 @@ void loop(){
         count++;
         robotState = SETTING_MOTOR_POS;
       };
+      break;
+    }
+    case(IDLE):
+    {
+      delay(1000);
       break;
     }
   }

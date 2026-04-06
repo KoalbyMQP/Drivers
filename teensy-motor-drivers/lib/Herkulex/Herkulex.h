@@ -80,7 +80,7 @@ typedef enum {
 
 typedef enum {
 
-  BASE_LENGTH = 0x08,
+  BASE_LENGTH = 0x07,
   //setID
   HEEPWRITE_LENGTH_1 = 0x0A, 
   HEEPWRITE_DATA_LENGTH_1 = 0x03,
@@ -92,6 +92,8 @@ typedef enum {
   //checkModel
   HEEPREAD_LENGTH = 0x09,
   HEEPREAD_DATA_LENGTH = 0x02,
+
+  RAMWRITE_INFO_LENGTH = 0x02,
  
   //clearError, writeRegistryRAM
   HRAMWRITE_LENGTH = 0x0B,    //before it was also 0x0A, checked page 37 writeRegistryRAM
@@ -153,6 +155,7 @@ typedef enum {
 
 
 typedef enum {
+  LED_CONTROL = 0x35,
   CALIBRATED_POS = 0x3A,
 } REGISTER;
 
@@ -198,31 +201,34 @@ public:
   int   getSpeed(int servoID);
     
   void  reboot(int servoID);
-  void  setLed(int servoID, int valueLed);
+  void  setLed(uint8_t servoID, uint8_t valueLed);
 
   void  writeRegistryRAM(int servoID, int address, int writeByte);
   void  writeRegistryEEP(int servoID, int address, int writeByte);
 
+  void writeToEEPRegister(uint8_t servoID, uint8_t address, uint8_t numBytes);
+  
   void sendData(uint8_t* buffer, uint8_t length);
   void requestRead(uint8_t length);
   void updateRead();
   boolean isReplyReady();
   
-
-private:
-
-
+  
+  private:
+  
+  
   int _serialPort;
   HardwareSerial* _serial = nullptr; // store pointer to serial object
-
+  
   uint8_t calcChecksumOne();
   uint8_t calcChecksumTwo();
-
+  
   void resetClassVals();
   
   void clearBuffer();
   void printHexByte(byte x);
-
+  
+  void writeToRamRegister(uint8_t servoID, uint8_t address, uint8_t* writeData, uint8_t writeDataLength);
 
   uint8_t queuedPacketCount;
 
@@ -242,9 +248,6 @@ private:
   uint8_t CMD;            // Command Type
   uint8_t checksumOne;
   uint8_t checksumTwo;
-
-  uint8_t packetSize;
-  // TO DO: remove references to packetSize and switch to above packetLength
 
   uint8_t additionalDataLength; // length of additional data
 

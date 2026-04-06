@@ -129,7 +129,7 @@ void HerkulexClass::initialize(){
 // stat
 byte HerkulexClass::stat(int servoID)
 {
-	packetSize = PACKET_LENGTH_BYTES::HSTAT_LENGTH;
+	packetLength = PACKET_LENGTH_BYTES::HSTAT_LENGTH;
 	additionalDataLength = PACKET_LENGTH_BYTES::HSTAT_DATA_LENGTH;
 
 	pID      = servoID;			//4.Servo ID - 0XFE=All servos
@@ -138,7 +138,7 @@ byte HerkulexClass::stat(int servoID)
 	// base packet
 	packet[0] = PACKET_CONSTS::PACKET_HEADER;
 	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetSize;
+	packet[2] = packetLength;
 	packet[3] = pID;
 	packet[4] = CMD;
 
@@ -150,20 +150,19 @@ byte HerkulexClass::stat(int servoID)
 	packet[5] = checksumOne;	
 	packet[6] = checksumTwo;	
 	     
-	sendData(packet, packetSize);
+	sendData(packet, packetLength);
 	delay(2);
 	if(!readBlocking(9)) return -3; 	// read 9 bytes from serial, return -3 if nothing
 
 	// second part of the function where it reads the data
-	packetSize = packet[2];       
+	packetLength = packet[2];       
 	pID   = packet[3];        
 	CMD   = packet[4];       
 	checksumData[0]=packet[7];
     checksumData[1]=packet[8];
-    packetLength=2;
+    packetLength=2; // ??
 
 	checksumOne = calcChecksumOne(); // old one: checksumOne = (dataEx[2]^dataEx[3]^dataEx[4]^dataEx[7]^dataEx[8]) & 0xFE; 
-
 	checksumTwo = calcChecksumTwo();			
 	
 	if (checksumOne != packet[5]) return -1; //checksum verify
@@ -206,7 +205,7 @@ void HerkulexClass::torqueON(int servoID)
 // torque off - the torque is FREE, not Break
 void HerkulexClass::torqueOFF(int servoID)
 {
-	packetSize = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_LENGTH;
+	packetLength = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_LENGTH;
 	additionalDataLength = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_DATA_LENGTH;
 
 	pID   = servoID;
@@ -219,7 +218,7 @@ void HerkulexClass::torqueOFF(int servoID)
 	// base packet
 	packet[0] = PACKET_CONSTS::PACKET_HEADER;
 	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetSize;
+	packet[2] = packetLength;
 	packet[3] = pID;
 	packet[4] = CMD;
 	
@@ -235,13 +234,13 @@ void HerkulexClass::torqueOFF(int servoID)
 	packet[5] = checksumOne;			
 	packet[6] = checksumTwo;	
 
-    sendData(packet, packetSize);
+    sendData(packet, packetLength);
 }
 
 // ACK  - 0=No Replay, 1=Only reply to READ CMD, 2=Always reply
 void HerkulexClass::setACKPolicy(int valueACK)
 {
-	packetSize = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_LENGTH;
+	packetLength = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_LENGTH;
 	additionalDataLength = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_DATA_LENGTH;
 
 	pID   = PACKET_CONSTS::ALL_SERVOS;   
@@ -251,7 +250,7 @@ void HerkulexClass::setACKPolicy(int valueACK)
 	// base packet
 	packet[0] = PACKET_CONSTS::PACKET_HEADER;
 	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetSize;
+	packet[2] = packetLength;
 	packet[3] = pID;
 	packet[4] = CMD;
 	
@@ -267,13 +266,13 @@ void HerkulexClass::setACKPolicy(int valueACK)
 	packet[5] = checksumOne;		
 	packet[6] = checksumTwo;	
 
- 	sendData(packet, packetSize);
+ 	sendData(packet, packetLength);
 }
 
 // model - 1=0101 - 2=0201
 byte HerkulexClass::checkModel()
 {
-	packetSize = PACKET_LENGTH_BYTES::HEEPREAD_LENGTH;
+	packetLength = PACKET_LENGTH_BYTES::HEEPREAD_LENGTH;
 	additionalDataLength = PACKET_LENGTH_BYTES::HEEPREAD_DATA_LENGTH;
 
 	pID   = 0xFE;	           
@@ -285,7 +284,7 @@ byte HerkulexClass::checkModel()
 	// base packet
 	packet[0] = PACKET_CONSTS::PACKET_HEADER;
 	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetSize;
+	packet[2] = packetLength;
 	packet[3] = pID;
 	packet[4] = CMD;
 	
@@ -300,17 +299,17 @@ byte HerkulexClass::checkModel()
 	packet[5] = checksumOne;		
 	packet[6] = checksumTwo;
 
-    sendData(packet, packetSize);
+    sendData(packet, packetLength);
 
 	delay(1);
 	readBlocking(9);
 	
 	// this is the second part of te method that uses the read data
-	packetSize = packet[2];           
+	packetLength = packet[2];           
 	pID   = packet[3];           
 	CMD   = packet[4];
 	checksumData[0] = packet[7];         
-	packetLength = 1;      
+	packetLength = 1;  // ??    
   	
 	// TODO: I am unsure if these are correct
 	checksumOne = calcChecksumOne();	
@@ -325,7 +324,7 @@ byte HerkulexClass::checkModel()
 
 byte HerkulexClass::checkModelWithID(uint8_t pID)
 {
-	packetSize = PACKET_LENGTH_BYTES::HEEPREAD_LENGTH;
+	packetLength = PACKET_LENGTH_BYTES::HEEPREAD_LENGTH;
 	additionalDataLength = PACKET_LENGTH_BYTES::HEEPREAD_DATA_LENGTH;
 
 		           
@@ -337,7 +336,7 @@ byte HerkulexClass::checkModelWithID(uint8_t pID)
 	// base packet
 	packet[0] = PACKET_CONSTS::PACKET_HEADER;
 	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetSize;
+	packet[2] = packetLength;
 	packet[3] = pID;
 	packet[4] = CMD;
 	
@@ -352,12 +351,12 @@ byte HerkulexClass::checkModelWithID(uint8_t pID)
 	packet[5] = checksumOne;		
 	packet[6] = checksumTwo;
 
-    sendData(packet, packetSize);
+    sendData(packet, packetLength);
 
 	delay(1);
 	if (!readBlocking(11)) return -3;
 
-    packetSize = packet[2];
+    packetLength = packet[2];
     pID = packet[3];
     CMD = packet[4];
 
@@ -365,7 +364,7 @@ byte HerkulexClass::checkModelWithID(uint8_t pID)
     checksumData[1] = packet[8];
     checksumData[2] = packet[9];
     checksumData[3] = packet[10];
-    packetLength = 4;
+    packetLength = 4; // ??
 
     checksumOne = calcChecksumOne();
     checksumTwo = calcChecksumTwo();
@@ -379,8 +378,8 @@ byte HerkulexClass::checkModelWithID(uint8_t pID)
 // setID - Need to restart the servo
 void HerkulexClass::setID(int ID_Old, int ID_New)
 {
-	packetSize = PACKET_LENGTH_BYTES::HEEPWRITE_LENGTH_1;
-	// old one was : packetSize = 0x0A;  this does seem correct, so i created the HEEPWRITE_LENGTH_1, for writeRegistryEEP it's different
+	packetLength = PACKET_LENGTH_BYTES::HEEPWRITE_LENGTH_1;
+	// old one was : packetLength = 0x0A;  this does seem correct, so i created the HEEPWRITE_LENGTH_1, for writeRegistryEEP it's different
 	additionalDataLength = PACKET_LENGTH_BYTES::HEEPWRITE_DATA_LENGTH_1; 
 	//strange because the packetLength before was 3, but in the other ones it had been one less than the number of optional data
 
@@ -394,7 +393,7 @@ void HerkulexClass::setID(int ID_Old, int ID_New)
 	// base packet
 	packet[0] = PACKET_CONSTS::PACKET_HEADER;
 	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetSize;
+	packet[2] = packetLength;
 	packet[3] = pID;
 	packet[4] = CMD;
 	
@@ -410,14 +409,14 @@ void HerkulexClass::setID(int ID_Old, int ID_New)
 	packet[5] = checksumOne;
 	packet[6] = checksumTwo;
 
-	sendData(packet, packetSize);
+	sendData(packet, packetLength);
 
 }
 
 // clearError
 void HerkulexClass::clearError(int servoID)
 {	
-	packetSize = PACKET_LENGTH_BYTES::HRAMWRITE_LENGTH;
+	packetLength = PACKET_LENGTH_BYTES::HRAMWRITE_LENGTH;
 	additionalDataLength = PACKET_LENGTH_BYTES::HRAMWRITE_DATA_LENGTH;
 
 	pID   = servoID;     		
@@ -426,7 +425,7 @@ void HerkulexClass::clearError(int servoID)
 	// base packet
 	packet[0] = PACKET_CONSTS::PACKET_HEADER;
 	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetSize;
+	packet[2] = packetLength;
 	packet[3] = pID;
 	packet[4] = CMD;
 	
@@ -443,7 +442,7 @@ void HerkulexClass::clearError(int servoID)
 	packet[5] = checksumOne;			
 	packet[6] = checksumTwo;	
 
-	sendData(packet, packetSize);
+	sendData(packet, packetLength);
 }
 
 void HerkulexClass::queueMove(motorMoveInfo moveInfo)
@@ -576,7 +575,7 @@ uint16_t HerkulexClass::getPosition(int servoID) {
 
 // reboot single servo - pay attention 253 - all servos doesn't work!
 void HerkulexClass::reboot(int servoID) {
-    packetSize = PACKET_LENGTH_BYTES::HREBOOT_LENGTH;
+    packetLength = PACKET_LENGTH_BYTES::HREBOOT_LENGTH;
 	additionalDataLength = PACKET_LENGTH_BYTES::HREBOOT_DATA_LENGTH;
 
 	pID   = servoID;
@@ -585,12 +584,9 @@ void HerkulexClass::reboot(int servoID) {
 	// base packet
 	packet[0] = PACKET_CONSTS::PACKET_HEADER;
 	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetSize;
+	packet[2] = packetLength;
 	packet[3] = pID;
 	packet[4] = CMD;
-
-	// checksum
-	// before, this was done inline like so checksumOne = (packetSize ^ pID ^ CMD) &0xFE;, which is equivalent, but like this it's similar to the others
 
 	checksumOne = calcChecksumOne();
     checksumTwo = calcChecksumTwo();
@@ -598,50 +594,52 @@ void HerkulexClass::reboot(int servoID) {
 	packet[5] = checksumOne;	
 	packet[6] = checksumTwo;
 	
-	sendData(packet, packetSize);
+	sendData(packet, packetLength);
 
 }
 
-// LED  - see table of colors 
-void HerkulexClass::setLed(int servoID, int valueLed)
+
+void HerkulexClass::setLed(uint8_t servoID, uint8_t valueLed)
 {
-	packetLength = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_LENGTH;
-	additionalDataLength = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_DATA_LENGTH;
+	uint8_t byteArray[1] = {valueLed};
+	writeToRamRegister(servoID, REGISTER::LED_CONTROL, byteArray, 1);
+	// packetLength = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_LENGTH;
+	// additionalDataLength = PACKET_LENGTH_BYTES::SET_ACK_POLICY_RAMWRITE_DATA_LENGTH;
 
-	pID     = servoID;            
-	CMD     = COMMAND::HRAMWRITE;          
+	// pID     = servoID;            
+	// CMD     = COMMAND::HRAMWRITE;          
 
-	checksumData[0] = 0x35;               // 8. Address 53
-    checksumData[1] = 0x01;               // 9. Lenght
-	checksumData[2] = valueLed;           // 10.LedValue
+	// checksumData[0] = 0x35;               // 8. Address 53
+    // checksumData[1] = 0x01;               // 9. Lenght
+	// checksumData[2] = valueLed;           // 10.LedValue
   	  	
-	// base packet
-	packet[0] = PACKET_CONSTS::PACKET_HEADER;
-	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetLength;
-	packet[3] = pID;
-	packet[4] = CMD;
+	// // base packet
+	// packet[0] = PACKET_CONSTS::PACKET_HEADER;
+	// packet[1] = PACKET_CONSTS::PACKET_HEADER;
+	// packet[2] = packetLength;
+	// packet[3] = pID;
+	// packet[4] = CMD;
 
-	// optional data
-	packet[7] = checksumData[0];        // Address
-	packet[8] = checksumData[1];       	// Length
-	packet[9] = checksumData[2];        // Value
+	// // optional data
+	// packet[7] = checksumData[0];        // Address
+	// packet[8] = checksumData[1];       	// Length
+	// packet[9] = checksumData[2];        // Value
 
-	// checksum
-	checksumOne=calcChecksumOne();	
-	checksumTwo=calcChecksumTwo();	
+	// // checksum
+	// checksumOne=calcChecksumOne();	
+	// checksumTwo=calcChecksumTwo();	
 
-	packet[5] = checksumOne;			// Checksum 1
-	packet[6] = checksumTwo;			// Checksum 2
+	// packet[5] = checksumOne;			// Checksum 1
+	// packet[6] = checksumTwo;			// Checksum 2
 	
-	sendData(packet, packetLength);
+	// sendData(packet, packetLength);
 }
 
 // get the speed for one servo - values betweeb -1023 <--> 1023
 int HerkulexClass::getSpeed(int servoID) {
   	int speedy  = 0;
 
-	packetSize = PACKET_LENGTH_BYTES::HRAMREAD_LENGTH;
+	packetLength = PACKET_LENGTH_BYTES::HRAMREAD_LENGTH;
 	additionalDataLength = PACKET_LENGTH_BYTES::HRAMREAD_DATA_LENGTH;
 
 	pID   = servoID;     	   	  
@@ -654,7 +652,7 @@ int HerkulexClass::getSpeed(int servoID) {
 	// base packet
 	packet[0] = PACKET_CONSTS::PACKET_HEADER;
 	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetSize;
+	packet[2] = packetLength;
 	packet[3] = pID;
 	packet[4] = CMD;
   
@@ -669,14 +667,14 @@ int HerkulexClass::getSpeed(int servoID) {
 	packet[5] = checksumOne;
 	packet[6] = checksumTwo;	
 	
-	sendData(packet, packetSize);
+	sendData(packet, packetLength);
 
 	delay(1);
 	readBlocking(13);
 
 
 	// This is the second half of the function that uses the read data
-	packetSize =      inputBuffer[2];    
+	packetLength =    inputBuffer[2];    
 	pID   =           inputBuffer[3]; 
 	CMD   =           inputBuffer[4];
 
@@ -744,7 +742,7 @@ void HerkulexClass::moveOne(motorMoveInfo moveInfo)
 // write registry in the RAM: one byte 
 void HerkulexClass::writeRegistryRAM(int servoID, int address, int writeByte)
 {
-	packetSize = PACKET_LENGTH_BYTES::HRAMWRITE_LENGTH;
+	packetLength = PACKET_LENGTH_BYTES::HRAMWRITE_LENGTH;
 	// old one was : packetSize = 0x0A;  , but i think that that is wrong based on the datasheet. I changed it to 0x0B page 37
 	additionalDataLength = PACKET_LENGTH_BYTES::HRAMWRITE_DATA_LENGTH;
 
@@ -758,7 +756,7 @@ void HerkulexClass::writeRegistryRAM(int servoID, int address, int writeByte)
 	// base packet
 	packet[0] = PACKET_CONSTS::PACKET_HEADER;
 	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetSize;
+	packet[2] = packetLength;
 	packet[3] = pID;
 	packet[4] = CMD;
 
@@ -775,13 +773,16 @@ void HerkulexClass::writeRegistryRAM(int servoID, int address, int writeByte)
 	packet[5] = checksumOne;
 	packet[6] = checksumTwo;
 
-  	sendData(packet, packetSize);
+  	sendData(packet, packetLength);
 }
+
+
+//   void writeToEEPRegister(uint8_t servoID, uint8_t address, uint8_t numBytes);
 
 // write registry in the EEP memory (ROM): one byte 
 void HerkulexClass::writeRegistryEEP(int servoID, int address, int writeByte)
 {
-	packetSize = PACKET_LENGTH_BYTES::HEEPWRITE_LENGTH_2;
+	packetLength = PACKET_LENGTH_BYTES::HEEPWRITE_LENGTH_2;
 	// old one was : packetSize = 0x0A;  , but i think that that is wrong based on the datasheet. I changed it to 0x0B page 36
 	additionalDataLength = PACKET_LENGTH_BYTES::HEEPWRITE_DATA_LENGTH_2;
 	
@@ -796,7 +797,7 @@ void HerkulexClass::writeRegistryEEP(int servoID, int address, int writeByte)
   	// base packet
 	packet[0] = PACKET_CONSTS::PACKET_HEADER;
 	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetSize;
+	packet[2] = packetLength;
 	packet[3] = pID;
 	packet[4] = CMD;
 
@@ -813,12 +814,44 @@ void HerkulexClass::writeRegistryEEP(int servoID, int address, int writeByte)
 	packet[5] = checksumOne;
 	packet[6] = checksumTwo;
 
-  	sendData(packet, packetSize);
+  	sendData(packet, packetLength);
 }
 
 
 
 // Private Methods //////////////////////////////////////////////////////////////
+
+void HerkulexClass::writeToRamRegister(uint8_t servoID, uint8_t address, uint8_t* writeData, uint8_t writeDataLength)
+{
+	additionalDataLength = PACKET_LENGTH_BYTES::RAMWRITE_INFO_LENGTH + writeDataLength;
+	packetLength = PACKET_LENGTH_BYTES::BASE_LENGTH + additionalDataLength;
+
+	pID = servoID;
+	CMD = COMMAND::HRAMWRITE;
+
+	// base packet
+	packet[0] = PACKET_CONSTS::PACKET_HEADER;
+	packet[1] = PACKET_CONSTS::PACKET_HEADER;
+	packet[2] = packetLength;
+	packet[3] = pID;
+	packet[4] = CMD;
+
+	// optional data
+	packet[7] = address;
+	packet[8] = writeDataLength;    // num of bytes to write starting at address
+	for (uint8_t i = 0; i < writeDataLength; i++) {
+		packet[9 + i] = writeData[i]; 	// copy the writeData to the packet
+	}
+
+	// checksum
+	checksumOne = calcChecksumOne();
+  	checksumTwo = calcChecksumTwo();
+
+	packet[5] = checksumOne;
+	packet[6] = checksumTwo;
+
+  	sendData(packet, packetLength);
+}
 
 // calculated checksum1 as defined in datasheets
 uint8_t HerkulexClass::calcChecksumOne()
@@ -827,7 +860,7 @@ uint8_t HerkulexClass::calcChecksumOne()
   	checksumOne = 0 ^ packetLength ^ pID ^ CMD;
   	for (int i = 0; i < additionalDataLength; i++)
 	{
-		checksumOne = checksumOne ^ packet[i + 7]; // 7 puts us at the start of the additional data
+		checksumOne = checksumOne ^ packet[i + PACKET_LENGTH_BYTES::BASE_LENGTH]; //puts us at the start of the additional data
 	}
 	return checksumOne & 0xFE;
 }
@@ -838,7 +871,7 @@ uint8_t HerkulexClass::calcChecksumTwo()
 	checksumTwo = 0 ^ packetLength ^ pID ^ CMD;
 	for (int i = 0; i < additionalDataLength; i++) 
 	{
-		checksumTwo = checksumTwo ^ packet[i + 7]; // 7 puts us at the start of the additional data
+		checksumTwo = checksumTwo ^ packet[i + PACKET_LENGTH_BYTES::BASE_LENGTH]; // puts us at the start of the additional data
 	}
 	return (~checksumTwo) & 0xFE;
 }
@@ -856,7 +889,7 @@ void HerkulexClass::requestRead(uint8_t length){
 	readStartTime = micros();
 }
 
-// update the read request
+// update the read request MUST CALL REQUEST READ BEFOREHAND
 void HerkulexClass::updateRead(){
 	// do nothing if no read is requested
 	if(!readPending) return;

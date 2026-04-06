@@ -57,6 +57,8 @@ class HerkulexMotor{
         MotorRef getMotorRef() const;   // allows generation of the MotorRef table itself so that it can be automated
         float rawToDegs(uint16_t rawPos);
 
+        void setLed(uint8_t ledColor);
+
         // getter functions
         int getId()    const { return _id; }
         int getBusId() const { return _busId; }
