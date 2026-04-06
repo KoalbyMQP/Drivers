@@ -75,12 +75,12 @@ void setup(){
     motors[i].setLed(LED_STATE::LED_BLUE);
   }
 
-  // // // MotorRef table — used by the parallelized position read.
-  // // // Each entry is {busId, servoId}. Order here determines order in rawPositions[], can mix and match serial buses
-  // // // Add or remove entries to match the motors needed
-  // for (int i = 0; i < MOTOR_COUNT; i++) motorRefs[i] = motors[i].getMotorRef();
-  // for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(-20.0);
-  // delay(2000);
+  // // MotorRef table — used by the parallelized position read.
+  // // Each entry is {busId, servoId}. Order here determines order in rawPositions[], can mix and match serial buses
+  // // Add or remove entries to match the motors needed
+  for (int i = 0; i < MOTOR_COUNT; i++) motorRefs[i] = motors[i].getMotorRef();
+  for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(0.0);
+  delay(2000);
 
 }
 
