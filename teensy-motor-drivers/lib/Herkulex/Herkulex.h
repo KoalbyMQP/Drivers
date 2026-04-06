@@ -218,10 +218,8 @@ public:
   void  reboot(int servoID);
   void  setLed(uint8_t servoID, LED_STATE valueLed);
 
-  void  writeRegistryRAM(int servoID, int address, int writeByte);
   void  writeRegistryEEP(int servoID, int address, int writeByte);
 
-  void writeToEEPRegister(uint8_t servoID, uint8_t address, uint8_t numBytes);
   
   void sendData(uint8_t* buffer, uint8_t length);
   void requestRead(uint8_t length);
@@ -244,7 +242,8 @@ public:
   void printHexByte(byte x);
   
   void writeToRamRegister(uint8_t servoID, uint8_t address, uint8_t* writeData, uint8_t writeDataLength);
-
+  void writeToEEPRegister(uint8_t servoID, uint8_t address, uint8_t* writeData, uint8_t writeDataLength);
+  
   uint8_t queuedPacketCount;
 
 

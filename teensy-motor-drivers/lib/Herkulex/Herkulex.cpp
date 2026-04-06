@@ -606,45 +606,9 @@ void HerkulexClass::moveOne(motorMoveInfo moveInfo)
 	sendData(packet, packetLength);
 }
 
-// write registry in the RAM: one byte 
-void HerkulexClass::writeRegistryRAM(int servoID, int address, int writeByte)
-{
-	packetLength = PACKET_LENGTH_BYTES::HRAMWRITE_LENGTH;
-	// old one was : packetSize = 0x0A;  , but i think that that is wrong based on the datasheet. I changed it to 0x0B page 37
-	additionalDataLength = PACKET_LENGTH_BYTES::HRAMWRITE_DATA_LENGTH;
-
-	pID   = servoID;     
-	CMD   = COMMAND::HRAMWRITE; 
-
-	checksumData[0]=address;              // 8. Address
-	checksumData[1]=0x01;               	// 9. Length
-	checksumData[2]=writeByte;            // 10. Write error=0
-  
-	// base packet
-	packet[0] = PACKET_CONSTS::PACKET_HEADER;
-	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetLength;
-	packet[3] = pID;
-	packet[4] = CMD;
-
-	// optional data
-	packet[7] = checksumData[0]; 		// Address 52
-	packet[8] = checksumData[1]; 		// Length
-	packet[9] = checksumData[2]; 		// Value1
-	packet[10]= checksumData[3]; 		// Value2
-
-	// checksum
-	checksumOne=calcChecksumOne();
-  	checksumTwo=calcChecksumTwo();
-
-	packet[5] = checksumOne;
-	packet[6] = checksumTwo;
-
-  	sendData(packet, packetLength);
-}
 
 
-//   void writeToEEPRegister(uint8_t servoID, uint8_t address, uint8_t numBytes);
+
 
 // write registry in the EEP memory (ROM): one byte 
 void HerkulexClass::writeRegistryEEP(int servoID, int address, int writeByte)
@@ -719,6 +683,9 @@ void HerkulexClass::writeToRamRegister(uint8_t servoID, uint8_t address, uint8_t
 
   	sendData(packet, packetLength);
 }
+
+// TO DO: similar to above, as EEPRegistry writes can be either one or two bytes
+//   void writeToEEPRegister(uint8_t servoID, uint8_t address, uint8_t* writeData, uint8_t writeDataLength);
 
 // calculated checksum1 as defined in datasheets
 uint8_t HerkulexClass::calcChecksumOne()
