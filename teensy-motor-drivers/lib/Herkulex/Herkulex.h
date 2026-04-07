@@ -93,13 +93,13 @@ typedef enum {
   HEEPREAD_LENGTH = 0x09,
   HEEPREAD_DATA_LENGTH = 0x02,
 
-  RAMWRITE_INFO_LENGTH = 0x02,
+  REGISTER_INFO_LENGTH = 0x02,
  
   //clearError, writeRegistryRAM
   HRAMWRITE_LENGTH = 0x0B,    //before it was also 0x0A, checked page 37 writeRegistryRAM
   HRAMWRITE_DATA_LENGTH = 0x04,
 
-  //setLed, setACKPolicy, torqueOFF, torqueON
+  //setLed, setACKPolicy, torqueFree, torqueON
   SET_ACK_POLICY_RAMWRITE_LENGTH = 0x0A,    //before it was also 0x0A, checked page 37 writeRegistryRAM
   SET_ACK_POLICY_RAMWRITE_DATA_LENGTH = 0x03,
 
@@ -165,6 +165,18 @@ typedef enum {
   HREBOOT = 0x09, 
 } COMMAND;
 
+typedef enum {
+  HEEPWRITE_RESPONSE = 0x41,
+  HEEPREAD_RESPONSE = 0x42,
+  HRAMWRITE_RESPONSE = 0x43,
+  HRAMREAD_RESPONSE = 0x44,
+  HIJOG_RESPONSE = 0x45,
+  HSJOG_RESPONSE = 0x46,
+  HSTAT_RESPONSE = 0x47,
+  HROLLBACK_RESPONSE = 0x48,
+  HREBOOT_RESPONSE = 0x49,
+} COMMAND_RESPONSE;
+
 
 typedef enum {
   ACK_POLICY = 0x01,
@@ -202,7 +214,7 @@ public:
   void  clearError(int servoID);
 
   void  torqueON(int servoID);
-  void  torqueOFF(int servoID);
+  void  torqueFree(int servoID);
 
   void  queueMove(motorMoveInfo moveInfo);
   void  actionMoves(uint8_t playTime);
@@ -217,8 +229,6 @@ public:
     
   void  reboot(int servoID);
   void  setLed(uint8_t servoID, LED_STATE valueLed);
-
-  void  writeRegistryEEP(int servoID, int address, int writeByte);
 
   
   void sendData(uint8_t* buffer, uint8_t length);
@@ -241,8 +251,13 @@ public:
   void clearBuffer();
   void printHexByte(byte x);
   
+  void writeToRegister(uint8_t servoID, uint8_t address, uint8_t* writeData, uint8_t writeDataLength, COMMAND cmd);
   void writeToRamRegister(uint8_t servoID, uint8_t address, uint8_t* writeData, uint8_t writeDataLength);
   void writeToEEPRegister(uint8_t servoID, uint8_t address, uint8_t* writeData, uint8_t writeDataLength);
+
+  bool readFromRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer, COMMAND cmd, COMMAND_RESPONSE cmd_res);
+  bool readFromRamRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer);
+  bool readFromEEPRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer);
   
   uint8_t queuedPacketCount;
 
