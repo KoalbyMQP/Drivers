@@ -188,7 +188,12 @@ typedef enum {
   TORQUE_CONTROL = 0x34,
   LED_CONTROL = 0x35,
   CALIBRATED_POS = 0x3A,
-} REGISTER;
+  PWM = 0x40,
+} RAM_REGISTER;
+
+typedef enum {
+  MOTOR_MODEL = 0x00,
+} EEP_REGISTER;
 
 // HERKULEX STATUS ERROR - See Manual p39
 static byte H_STATUS_OK					= 0x00;
@@ -212,8 +217,7 @@ public:
   void  initialize();
   byte  stat(int servoID);
   void  setACKPolicy(int valueACK);
-  byte  checkModel();
-  byte checkModelWithID(uint8_t pID);
+  uint16_t checkModel(uint8_t servoID);
   void  setID(int ID_Old, int ID_New);
   void  clearError(int servoID);
 
@@ -256,16 +260,17 @@ public:
   void printHexByte(byte x);
   
   void writeToRegister(uint8_t servoID, uint8_t address, uint8_t* writeData, uint8_t writeDataLength, COMMAND cmd);
-  void writeToRamRegister(uint8_t servoID, uint8_t address, uint8_t* writeData, uint8_t writeDataLength);
-  void writeToEEPRegister(uint8_t servoID, uint8_t address, uint8_t* writeData, uint8_t writeDataLength);
+  void writeToRamRegister(uint8_t servoID, RAM_REGISTER address, uint8_t* writeData, uint8_t writeDataLength);
+  void writeToEEPRegister(uint8_t servoID, EEP_REGISTER address, uint8_t* writeData, uint8_t writeDataLength);
 
   void requestFromRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, COMMAND cmd);
-  void requestFromRamRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes);
-  void requestFromEEPRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes);
+  void requestFromRamRegister(uint8_t servoID, RAM_REGISTER address, uint8_t numRequestedBytes);
+  void requestFromEEPRegister(uint8_t servoID, EEP_REGISTER address, uint8_t numRequestedBytes);
   bool readFromRegisterBlocking(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer, COMMAND cmd, COMMAND_RESPONSE cmd_res);
-  bool readFromRamRegisterBlocking(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer);
-  bool readFromEEPRegisterBlocking(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer);
+  bool readFromRamRegisterBlocking(uint8_t servoID, RAM_REGISTER address, uint8_t numRequestedBytes, uint8_t* buffer);
+  bool readFromEEPRegisterBlocking(uint8_t servoID, EEP_REGISTER address, uint8_t numRequestedBytes, uint8_t* buffer);
 
+  void buildPacket(uint8_t servoID, uint8_t* optionalData, uint8_t optionalDataLength, COMMAND cmd);
   void sendPacket(uint8_t servoID, uint8_t* data, uint8_t dataLength, COMMAND cmd);
 
   bool verifyInputPacket(uint8_t* inputPacket, uint8_t inputPacketLength);

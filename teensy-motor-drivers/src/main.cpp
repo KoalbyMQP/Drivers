@@ -24,7 +24,7 @@ enum STATE {
   IDLE // allows us to not run code in main
 };
 
-uint8_t robotState = SETTING_MOTOR_POS;
+uint8_t robotState = IDLE;
 
 
 const uint8_t MOTOR_COUNT = 3;
@@ -72,7 +72,7 @@ void setup(){
   delay(2000);
 
   for (int i = 0; i < MOTOR_COUNT; i++){
-    motors[i].setLed(LED_STATE::LED_PURPLE);
+    motors[i].setLed(LED_STATE::LED_BLUE);
   }
 
   delay(2000);
@@ -81,8 +81,15 @@ void setup(){
   // Each entry is {busId, servoId}. Order here determines order in rawPositions[], can mix and match serial buses
   // Add or remove entries to match the motors needed
   for (int i = 0; i < MOTOR_COUNT; i++) motorRefs[i] = motors[i].getMotorRef();
-  for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(50.0);
+  for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(0.0);
   delay(2000);
+
+
+  for (int i = 0; i < MOTOR_COUNT; i++){
+    Serial.println(motors[i].getModel());
+  }
+
+
 
 }
 

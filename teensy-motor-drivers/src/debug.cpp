@@ -85,7 +85,7 @@ int find_all_motors_on_bus(){
             Serial.print("Motor at ID: ");
             Serial.println(pID);
 
-            int modelNo = Herkulex.checkModelWithID(pID);
+            int modelNo = Herkulex.checkModel(pID);
             MotorModel model = decodeModel(modelNo);
 
             Serial.print("Motor model: ");

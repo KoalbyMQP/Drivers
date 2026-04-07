@@ -93,6 +93,10 @@ void HerkulexMotor::setLed(LED_STATE ledColor){
     SerialBusManager::getBus(_busId).setLed(_id, ledColor);
 }
 
+uint16_t HerkulexMotor::getModel(){
+    return SerialBusManager::getBus(_busId).checkModel(_id);
+}
+
 
 // PRIVATE METHODS
 uint16_t HerkulexMotor::boundPos(int32_t rawPos){

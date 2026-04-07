@@ -58,6 +58,7 @@ class HerkulexMotor{
         float rawToDegs(uint16_t rawPos);
 
         void setLed(LED_STATE ledColor);
+        uint16_t getModel();
 
         // getter functions
         int getId()    const { return _id; }
