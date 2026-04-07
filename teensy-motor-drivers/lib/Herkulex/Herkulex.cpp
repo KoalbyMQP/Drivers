@@ -120,7 +120,7 @@ void HerkulexClass::initialize(){
         delay(100);       
         clearError(PACKET_CONSTS::ALL_SERVOS);	// clear error for all servos
         delay(10);
-        setACKPolicy(1);						// set ACK
+        setACKPolicy(2);						// set ACK
         delay(10);
         torqueON(PACKET_CONSTS::ALL_SERVOS);		// torqueON for all servos
         delay(10);
@@ -129,6 +129,10 @@ void HerkulexClass::initialize(){
 // stat
 byte HerkulexClass::stat(int servoID)
 {
+	
+	// flush any stale RX bytes before starting
+	while (_serial->available()) _serial->read();
+
 	packetSize = PACKET_LENGTH_BYTES::HSTAT_LENGTH;
 	additionalDataLength = PACKET_LENGTH_BYTES::HSTAT_DATA_LENGTH;
 
@@ -151,25 +155,40 @@ byte HerkulexClass::stat(int servoID)
 	packet[6] = checksumTwo;	
 	     
 	sendData(packet, packetSize);
+	_serial->flush();                        // wait for TX to finish
+	// drain the 7-byte TX echo from RX
+	uint32_t flushStart = micros();
+	uint8_t flushed = 0;
+	while (flushed < packetSize && micros() - flushStart < SERIAL_READ_TIMEOUT_US) {
+		if (_serial->available()) {
+			_serial->read();
+			flushed++;
+		}
+	}
 	delay(2);
-	if(!readBlocking(9)) return -3; 	// read 9 bytes from serial, return -3 if nothing
+	readBlocking(9);
 
-	// second part of the function where it reads the data
-	packetSize = packet[2];       
-	pID   = packet[3];        
-	CMD   = packet[4];       
-	checksumData[0]=packet[7];
-    checksumData[1]=packet[8];
-    packetLength=2;
+	Serial.print("Motor "); Serial.print(servoID); Serial.print(" raw bytes: ");
+	for(int i = 0; i < 9; i++){
+		Serial.print("0x"); Serial.print(packet[i], HEX); Serial.print(" ");
+	}
+	Serial.println();
 
-	checksumOne = calcChecksumOne(); // old one: checksumOne = (dataEx[2]^dataEx[3]^dataEx[4]^dataEx[7]^dataEx[8]) & 0xFE; 
+	uint8_t receivedCS1 = packet[5];
+	uint8_t receivedCS2 = packet[6];
 
-	checksumTwo = calcChecksumTwo();			
-	
-	if (checksumOne != packet[5]) return -1; //checksum verify
-	if (checksumTwo != packet[6]) return -2;
+	packetLength         = packet[2];
+	pID                  = packet[3];
+	CMD                  = packet[4];
+	additionalDataLength = 2;
 
-	return packet[7];			// return status
+	checksumOne = calcChecksumOne();   // ← MUST be here
+	checksumTwo = calcChecksumTwo();   // ← MUST be here
+
+	if (checksumOne != receivedCS1) return -1;
+	if (checksumTwo != receivedCS2) return -2;
+
+	return packet[7];
 }
 
 // torque on - 
@@ -256,7 +275,7 @@ void HerkulexClass::setACKPolicy(int valueACK)
 	packet[4] = CMD;
 	
 	//optional data
-	packet[7] = 0x34; 		// Address 52
+	packet[7] = 0x0E; 		// Address 52
 	packet[8] = 0x01; 		// Length
 	packet[9] = valueACK; 	// Value 0=No reply, 1= Only reply to READ CMD, 2 = Always reply
 	
@@ -876,17 +895,15 @@ void HerkulexClass::updateRead(){
 
 
 bool HerkulexClass::readBlocking(uint8_t length){
-	readStartTime = micros();
-	while(_serial->available() < length){
-		delayMicroseconds(50);
-		if (micros() - readStartTime >= SERIAL_READ_TIMEOUT_US){
-			return false;
-		}
-		if (_serial->available() >= length){
-			_serial->readBytes(inputBuffer, length);
-			return true;
-		}
-	}
+    readStartTime = micros();
+    while(_serial->available() < length){
+        delayMicroseconds(50);
+        if (micros() - readStartTime >= SERIAL_READ_TIMEOUT_US){
+            return false;
+        }
+    }
+    _serial->readBytes(packet, length);  // read into packet[], not inputBuffer
+    return true;
 }
 
 // LEGACY

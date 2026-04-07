@@ -52,7 +52,7 @@ struct motorMoveInfo {
 
 #define DATA_SIZE	 30		               // buffer for input data
 #define DATA_MOVE  	 50		             // max 10 servos <---- change this for more servos!
-#define SERIAL_READ_TIMEOUT_US  2000   // timeout serial communication (microseconds)
+#define SERIAL_READ_TIMEOUT_US  10000   // timeout serial communication (microseconds)
 
 // SERVO HERKULEX COMMAND - See Manual p40
 // #define HEEPWRITE    0x01 	//Rom write
