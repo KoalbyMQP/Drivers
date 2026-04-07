@@ -75,6 +75,10 @@ typedef enum {
   LED_GREEN = 0x01,
   LED_BLUE = 0x02,
   LED_RED = 0x04,
+  
+
+  // MIX
+  LED_PURPLE = LED_BLUE | LED_RED,
 } LED_STATE;
 
 
@@ -225,7 +229,7 @@ public:
   void sendPosRequest(int servoID);
   uint16_t collectPosition(int servoID);
 
-  int   getSpeed(int servoID);
+  uint16_t getSpeed(int servoID);
     
   void  reboot(int servoID);
   void  setLed(uint8_t servoID, LED_STATE valueLed);
@@ -255,9 +259,17 @@ public:
   void writeToRamRegister(uint8_t servoID, uint8_t address, uint8_t* writeData, uint8_t writeDataLength);
   void writeToEEPRegister(uint8_t servoID, uint8_t address, uint8_t* writeData, uint8_t writeDataLength);
 
-  bool readFromRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer, COMMAND cmd, COMMAND_RESPONSE cmd_res);
-  bool readFromRamRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer);
-  bool readFromEEPRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer);
+  void requestFromRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, COMMAND cmd);
+  void requestFromRamRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes);
+  void requestFromEEPRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes);
+  bool readFromRegisterBlocking(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer, COMMAND cmd, COMMAND_RESPONSE cmd_res);
+  bool readFromRamRegisterBlocking(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer);
+  bool readFromEEPRegisterBlocking(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer);
+
+  void sendPacket(uint8_t servoID, uint8_t* data, uint8_t dataLength, COMMAND cmd);
+
+  bool verifyInputPacket(uint8_t* inputPacket, uint8_t inputPacketLength);
+  bool readPacketReply(uint8_t servoID, uint8_t* outputBuffer, uint8_t optionalDataLength, COMMAND_RESPONSE cmd_res);
   
   uint8_t queuedPacketCount;
 
@@ -291,7 +303,7 @@ public:
 
   uint8_t packetQueue[DATA_MOVE];  // stores move packets for simulataneous jog
 
-  uint8_t inputBuffer[DATA_MOVE]; // stores input 
+  uint8_t inputBuffer[DATA_MOVE]; // stores input HOW LARGE DOES THIS NEED TO BE?
   uint8_t checksumData[PACKET_LENGTH_BYTES::BASE_LENGTH];  // stores checksumdata for input validation 
 };
 

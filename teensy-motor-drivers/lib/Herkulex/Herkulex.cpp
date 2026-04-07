@@ -132,8 +132,8 @@ byte HerkulexClass::stat(int servoID)
 	packetLength = PACKET_LENGTH_BYTES::HSTAT_LENGTH;
 	additionalDataLength = PACKET_LENGTH_BYTES::HSTAT_DATA_LENGTH;
 
-	pID      = servoID;			//4.Servo ID - 0XFE=All servos
-	CMD      = COMMAND::HSTAT;			//5.CMD
+	pID      = servoID;
+	CMD      = COMMAND::HSTAT;
   
 	// base packet
 	packet[0] = PACKET_CONSTS::PACKET_HEADER;
@@ -353,6 +353,8 @@ void HerkulexClass::queueMove(motorMoveInfo moveInfo)
 
 // move all servos with the same execution time
 // DO NOT USE IN MAIN: USE HerkulexMotor::actionMoves(int playTimeMs) instead
+// TODO: refactor sendPacket into buildPacket and sendPacket functions
+// as we have to use buildPacket here then append the packetQueue after it, then send the whole bigass packet
 void HerkulexClass::actionMoves(uint8_t playTime)
 {
 
@@ -396,31 +398,7 @@ void HerkulexClass::actionMoves(uint8_t playTime)
 // Call this on every bus BEFORE calling collectPosition on any bus so that all
 // motors can reply in parallel while the CPU is busy sending to the next bus.
 void HerkulexClass::sendPosRequest(int servoID) {
-	packetLength = PACKET_LENGTH_BYTES::HRAMREAD_LENGTH;
-	additionalDataLength = PACKET_LENGTH_BYTES::HRAMREAD_DATA_LENGTH;
-
-    pID          = servoID;						// Servo ID - 253=all servos
-    CMD          = COMMAND::HRAMREAD;
-	
-	// base packet
-	packet[0] = PACKET_CONSTS::PACKET_HEADER;
-	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetLength;
-	packet[3] = pID;
-	packet[4] = CMD;
-	
-	// optional data
-	packet[7] = REGISTER::CALIBRATED_POS; // register address
-	packet[8] = additionalDataLength;  	  // data length
-	
-	// checksum
-	checksumOne = calcChecksumOne();
-	checksumTwo = calcChecksumTwo();				
-	
-	packet[5] = checksumOne;					
-	packet[6] = checksumTwo;					
-
-    sendData(packet, packetLength);
+	requestFromRamRegister(servoID, REGISTER::CALIBRATED_POS, PACKET_LENGTH_BYTES::HRAMREAD_DATA_LENGTH);
 	requestRead(PACKET_LENGTH_BYTES::GETPOS_RESPONSE);
 }
 
@@ -442,23 +420,11 @@ uint16_t HerkulexClass::collectPosition(int servoID) {
 
 	newDataInInputBuffer = false;
 
-	// Re-arm class fields so checksums knows what packet we expect.
-	// These must match what requestPosition() set.
-	packetLength = inputBuffer[2];
-	pID          = inputBuffer[3];
-	CMD          = inputBuffer[4];
-
-	// Parse data from input buffer into packet for checksum
-	memcpy(&packet[7], &inputBuffer[7], 6);
-
-	checksumOne = calcChecksumOne();
-	checksumTwo = calcChecksumTwo();
-
-	// if (checksumOne != inputBuffer[5]) return 0xFFFF;    // checksum error flag
-	// if (checksumTwo != inputBuffer[6]) return 0xFFFF;
-
-	uint16_t raw_position = (uint16_t)((packet[10] << 8) | packet[9]);
-	return raw_position;
+	// verify input data against checksum
+	if (!verifyInputPacket(inputBuffer, PACKET_LENGTH_BYTES::GETPOS_RESPONSE)){
+		return 0xFFFF; // error flag
+	}
+	return (uint16_t)((inputBuffer[10] << 8) | inputBuffer[9]);
 }
 
 // getPosition -- original blocking API, preserved for single-motor or debug use.
@@ -493,7 +459,6 @@ void HerkulexClass::reboot(int servoID) {
 	packet[6] = checksumTwo;
 	
 	sendData(packet, packetLength);
-
 }
 
 void HerkulexClass::setLed(uint8_t servoID, LED_STATE valueLed)
@@ -503,107 +468,76 @@ void HerkulexClass::setLed(uint8_t servoID, LED_STATE valueLed)
 }
 
 // get the speed for one servo - values betweeb -1023 <--> 1023
-int HerkulexClass::getSpeed(int servoID) {
-  	int speedy  = 0;
+uint16_t HerkulexClass::getSpeed(int servoID) {
+	uint8_t dataBuffer[2];
+	if (readFromRamRegisterBlocking(servoID, 0x40, 2, dataBuffer)){
+		return (((uint16_t)dataBuffer[1] << 8) | dataBuffer[0]) & 0x03FF; // build 16 bit int, then mask to 10 bits (max 1023)
+	}
+	return -1;
+  	// int speedy  = 0;
 
-	packetLength = PACKET_LENGTH_BYTES::HRAMREAD_LENGTH;
-	additionalDataLength = PACKET_LENGTH_BYTES::HRAMREAD_DATA_LENGTH;
+	// packetLength = PACKET_LENGTH_BYTES::HRAMREAD_LENGTH;
+	// additionalDataLength = PACKET_LENGTH_BYTES::HRAMREAD_DATA_LENGTH;
 
-	pID   = servoID;     	   	  
-	CMD   = COMMAND::HRAMREAD;      
+	// pID   = servoID;     	   	  
+	// CMD   = COMMAND::HRAMREAD;      
 
-	checksumData[0]=0x40;               // 8. Address
-	checksumData[1]=0x02;               // 9. Lenght
+	// checksumData[0]=0x40;               // 8. Address
+	// checksumData[1]=0x02;               // 9. Lenght
 
   
-	// base packet
-	packet[0] = PACKET_CONSTS::PACKET_HEADER;
-	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetLength;
-	packet[3] = pID;
-	packet[4] = CMD;
+	// // base packet
+	// packet[0] = PACKET_CONSTS::PACKET_HEADER;
+	// packet[1] = PACKET_CONSTS::PACKET_HEADER;
+	// packet[2] = packetLength;
+	// packet[3] = pID;
+	// packet[4] = CMD;
   
-	//optional data
-	packet[7] = checksumData[0]; 	    // Address  
-	packet[8] = checksumData[1]; 		// Length
+	// //optional data
+	// packet[7] = checksumData[0]; 	    // Address  
+	// packet[8] = checksumData[1]; 		// Length
   
-	// checksum
-	checksumOne=calcChecksumOne();		
-	checksumTwo=calcChecksumTwo();		
+	// // checksum
+	// checksumOne=calcChecksumOne();		
+	// checksumTwo=calcChecksumTwo();		
   
-	packet[5] = checksumOne;
-	packet[6] = checksumTwo;	
+	// packet[5] = checksumOne;
+	// packet[6] = checksumTwo;	
 	
-	sendData(packet, packetLength);
+	// sendData(packet, packetLength);
 
-	delay(1);
-	readBlocking(13);
+	// delay(1);
+	// readBlocking(13);
 
 
-	// This is the second half of the function that uses the read data
-	packetLength =    inputBuffer[2];    
-	pID   =           inputBuffer[3]; 
-	CMD   =           inputBuffer[4];
+	// // This is the second half of the function that uses the read data
+	// packetLength =    inputBuffer[2];    
+	// pID   =           inputBuffer[3]; 
+	// CMD   =           inputBuffer[4];
 
-	packetLength = 6;
-	memcpy(&packet[7], &inputBuffer[7], packetLength);
+	// packetLength = 6;
+	// memcpy(&packet[7], &inputBuffer[7], packetLength);
 
-	checksumOne=calcChecksumOne();	
-	checksumTwo=calcChecksumTwo();	
+	// checksumOne=calcChecksumOne();	
+	// checksumTwo=calcChecksumTwo();	
 
-	if (checksumOne != inputBuffer[5]) return -1;
-	if (checksumTwo != inputBuffer[6]) return -1;
+	// if (checksumOne != inputBuffer[5]) return -1;
+	// if (checksumTwo != inputBuffer[6]) return -1;
 
-	speedy = ((packet[10]&0xFF)<<8) | packet[9];
-	return speedy;
+	// speedy = ((packet[10]&0xFF)<<8) | packet[9];
+	// return speedy;
 }
 
 // moves one motor with the set moveInfo of goal, ID, LED color, and playTime
 void HerkulexClass::moveOne(motorMoveInfo moveInfo)
 {
-	// set all the pre-initialized variables needed for packet building
-
-
-	// length of additional data (dataEx 7 -> 11)
-	additionalDataLength = PACKET_LENGTH_BYTES::HSJOG_MOVEONE_DATA_LENGTH;
-
-	// these are needed for the base packet
-	packetLength = PACKET_LENGTH_BYTES::HSJOG_MOVEONE_LENGTH;
-	pID = moveInfo.servoID;
-	CMD = COMMAND::HSJOG;
+	uint8_t optionalData[PACKET_LENGTH_BYTES::HSJOG_MOVEONE_DATA_LENGTH] = {moveInfo.playTime,
+																			(uint8_t) (moveInfo.goalPos & 0X00FF),
+																			(uint8_t) ((moveInfo.goalPos & 0XFF00) >> 8),
+																			moveInfo.ledColor << 2,
+																			moveInfo.servoID};
 	
-
-	// these are needed for the "optional data"
-	// that, for this command, tells the motor its goal and playtime
-	playTime = moveInfo.playTime;
-	goalLSB = (uint8_t) (moveInfo.goalPos & 0X00FF);
-	goalMSB = (uint8_t) ((moveInfo.goalPos & 0XFF00) >> 8);
-	SET = moveInfo.ledColor << 2;  // TODO: verify against S_JOG_TAG on pg 41 of 0601 datasheet
-	ID = moveInfo.servoID;
-
-
-	// base packet
-	packet[0] = PACKET_CONSTS::PACKET_HEADER;
-	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetLength;
-	packet[3] = pID;
-	packet[4] = CMD;
-
-	// optional data
-	packet[7] = playTime;
-	packet[8] = goalLSB; 
-	packet[9] = goalMSB; 
-	packet[10] = SET;
-	packet[11] = ID;
-
-	// checksum has to be calculated last, but belongs in base packet
-	checksumOne = calcChecksumOne();
-	checksumTwo = calcChecksumTwo();
-
-	packet[5] = checksumOne;
-	packet[6] = checksumTwo;
-
-	sendData(packet, packetLength);
+	sendPacket(moveInfo.servoID, optionalData, PACKET_LENGTH_BYTES::HSJOG_MOVEONE_DATA_LENGTH, COMMAND::HSJOG);
 }
 
 
@@ -611,6 +545,7 @@ void HerkulexClass::moveOne(motorMoveInfo moveInfo)
 
 // Private Methods //////////////////////////////////////////////////////////////
 
+// REGISTER WRITES
 void HerkulexClass::writeToRamRegister(uint8_t servoID, uint8_t address, uint8_t* writeData, uint8_t writeDataLength){
 	writeToRegister(servoID, address, writeData, writeDataLength, COMMAND::HRAMWRITE);
 }
@@ -619,120 +554,182 @@ void HerkulexClass::writeToEEPRegister(uint8_t servoID, uint8_t address, uint8_t
 	writeToRegister(servoID, address, writeData, writeDataLength, COMMAND::HEEPWRITE);
 }
 
+// GENERAL REGISTER IMPLEMENTATION: USE writeToRamRegister OR writeToEEPRegister INSTEAD
 void HerkulexClass::writeToRegister(uint8_t servoID, uint8_t address, uint8_t* writeData, uint8_t writeDataLength, COMMAND cmd){
-	additionalDataLength = PACKET_LENGTH_BYTES::REGISTER_INFO_LENGTH + writeDataLength;
-	packetLength = PACKET_LENGTH_BYTES::BASE_LENGTH + additionalDataLength;
-
-	pID = servoID;
-	CMD = cmd;
-
-	// base packet
-	packet[0] = PACKET_CONSTS::PACKET_HEADER;
-	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetLength;
-	packet[3] = pID;
-	packet[4] = CMD;
-
-	// optional data
-	packet[7] = address;
-	packet[8] = writeDataLength;    // num of bytes to write starting at address
-	for (uint8_t i = 0; i < writeDataLength; i++) {
-		packet[9 + i] = writeData[i]; 	// copy the writeData to the packet
-	}
-
-	// checksum
-	checksumOne = calcChecksumOne();
-  	checksumTwo = calcChecksumTwo();
-
-	packet[5] = checksumOne;
-	packet[6] = checksumTwo;
-
-  	sendData(packet, packetLength);
+    uint8_t optionalDataLength = PACKET_LENGTH_BYTES::REGISTER_INFO_LENGTH + writeDataLength;
+    uint8_t optionalData[optionalDataLength];
+    optionalData[0] = address;
+    optionalData[1] = writeDataLength;
+    memcpy(&optionalData[2], writeData, writeDataLength);
+    sendPacket(servoID, optionalData, optionalDataLength, cmd);
 }
 
-bool HerkulexClass::readFromEEPRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer){
-	return readFromRegister(servoID, address, numRequestedBytes, buffer, COMMAND::HEEPREAD, COMMAND_RESPONSE::HEEPREAD_RESPONSE);
+// REGISTER READS/REQs
+void HerkulexClass::requestFromRamRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes){
+	requestFromRegister(servoID, address, numRequestedBytes, COMMAND::HRAMREAD);
 }
 
-bool HerkulexClass::readFromRamRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer){
-	return readFromRegister(servoID, address, numRequestedBytes, buffer, COMMAND::HRAMREAD, COMMAND_RESPONSE::HRAMREAD_RESPONSE);
+void HerkulexClass::requestFromEEPRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes){
+	requestFromRegister(servoID, address, numRequestedBytes, COMMAND::HEEPREAD);
 }
 
-bool HerkulexClass::readFromRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer, COMMAND cmd, COMMAND_RESPONSE cmd_res){
-	additionalDataLength = PACKET_LENGTH_BYTES::REGISTER_INFO_LENGTH;
-	packetLength = PACKET_LENGTH_BYTES::BASE_LENGTH + additionalDataLength;
+bool HerkulexClass::readFromRamRegisterBlocking(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer){
+	return readFromRegisterBlocking(servoID, address, numRequestedBytes, buffer, COMMAND::HRAMREAD, COMMAND_RESPONSE::HRAMREAD_RESPONSE);
+}
 
-	pID = servoID;
-	CMD = cmd;
+bool HerkulexClass::readFromEEPRegisterBlocking(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer){
+	return readFromRegisterBlocking(servoID, address, numRequestedBytes, buffer, COMMAND::HEEPREAD, COMMAND_RESPONSE::HEEPREAD_RESPONSE);
+}
 
-	// base packet
-	packet[0] = PACKET_CONSTS::PACKET_HEADER;
-	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetLength;
-	packet[3] = pID;
-	packet[4] = CMD;
+// GENERAL REGISTER IMPLEMENTATION: USE requestFromRamRegister OR requestFromEEPRegister INSTEAD
+void HerkulexClass::requestFromRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, COMMAND cmd){
+	uint8_t optionalDataLength = PACKET_LENGTH_BYTES::REGISTER_INFO_LENGTH;
+	uint8_t optionalData[optionalDataLength] = {address, numRequestedBytes};
+	sendPacket(servoID, optionalData, optionalDataLength, cmd);
+}
 
-	// optional data
-	packet[7] = address;
-	packet[8] = numRequestedBytes;
+// GENERAL REGISTER IMPLEMENTATION: USE readFromRamRegisterBlocking OR ReadFromEEPRegisterBlocking INSTEAD
+bool HerkulexClass::readFromRegisterBlocking(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer, COMMAND cmd, COMMAND_RESPONSE cmd_res){
+	requestFromRegister(servoID, address, numRequestedBytes, cmd);
+	// // SEND DATA
+	// additionalDataLength = PACKET_LENGTH_BYTES::REGISTER_INFO_LENGTH;
+	// packetLength = PACKET_LENGTH_BYTES::BASE_LENGTH + additionalDataLength;
 
-	
+	// pID = servoID;
+	// CMD = cmd;
 
-	// checksum
-	checksumOne = calcChecksumOne();
-  	checksumTwo = calcChecksumTwo();
+	// // base packet
+	// packet[0] = PACKET_CONSTS::PACKET_HEADER;
+	// packet[1] = PACKET_CONSTS::PACKET_HEADER;
+	// packet[2] = packetLength;
+	// packet[3] = pID;
+	// packet[4] = CMD;
 
-	packet[5] = checksumOne;
-	packet[6] = checksumTwo;
+	// // optional data
+	// packet[7] = address;
+	// packet[8] = numRequestedBytes;
 
-  	sendData(packet, packetLength);
+	// // checksum
+	// checksumOne = calcChecksumOne();
+  	// checksumTwo = calcChecksumTwo();
+
+	// packet[5] = checksumOne;
+	// packet[6] = checksumTwo;
+
+  	// sendData(packet, packetLength);
 	delayMicroseconds(100);
 
-
-	// READ DATA //
-
-	// set lengths expected in reply
-	additionalDataLength = PACKET_LENGTH_BYTES::REGISTER_INFO_LENGTH + numRequestedBytes + 2; // 2 additional bytes for error which is always appended
-	packetLength = PACKET_LENGTH_BYTES::BASE_LENGTH + additionalDataLength;
-
-	readBlocking(packetLength); 
-
-	// build data for checksum
-	CMD = cmd_res;
+	uint8_t outputData[numRequestedBytes] = {};
+	return readPacketReply(servoID, outputData, numRequestedBytes, cmd_res);
 	
+
+
+
+	// // READ DATA //
+
+	// // set lengths expected in reply
+	// additionalDataLength = PACKET_LENGTH_BYTES::REGISTER_INFO_LENGTH + numRequestedBytes + 2; // 2 additional bytes for error which is always appended
+	// packetLength = PACKET_LENGTH_BYTES::BASE_LENGTH + additionalDataLength;
+
+	// readBlocking(packetLength); 
+
+	// // build data for checksum
+	// CMD = cmd_res;
+	
+	// // base packet
+	// packet[0] = PACKET_CONSTS::PACKET_HEADER;
+	// packet[1] = PACKET_CONSTS::PACKET_HEADER;
+	// packet[2] = packetLength;
+	// packet[3] = pID;
+	// packet[4] = CMD;
+
+	// // optional data
+	// packet[7] = address;
+	// packet[8] = numRequestedBytes;
+	// for (uint8_t i = 0; i < additionalDataLength; i++) {
+	// 	packet[9 + i] = inputBuffer[i]; 	// copy the received data into the packet to calculate checksum, for verifying against checksum that servo gives us
+	// }
+
+	// // checksum
+	// checksumOne = calcChecksumOne();
+  	// checksumTwo = calcChecksumTwo();
+
+	// if ((checksumOne != inputBuffer[5]) || (checksumTwo != inputBuffer[6])){
+	// 	return false;
+	// }
+
+	// for (uint8_t i = 0; i < numRequestedBytes; i++){
+	// 	buffer[i] = inputBuffer[9 + i];
+	// }
+
+	// return true;
+}
+
+
+
+
+// these are the most basic servo packet methods: one to read and one to pull a reply from //
+// ======================================================================================= //
+
+// all packets consist of a base packet and optional data. Optional data can be empty.
+void HerkulexClass::sendPacket(uint8_t servoID, uint8_t* optionalData, uint8_t optionalDataLength, COMMAND cmd){
+	additionalDataLength = optionalDataLength; // stores in class variable for checksum calculations
+	packetLength = PACKET_LENGTH_BYTES::BASE_LENGTH + additionalDataLength; // ^
+
+	pID = servoID;
+	CMD = cmd;
+
 	// base packet
 	packet[0] = PACKET_CONSTS::PACKET_HEADER;
 	packet[1] = PACKET_CONSTS::PACKET_HEADER;
 	packet[2] = packetLength;
 	packet[3] = pID;
 	packet[4] = CMD;
-
-	// optional data
-	packet[7] = address;
-	packet[8] = numRequestedBytes;
-	for (uint8_t i = 0; i < additionalDataLength; i++) {
-		packet[9 + i] = inputBuffer[i]; 	// copy the received data into the packet to calculate checksum, for verifying against checksum that servo gives us
-	}
+	
+	memcpy(&packet[7], optionalData, optionalDataLength); // copy optional data to the packet after the base packet
 
 	// checksum
 	checksumOne = calcChecksumOne();
   	checksumTwo = calcChecksumTwo();
 
-	if ((checksumOne != inputBuffer[5]) || (checksumTwo != inputBuffer[6])){
-		return false;
-	}
+	packet[5] = checksumOne;
+	packet[6] = checksumTwo;
 
-	for (uint8_t i = 0; i < numRequestedBytes; i++){
-		buffer[i] = inputBuffer[9 + i];
-	}
+  	sendData(packet, packetLength);
+}
 
-	return true;
+// reads Optional Data (as specified in datasheet) into outputBuffer
+bool HerkulexClass::readPacketReply(uint8_t servoID, uint8_t* outputBuffer, uint8_t optionalDataLength, COMMAND_RESPONSE cmd_res){
+    packetLength = PACKET_LENGTH_BYTES::BASE_LENGTH + optionalDataLength;
+
+    if (!readBlocking(packetLength)) return false;
+    if (!verifyInputPacket(inputBuffer, packetLength)) return false;
+
+    memcpy(outputBuffer, &inputBuffer[7], optionalDataLength);
+    return true;
 }
 
 
+bool HerkulexClass::verifyInputPacket(uint8_t* inputPacket, uint8_t inputPacketLength){
+    additionalDataLength = inputPacketLength - PACKET_LENGTH_BYTES::BASE_LENGTH;
+    packetLength = inputPacketLength;
+    pID = inputPacket[3];
+    CMD = inputPacket[4];
 
+    packet[0] = PACKET_CONSTS::PACKET_HEADER;
+    packet[1] = PACKET_CONSTS::PACKET_HEADER;
+    packet[2] = packetLength;
+    packet[3] = pID;
+    packet[4] = CMD;
+    memcpy(&packet[7], &inputPacket[7], additionalDataLength);
 
-// calculated checksum1 as defined in datasheets
+    checksumOne = calcChecksumOne();
+    checksumTwo = calcChecksumTwo();
+    return (checksumOne == inputPacket[5]) && (checksumTwo == inputPacket[6]);
+}
+
+// calculated checksum1 as defined in datasheets with class variables, ensure all are
+// set properly: packetLength, pID, CMD, additionalDataLength, and all info in packet up to length packetLength
 uint8_t HerkulexClass::calcChecksumOne()
 {
 	// checksum base formula is XOR packetLength, pID, CMD, and all additional data
@@ -745,6 +742,8 @@ uint8_t HerkulexClass::calcChecksumOne()
 }
 
 // checksum2 is the bitwise complimente of ChecksumOne, which is why everything is the same except for the return
+// calculated checksum2 as defined in datasheets with class variables, ensure all are
+// set properly: packetLength, pID, CMD, additionalDataLength, and all info in packet up to length packetLength
 uint8_t HerkulexClass::calcChecksumTwo()
 {
 	checksumTwo = 0 ^ packetLength ^ pID ^ CMD;
