@@ -563,8 +563,15 @@ void HerkulexClass::sendPacket(uint8_t servoID, uint8_t* optionalData, uint8_t o
 bool HerkulexClass::readPacketReply(uint8_t servoID, uint8_t* outputBuffer, uint8_t optionalDataLength, COMMAND_RESPONSE cmd_res){
     packetLength = PACKET_LENGTH_BYTES::BASE_LENGTH + optionalDataLength;
 
-    if (!readBlocking(packetLength)) return false;
-    if (!verifyInputPacket(inputBuffer, packetLength)) return false;
+    if (!readBlocking(packetLength)){
+		Serial.println("readBlocking returned nothing."); 
+		return false;
+	}
+	// Something is going wrong in verifyInputPacket
+    if (!verifyInputPacket(inputBuffer, packetLength)){
+		Serial.println("Packet cannot be verified.");
+		return false;
+	}
 
     memcpy(outputBuffer, &inputBuffer[7], optionalDataLength);
     return true;
@@ -646,17 +653,27 @@ void HerkulexClass::updateRead(){
 }
 
 
+
 bool HerkulexClass::readBlocking(uint8_t length){
-	readStartTime = micros();
-	while(_serial->available() < length){
-		delayMicroseconds(50);
-		if (micros() - readStartTime >= SERIAL_READ_TIMEOUT_US){
-			return false;
+    readStartTime = micros();
+	Serial.print("Attempting to read ");
+	Serial.print(packetLength);
+	Serial.println(" bytes");
+    while(_serial->available() < length){
+        delayMicroseconds(50);
+        if (micros() - readStartTime >= SERIAL_READ_TIMEOUT_US){
+            return false;
+        }
+    }
+	if(_serial->available() >= length){
+		_serial->readBytes(inputBuffer, length);
+		for (uint8_t i = 0; i < length; i++) {
+			printHexByte(inputBuffer[i]);
 		}
-		if (_serial->available() >= length){
-			_serial->readBytes(inputBuffer, length);
-			return true;
-		}
+		Serial.println();
+    	return true;
+	} else {
+		return false;
 	}
 }
 

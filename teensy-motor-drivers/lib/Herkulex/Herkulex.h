@@ -254,6 +254,7 @@ public:
   uint8_t calcChecksumOne();
   uint8_t calcChecksumTwo();
   
+  
   void resetClassVals();
   
   void clearBuffer();
