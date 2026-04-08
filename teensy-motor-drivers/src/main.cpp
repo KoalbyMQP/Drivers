@@ -89,6 +89,9 @@ void setup(){
     Serial.println(motors[i].getModel());
   }
 
+  // Futur print for testing
+  //Serial.println(SerialBusManager::getBus(BUS_R_LEG).stat())
+
 
 
 }
