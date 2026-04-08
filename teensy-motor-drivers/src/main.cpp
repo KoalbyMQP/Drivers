@@ -91,31 +91,36 @@ void setup(){
 }
 
 
-
-
 void loop(){
-    if (imuTimer >= 10) {
+  
+    if (imuTimer >= 200) {   // 200ms — slow enough to read in Serial Monitor
         imuTimer = 0;
 
-        // Phase 1 — time the write
-        uint32_t t1 = micros();
         imu1.requestUpdate();
-        uint32_t t2 = micros();
-
-        // gap — in real firmware motor reads go here
-        
-        // Phase 2 — time the read
-        uint32_t t3 = micros();
         imu1.collectUpdate();
-        uint32_t t4 = micros();
 
-        // print as CSV for easy reading
-        Serial.print(t2 - t1);   // requestUpdate duration
-        Serial.print(",");
-        Serial.print(t4 - t3);   // collectUpdate duration
-        Serial.print(",");
-        Serial.println(t4 - t1); // total duration
+        // Get accel as array [X, Y, Z] in m/s²
+        float accel[3];
+        imu1.getAccelArray(accel);
+
+        // --- Accel Output ---
+        // Axis mapping (90° CCW remap around Z):
+        //   accel[0] = X = physical -Y
+        //   accel[1] = Y = physical +X
+        //   accel[2] = Z = physical +Z
+        //
+        // Expected flat on table:
+        //   accel[0] ≈  0.00 m/s²
+        //   accel[1] ≈  0.00 m/s²
+        //   accel[2] ≈  9.81 m/s²
+
+        Serial.println("-------- IMU Accel --------");
+        Serial.print("Accel  | X: "); Serial.print(accel[0], 4);
+        Serial.print("  Y: ");        Serial.print(accel[1], 4);
+        Serial.print("  Z: ");        Serial.println(accel[2], 4);
+        Serial.print("Calib  | Accel: "); Serial.println(imu1.getCalAccel());
     }
+
 
 
   // // this loops

@@ -7,90 +7,106 @@ IMU::IMU(int32_t sensorID, uint8_t address)
       _address(address),
       _requested(false) {}
 
+// ---------------------------------------------------------------------------
+// begin — initialize I2C, apply axis remap, start ACCONLY mode
+// ---------------------------------------------------------------------------
 bool IMU::begin() {
-    Wire.setClock(1000000);
+    Wire.setClock(400000);      // 400kHz — sufficient for accel-only, more stable than 1MHz
     if (!_bno.begin()) {
         return false;
     }
-    _bno.setExtCrystalUse(true);
+
     return true;
 }
 
-// Phase 1 — write the starting register address to the BNO055.
-// endTransmission(false) sends the address byte but holds the bus open
-// (no STOP condition). This primes the BNO055 to serve bytes from
-// START_REG onward when the read comes in Phase 2.
+// ---------------------------------------------------------------------------
+// writeRegister — helper to write a single byte to a BNO055 register
+// ---------------------------------------------------------------------------
+void IMU::writeRegister(uint8_t reg, uint8_t val) {
+    Wire.beginTransmission(_address);
+    Wire.write(reg);
+    Wire.write(val);
+    Wire.endTransmission();
+}
+
+// ---------------------------------------------------------------------------
+// requestUpdate — Phase 1
+// Writes the accel start register address to the BNO055.
+// endTransmission(false) holds the bus open (no STOP) so the follow-up
+// requestFrom in collectUpdate can issue a repeated START.
+// ---------------------------------------------------------------------------
 void IMU::requestUpdate() {
     Wire.beginTransmission(_address);
-    Wire.write(START_REG);
-    Wire.endTransmission(false);  // false = no STOP, keeps bus held
+    Wire.write(ACCEL_START_REG);
+    Wire.endTransmission(false);    // no STOP — keeps bus held
     _requested = true;
 }
 
-// Phase 2 — issue the read request and pull all bytes from the RX buffer.
-// requestFrom() sends a repeated START, reads READ_LEN bytes into the
-// RX buffer, then issues a STOP. readBytes() then drains the buffer
-// in one memcpy rather than byte-by-byte.
+// ---------------------------------------------------------------------------
+// collectUpdate — Phase 2
+// Issues the read and pulls all 6 accel bytes from the RX buffer in one call.
+// Also reads the calibration status register separately.
+// ---------------------------------------------------------------------------
 bool IMU::collectUpdate() {
     if (!_requested) return false;
 
-    uint8_t count = Wire.requestFrom(_address, READ_LEN, (uint8_t)1);
-    if (count < READ_LEN) {
+    // Read 6 accel bytes (X_LSB, X_MSB, Y_LSB, Y_MSB, Z_LSB, Z_MSB)
+    uint8_t count = Wire.requestFrom(_address, ACCEL_READ_LEN, (uint8_t)1);
+    if (count < ACCEL_READ_LEN) {
         _requested = false;
-        return false;   // sensor did not return expected number of bytes
+        return false;
     }
 
-    uint8_t buf[READ_LEN];
-    Wire.readBytes(buf, READ_LEN);  // drains entire RX buffer in one call
-
+    uint8_t buf[ACCEL_READ_LEN];
+    Wire.readBytes(buf, ACCEL_READ_LEN);
     parseBuffer(buf);
+
+    // Read calibration status register separately
+    Wire.beginTransmission(_address);
+    Wire.write(CALIB_STAT_REG);
+    Wire.endTransmission(false);
+    Wire.requestFrom(_address, (uint8_t)1, (uint8_t)1);
+    if (Wire.available()) {
+        uint8_t cal = Wire.read();
+        _data.cal_accel = (cal >> 2) & 0x03;   // bits [3:2]
+    }
+
     _requested = false;
     return true;
 }
 
-// Parse raw bytes from the RX buffer into _data.
-// BNO055 register map from START_REG (0x1A):
-// Bytes 0–1:   Euler Heading  (LSB, MSB) — units: 1/16 degree
-// Bytes 2–3:   Euler Roll     (LSB, MSB)
-// Bytes 4–5:   Euler Pitch    (LSB, MSB)
-// Bytes 6–7:   Quaternion W   (LSB, MSB) — units: 1/(2^14)
-// Bytes 8–9:   Quaternion X   (LSB, MSB)
-// Bytes 10–11: Quaternion Y   (LSB, MSB)
-// Bytes 12–13: Quaternion Z   (LSB, MSB)
-// Byte  14:    Calibration status register (packed nibbles)
+// ---------------------------------------------------------------------------
+// parseBuffer — convert raw 6 bytes into float m/s² values
+//
+// BNO055 accel register map from 0x08:
+//   Bytes 0-1: X (LSB, MSB) — raw units: 1 LSB = 1 m/s² / 100
+//   Bytes 2-3: Y (LSB, MSB)
+//   Bytes 4-5: Z (LSB, MSB)
+//
+// Scale factor: 1/100 m/s² per LSB (default range ±2g, 100 LSB/m/s²)
+// ---------------------------------------------------------------------------
 void IMU::parseBuffer(uint8_t* buf) {
-    const float EULER_SCALE = 1.0f / 16.0f;
-    _data.heading = (int16_t)((buf[1] << 8) | buf[0]) * EULER_SCALE;
-    _data.roll    = (int16_t)((buf[3] << 8) | buf[2]) * EULER_SCALE;
-    _data.pitch   = (int16_t)((buf[5] << 8) | buf[4]) * EULER_SCALE;
-
-    const float QUAT_SCALE = 1.0f / (1 << 14);
-    _data.qw = (int16_t)((buf[7]  << 8) | buf[6])  * QUAT_SCALE;
-    _data.qx = (int16_t)((buf[9]  << 8) | buf[8])  * QUAT_SCALE;
-    _data.qy = (int16_t)((buf[11] << 8) | buf[10]) * QUAT_SCALE;
-    _data.qz = (int16_t)((buf[13] << 8) | buf[12]) * QUAT_SCALE;
-
-    // Calibration packed into one register — two bits per sensor
-    uint8_t cal = buf[14];
-    _data.cal_mag   = (cal >> 0) & 0x03;
-    _data.cal_accel = (cal >> 2) & 0x03;
-    _data.cal_gyro  = (cal >> 4) & 0x03;
-    _data.cal_sys   = (cal >> 6) & 0x03;
+    const float ACCEL_SCALE = 1.0f / 100.0f;   // 100 LSB per m/s²
+    _data.accel[0] = (int16_t)((buf[1] << 8) | buf[0]) * ACCEL_SCALE;  // X
+    _data.accel[1] = (int16_t)((buf[3] << 8) | buf[2]) * ACCEL_SCALE;  // Y
+    _data.accel[2] = (int16_t)((buf[5] << 8) | buf[4]) * ACCEL_SCALE;  // Z
 }
 
+// ---------------------------------------------------------------------------
+// Public accessors
+// ---------------------------------------------------------------------------
 IMUData IMU::getData() const { return _data; }
 
-int IMU::formatPacket(char* buf, size_t bufSize) const {
-    return snprintf(buf, bufSize,
-        "%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%u,%u,%u,%u",
-        _data.heading, _data.roll,  _data.pitch,
-        _data.qw,      _data.qx,   _data.qy,   _data.qz,
-        _data.cal_sys, _data.cal_gyro, _data.cal_accel, _data.cal_mag);
+void IMU::getAccelArray(float out[3]) const {
+    out[0] = _data.accel[0];
+    out[1] = _data.accel[1];
+    out[2] = _data.accel[2];
 }
 
-bool IMU::isCalibrated() const {
-    return (_data.cal_sys   == 3 &&
-            _data.cal_gyro  == 3 &&
-            _data.cal_accel == 3 &&
-            _data.cal_mag   == 3);
+// Formats as CSV: "X,Y,Z,cal_accel"
+int IMU::formatPacket(char* buf, size_t bufSize) const {
+    return snprintf(buf, bufSize,
+        "%.4f,%.4f,%.4f,%u",
+        _data.accel[0], _data.accel[1], _data.accel[2],
+        _data.cal_accel);
 }
