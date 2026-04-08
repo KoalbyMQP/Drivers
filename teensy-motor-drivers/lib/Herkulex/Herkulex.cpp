@@ -199,7 +199,7 @@ uint16_t HerkulexClass::checkModel(uint8_t servoID)
 
 	uint8_t result[2];
 
-    if (!readFromEEPRegisterBlocking(servoID, EEP_REGISTER::MOTOR_MODEL, 2, result)) return -1;
+    if (!readFromEEPRegisterBlocking(servoID, EEP_REGISTER::MOTOR_MODEL, 6, result)) return -1;
     return (result[1] << 4 | result[0]);
 
 	// packetLength = PACKET_LENGTH_BYTES::HEEPREAD_LENGTH;
