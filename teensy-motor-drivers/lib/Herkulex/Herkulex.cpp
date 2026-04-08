@@ -213,12 +213,9 @@ uint16_t HerkulexClass::checkModel(uint8_t servoID)
 
 	uint8_t result[2];
 
-	// 6 requested bytes: EEPRead always returns an address echo and status bytes. Without 6, we will get
-	// misaligned packets
-
     if (!readFromEEPRegisterBlocking(servoID, EEP_REGISTER::MOTOR_MODEL, 2, result)) return -1;
 	
-	// model no is 16 bit int, shift over by 8 for correct model
+	// model no is 16 bit int, shift over by 8 for correct model number
     return (result[1] << 8 | result[0]);
 
 	// packetLength = PACKET_LENGTH_BYTES::HEEPREAD_LENGTH;
