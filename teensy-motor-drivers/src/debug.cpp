@@ -65,7 +65,7 @@ int find_all_motors_on_bus(){
         // send packet with current pID and wait for ACK packet
         // comments for debugging
 
-        status = Herkulex.stat(pID);
+        //status = Herkulex.stat(pID);
         if(status == 0xFD){
             // Serial.print("Broadcast on ID ");
             // Serial.print(pID);

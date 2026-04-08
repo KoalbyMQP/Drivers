@@ -215,7 +215,7 @@ public:
   void endSerialBus();
 
   void  initialize();
-  byte  stat(int servoID);
+  bool  stat(uint8_t servoID, uint8_t* statError, uint8_t* statDetail);
   void  setACKPolicy(int valueACK);
   uint16_t checkModel(uint8_t servoID);
   void  setID(int ID_Old, int ID_New);

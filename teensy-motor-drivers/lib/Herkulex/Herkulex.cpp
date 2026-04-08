@@ -127,9 +127,22 @@ void HerkulexClass::initialize(){
 }
 
 // stat
-byte HerkulexClass::stat(int servoID)
+bool HerkulexClass::stat(uint8_t servoID, uint8_t* statError, uint8_t* statDetail)
 {
-	// sendPacket();
+	sendPacket(servoID, nullptr, 0, COMMAND::HSTAT);
+	delayMicroseconds(1000);
+
+	uint8_t buffer[2];
+
+	if(!readPacketReply(servoID, buffer, 2, COMMAND_RESPONSE::HSTAT_RESPONSE)){
+		return false;
+	}
+	*statError = buffer[0];
+	*statDetail = buffer[1];
+	return true;
+
+	//Previous stat code
+	/*
 	packetLength = PACKET_LENGTH_BYTES::HSTAT_LENGTH;
 	additionalDataLength = PACKET_LENGTH_BYTES::HSTAT_DATA_LENGTH;
 
@@ -170,6 +183,7 @@ byte HerkulexClass::stat(int servoID)
 	if (checksumTwo != packet[6]) return -2;
 
 	return packet[7];			// return status
+	*/
 }
 
 // torque on - 
@@ -199,8 +213,13 @@ uint16_t HerkulexClass::checkModel(uint8_t servoID)
 
 	uint8_t result[2];
 
-    if (!readFromEEPRegisterBlocking(servoID, EEP_REGISTER::MOTOR_MODEL, 6, result)) return -1;
-    return (result[1] << 4 | result[0]);
+	// 6 requested bytes: EEPRead always returns an address echo and status bytes. Without 6, we will get
+	// misaligned packets
+
+    if (!readFromEEPRegisterBlocking(servoID, EEP_REGISTER::MOTOR_MODEL, 2, result)) return -1;
+	
+	// model no is 16 bit int, shift over by 8 for correct model
+    return (result[1] << 8 | result[0]);
 
 	// packetLength = PACKET_LENGTH_BYTES::HEEPREAD_LENGTH;
 	// additionalDataLength = PACKET_LENGTH_BYTES::HEEPREAD_DATA_LENGTH;
@@ -523,8 +542,15 @@ void HerkulexClass::requestFromRegister(uint8_t servoID, uint8_t address, uint8_
 bool HerkulexClass::readFromRegisterBlocking(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer, COMMAND cmd, COMMAND_RESPONSE cmd_res){
 	requestFromRegister(servoID, address, numRequestedBytes, cmd);
 	delayMicroseconds(1000);
-	return readPacketReply(servoID, buffer, numRequestedBytes, cmd_res);
+
+	uint8_t replyOptionalLength = 4 + numRequestedBytes;
+	uint8_t replyBuff[replyOptionalLength];
 	
+	// Since we are taking address and status echo into account, replybuff[2] is where we need to memcpy
+	if (!readPacketReply(servoID, replyBuff, replyOptionalLength, cmd_res)) return false;
+	memcpy(buffer, &replyBuff[2], numRequestedBytes);
+    return true;
+
 }
 
 
