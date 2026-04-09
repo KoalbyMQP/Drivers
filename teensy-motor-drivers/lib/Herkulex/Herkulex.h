@@ -54,17 +54,6 @@ struct motorMoveInfo {
 #define DATA_MOVE  	 50		             // max 10 servos <---- change this for more servos!
 #define SERIAL_READ_TIMEOUT_US  2000   // timeout serial communication (microseconds)
 
-// SERVO HERKULEX COMMAND - See Manual p40
-// #define HEEPWRITE    0x01 	//Rom write
-// #define HEEPREAD     0x02 	//Rom read
-// #define HRAMWRITE	 0x03 	//Ram write
-// #define HRAMREAD	 0x04 	//Ram read
-// #define HIJOG		 0x05 	//Write n servo with different timing
-// #define HSJOG		 0x06 	//Write n servo with same time
-// #define HSTAT	 	 0x07 	//Read error
-// #define HROLLBACK	 0x08 	//Back to factory value
-// #define HREBOOT	 	 0x09 	//Reboot
-
 #define CONVERT_PLAYTIME_TO_MS 11.2 // conversion factor for turning a playtime duration sent to and used by the servo into a millisecond duration
 
 
@@ -79,6 +68,7 @@ typedef enum {
 
   // MIX
   LED_PURPLE = LED_BLUE | LED_RED,
+  LED_ALL = LED_PURPLE | LED_GREEN,
 } LED_STATE;
 
 
@@ -90,37 +80,37 @@ typedef enum {
   HEEPWRITE_DATA_LENGTH_1 = 0x03,
 
   //writeRegistryEEP
-  HEEPWRITE_LENGTH_2 = 0x0B,    //before it was 0x0A but for 4 optional data i see 0x0B in page 36 of datasheet
-  HEEPWRITE_DATA_LENGTH_2 = 0x04,
+  // HEEPWRITE_LENGTH_2 = 0x0B,    //before it was 0x0A but for 4 optional data i see 0x0B in page 36 of datasheet
+  // HEEPWRITE_DATA_LENGTH_2 = 0x04,
 
   //checkModel
-  HEEPREAD_LENGTH = 0x09,
-  HEEPREAD_DATA_LENGTH = 0x02,
+  // HEEPREAD_LENGTH = 0x09,
+  // HEEPREAD_DATA_LENGTH = 0x02,
 
   REGISTER_INFO_LENGTH = 0x02,
  
-  //clearError, writeRegistryRAM
-  HRAMWRITE_LENGTH = 0x0B,    //before it was also 0x0A, checked page 37 writeRegistryRAM
-  HRAMWRITE_DATA_LENGTH = 0x04,
+  // //clearError, writeRegistryRAM
+  // HRAMWRITE_LENGTH = 0x0B,    //before it was also 0x0A, checked page 37 writeRegistryRAM
+  // HRAMWRITE_DATA_LENGTH = 0x04,
 
-  //setLed, setACKPolicy, torqueFree, torqueON
-  SET_ACK_POLICY_RAMWRITE_LENGTH = 0x0A,    //before it was also 0x0A, checked page 37 writeRegistryRAM
-  SET_ACK_POLICY_RAMWRITE_DATA_LENGTH = 0x03,
+  // //setLed, setACKPolicy, torqueFree, torqueON
+  // SET_ACK_POLICY_RAMWRITE_LENGTH = 0x0A,    //before it was also 0x0A, checked page 37 writeRegistryRAM
+  // SET_ACK_POLICY_RAMWRITE_DATA_LENGTH = 0x03,
 
-  //getSpeed, requestPosition, 
-  HRAMREAD_LENGTH = 0x09, 
+  // //getSpeed, requestPosition, 
+  // HRAMREAD_LENGTH = 0x09, 
   HRAMREAD_DATA_LENGTH = 0x02,
 
   // not used
   // HIJOG_LENGTH = 0x0A, 
   // HIJOG_DATA_LENGTH = 0x04,
 
-  //moveOne
-  HSJOG_MOVEONE_LENGTH = 0x0C,
+  // //moveOne
+  // HSJOG_MOVEONE_LENGTH = 0x0C,
   HSJOG_MOVEONE_DATA_LENGTH = 0x05,
   
   //actionMoves
-  HSJOG_MOVEMULTIPLE_LENGTH = 0x08,
+  // HSJOG_MOVEMULTIPLE_LENGTH = 0x08,
   HSJOG_MOVEMULTIPLE_DATA_LENGTH = 0x01,
 
   HSTAT_LENGTH = 0x07,      // STRANGE, because it would seem like the datasheet, page 42, is wrong about this one. I think that first row should have no optional data
@@ -329,7 +319,7 @@ public:
   uint8_t SET; // called in datasheet, it contains multiple bits of distinct info
   uint8_t ID; // seperate from pID in datasheet but same for our use case
 
-  uint8_t packet[DATA_MOVE + PACKET_LENGTH_BYTES::HSJOG_MOVEMULTIPLE_LENGTH]; // stores full packet to send
+  uint8_t packet[DATA_MOVE + PACKET_LENGTH_BYTES::BASE_LENGTH + PACKET_LENGTH_BYTES::HSJOG_MOVEONE_DATA_LENGTH]; // stores full packet to send
 
   uint8_t packetQueue[DATA_MOVE];  // stores move packets for simulataneous jog
 
