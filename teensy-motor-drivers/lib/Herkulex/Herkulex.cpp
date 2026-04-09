@@ -329,6 +329,7 @@ void HerkulexClass::queueMove(motorMoveInfo moveInfo)
 // DO NOT USE IN MAIN: USE HerkulexMotor::actionMoves(int playTimeMs) instead
 // TODO: refactor sendPacket into buildPacket and sendPacket functions
 // as we have to use buildPacket here then append the packetQueue after it, then send the whole bigass packet
+// TODO: update to get rid of optionalData declaration, instead implement queuedPacketIndex and just implement logic on packetQueue
 void HerkulexClass::actionMoves(uint8_t playTime)
 {
 	uint8_t optionalDataLength = PACKET_LENGTH_BYTES::HSJOG_MOVEMULTIPLE_DATA_LENGTH + queuedPacketCount;
