@@ -22,9 +22,9 @@
 MotorModel decodeModel(int rawModel)
 {
     switch (rawModel) {
-        case 0x0201: return DRS_0201;
-        case 0x0601: return DRS_0601;
-        case 0x0602: return DRS_0602;
+        case 0x0102: return DRS_0201;
+        case 0x0106: return DRS_0601;
+        case 0x0206: return DRS_0602;
         default:     return UNKNOWN_MODEL;
     }
 }
@@ -54,7 +54,7 @@ static const char* busName(int b) {
 
 
 //find_all_motors_on_bus
-int find_all_motors_on_bus(HerkulexClass SerialBus){
+int find_all_motors_on_bus(HerkulexClass& SerialBus){
     // loop through all possible pIDs (0-253), every time a motor is found, print and add to motor out
     // packet = data for servos (50) + 8 for move multiple length. See herkulex.h for more details.
     byte status;
@@ -63,33 +63,37 @@ int find_all_motors_on_bus(HerkulexClass SerialBus){
     for (uint8_t pID = 0; pID < 0xFE; pID++){
         // send packet with current pID and wait for ACK packet
         // comments for debugging
+        
+        uint8_t error, detail;
 
-        //status = Herkulex.stat(pID);
-        if(status == 0xFD){
-            // Serial.print("Broadcast on ID ");
-            // Serial.print(pID);
-            // Serial.println(" failed to find motor.");
-            continue;
-        } else if(status == 0xFE){
-            // Serial.print("Broadcast on ID ");
-            // Serial.print(pID);
-            // Serial.println(" failed checksum 2.");
-            continue;
-        } else if(status == 0xFF){
-            // Serial.print("Broadcast on ID ");
-            // Serial.print(pID);
-            // Serial.println(" failed checksum 1.");
-            continue;
-        } else {
+        if (SerialBus.stat(pID, &error, &detail)) {
+            // no errors and there is a motor at that id
             Serial.print("Motor at ID: ");
             Serial.println(pID);
 
-            int modelNo = SerialBus.checkModel(pID);
-            MotorModel model = decodeModel(modelNo);
+            motorCount++;
 
-            Serial.print("Motor model: ");
-            Serial.println(modelName(model));
+            uint16_t modelNo;   // hold the model number returned by checkModel here
+            
+            if (SerialBus.checkModel(pID, &modelNo)) {
+                MotorModel model = decodeModel(modelNo);
+
+                Serial.print("Motor model: ");
+                Serial.println(modelName(model));
+            } else {
+                Serial.println("Motor model: [READ FAILED]");
+            }
+            Serial.println();
+        } else {
+            // Serial.print("Broadcast on ID ");
+            // Serial.print(pID);
+            // Serial.print("   Error: ");
+            // Serial.print(error, HEX);
+            // Serial.print("   Detail: ");
+            // Serial.print(detail, HEX);
+            continue;
         }
+        delayMicroseconds(500);     // Short delay to not overwelm calls on bus
     }
     return motorCount;
 }

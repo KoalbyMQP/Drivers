@@ -208,15 +208,17 @@ void HerkulexClass::setACKPolicy(int valueACK)
 }
 
 // return full model number as specified in datasheet
-uint16_t HerkulexClass::checkModel(uint8_t servoID)
+bool HerkulexClass::checkModel(uint8_t servoID, uint16_t* model)
 {
-
 	uint8_t result[2];
 
-    if (!readFromEEPRegisterBlocking(servoID, EEP_REGISTER::MOTOR_MODEL, 2, result)) return -1;
+    if (!readFromEEPRegisterBlocking(servoID, EEP_REGISTER::MOTOR_MODEL, 2, result)) {
+		return false;
+	}
 	
 	// model no is 16 bit int, shift over by 8 for correct model number
-    return (result[1] << 8 | result[0]);
+	*model = (result[1] << 8) | result[0];
+    return true;
 
 	// packetLength = PACKET_LENGTH_BYTES::HEEPREAD_LENGTH;
 	// additionalDataLength = PACKET_LENGTH_BYTES::HEEPREAD_DATA_LENGTH;
@@ -587,12 +589,12 @@ bool HerkulexClass::readPacketReply(uint8_t servoID, uint8_t* outputBuffer, uint
     packetLength = PACKET_LENGTH_BYTES::BASE_LENGTH + optionalDataLength;
 
     if (!readBlocking(packetLength)){
-		Serial.println("readBlocking returned nothing."); 
+		// Serial.println("readBlocking returned nothing."); 
 		return false;
 	}
 	// Something is going wrong in verifyInputPacket
     if (!verifyInputPacket(inputBuffer, packetLength)){
-		Serial.println("Packet cannot be verified.");
+		// Serial.println("Packet cannot be verified.");
 		return false;
 	}
 
@@ -679,9 +681,9 @@ void HerkulexClass::updateRead(){
 
 bool HerkulexClass::readBlocking(uint8_t length){
     readStartTime = micros();
-	Serial.print("Attempting to read ");
-	Serial.print(packetLength);
-	Serial.println(" bytes");
+	// Serial.print("Attempting to read ");
+	// Serial.print(packetLength);
+	// Serial.println(" bytes");
     while(_serial->available() < length){
         delayMicroseconds(50);
         if (micros() - readStartTime >= SERIAL_READ_TIMEOUT_US){
@@ -690,10 +692,10 @@ bool HerkulexClass::readBlocking(uint8_t length){
     }
 	if(_serial->available() >= length){
 		_serial->readBytes(inputBuffer, length);
-		for (uint8_t i = 0; i < length; i++) {
-			printHexByte(inputBuffer[i]);
-		}
-		Serial.println();
+		// for (uint8_t i = 0; i < length; i++) {
+		// 	printHexByte(inputBuffer[i]);
+		// }
+		// Serial.println();
     	return true;
 	} else {
 		return false;

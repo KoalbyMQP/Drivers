@@ -217,7 +217,7 @@ public:
   void  initialize();
   bool  stat(uint8_t servoID, uint8_t* statError, uint8_t* statDetail);
   void  setACKPolicy(int valueACK);
-  uint16_t checkModel(uint8_t servoID);
+  bool checkModel(uint8_t servoI,  uint16_t* model);
   void  setID(int ID_Old, int ID_New);
   void  clearError(int servoID);
 
