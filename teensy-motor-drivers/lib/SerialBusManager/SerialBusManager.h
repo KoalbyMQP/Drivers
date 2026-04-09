@@ -28,7 +28,9 @@ class SerialBusManager {
         static HerkulexClass _buses[MAX_BUS_COUNT];
         static int _busesTracker[MAX_BUS_COUNT];
 
-        static void startAllBuses(long baud);
+        static void infoAllMotors(const MotorRef* motors, uint8_t count);
+
+        static void startAllBuses(BAUD_RATE baud);
         static void initAllMotors();
         static void endAllBuses();
 

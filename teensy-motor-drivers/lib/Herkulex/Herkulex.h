@@ -79,54 +79,14 @@ typedef enum {
   HEEPWRITE_LENGTH_1 = 0x0A, 
   HEEPWRITE_DATA_LENGTH_1 = 0x03,
 
-  //writeRegistryEEP
-  // HEEPWRITE_LENGTH_2 = 0x0B,    //before it was 0x0A but for 4 optional data i see 0x0B in page 36 of datasheet
-  // HEEPWRITE_DATA_LENGTH_2 = 0x04,
-
-  //checkModel
-  // HEEPREAD_LENGTH = 0x09,
-  // HEEPREAD_DATA_LENGTH = 0x02,
 
   REGISTER_INFO_LENGTH = 0x02,
- 
-  // //clearError, writeRegistryRAM
-  // HRAMWRITE_LENGTH = 0x0B,    //before it was also 0x0A, checked page 37 writeRegistryRAM
-  // HRAMWRITE_DATA_LENGTH = 0x04,
-
-  // //setLed, setACKPolicy, torqueFree, torqueON
-  // SET_ACK_POLICY_RAMWRITE_LENGTH = 0x0A,    //before it was also 0x0A, checked page 37 writeRegistryRAM
-  // SET_ACK_POLICY_RAMWRITE_DATA_LENGTH = 0x03,
-
-  // //getSpeed, requestPosition, 
-  // HRAMREAD_LENGTH = 0x09, 
-  HRAMREAD_DATA_LENGTH = 0x02,
-
-  // not used
-  // HIJOG_LENGTH = 0x0A, 
-  // HIJOG_DATA_LENGTH = 0x04,
-
-  // //moveOne
-  // HSJOG_MOVEONE_LENGTH = 0x0C,
   HSJOG_MOVEONE_DATA_LENGTH = 0x05,
-  
-  //actionMoves
-  // HSJOG_MOVEMULTIPLE_LENGTH = 0x08,
   HSJOG_MOVEMULTIPLE_DATA_LENGTH = 0x01,
-
-  HSTAT_LENGTH = 0x07,      // STRANGE, because it would seem like the datasheet, page 42, is wrong about this one. I think that first row should have no optional data
   HSTAT_DATA_LENGTH = 0x00,
-
-  // not used
-  // HROLLBACK_LENGTH = 0x0A, 
-  // HROLLBACK_DATA_LENGTH = 0x04,
-
-  //reboot
-  HREBOOT_LENGTH = 0x07, 
   HREBOOT_DATA_LENGTH = 0x00,
-
   
-  GETPOS_RESPONSE = 13       // bytes expected back from a RAMREAD position query
-
+  GETPOS_RESPONSE = 13,    // bytes expected back from a RAMREAD position query
 
 } PACKET_LENGTH_BYTES;
 
@@ -143,7 +103,7 @@ typedef enum {
 
 typedef enum {
   SPEED_1M   = 0x01,  // 1,000,000 bps
-  SPEED_667K = 0x02,  // 666,666 bps
+  SPEED_667K = 0x02,  // 666,666 bps, fastest with 0201s
   SPEED_500K = 0x03,  // 500,000 bps
   SPEED_400K = 0x04,  // 400,000 bps
   SPEED_250K = 0x07,  // 250,000 bps
@@ -206,17 +166,32 @@ typedef enum {
 typedef enum {
   MOTOR_MODEL = 0x00,
   BAUD_SETTING = 0x04,
+  ID = 0x06,
 } EEP_REGISTER;
 
-// HERKULEX STATUS ERROR - See Manual p39
-static byte H_STATUS_OK					= 0x00;
-static byte H_ERROR_INPUT_VOLTAGE 		= 0x01;
-static byte H_ERROR_POS_LIMIT			= 0x02;
-static byte H_ERROR_TEMPERATURE_LIMIT	= 0x04;
-static byte H_ERROR_INVALID_PKT			= 0x08;
-static byte H_ERROR_OVERLOAD			= 0x10;
-static byte H_ERROR_DRIVER_FAULT  		= 0x20;
-static byte H_ERROR_EEPREG_DISTORT		= 0x40;
+typedef enum {
+  H_STATUS_OK = 0x00,
+  H_EXCEED_INPUT_VOLTAGE = 0x01,
+  H_EXCEED_POT_LIMIT = 0x02,
+  H_EXCEED_TEMP_LIMIT = 0x04,
+  H_INVALID_PACKET = 0x08,
+  H_OVERLOAD_DETECTED = 0x10,
+  H_RESERVED_BIT_FIVE_ERROR = 0x20,
+  H_EEP_REG_DISTORTED = 0x40,
+  H_RESERVED_BIT_SEVEN_ERROR = 0x80,
+} STATUS_ERROR_TYPE;
+
+typedef enum {
+  H_NO_DETAILS = 0x00,
+  H_MOVING_FLAG = 0x01,
+  H_INPOSITION_FLAG = 0x02,
+  H_CHECKSUM_ERROR = 0x04,
+  H_UNKNOWN_COMMAND = 0x08,
+  H_EXCEED_REG_RANGE = 0x10,
+  H_GARBAGE_DETECTED = 0x20,
+  H_TORQUE_ON = 0x40,
+  H_RESERVED_BIT_SEVEN_DETAIL = 0x80,
+} STATUS_DETAIL;
 
 
 class HerkulexClass {
@@ -232,7 +207,7 @@ public:
   bool  stat(uint8_t servoID, uint8_t* statError, uint8_t* statDetail);
   void  setACKPolicy(int valueACK);
   bool checkModel(uint8_t servoID, uint16_t* model);
-  void setID(int ID_Old, int ID_New);
+  void setID(uint8_t oldID, uint8_t newID);
   void clearError(int servoID);
   void setBaudRate(BAUD_RATE newBaud);
 

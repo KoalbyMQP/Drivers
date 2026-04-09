@@ -203,41 +203,12 @@ bool HerkulexClass::checkModel(uint8_t servoID, uint16_t* model)
 }
 
 // setID - Need to restart the servo
-void HerkulexClass::setID(int ID_Old, int ID_New)
+void HerkulexClass::setID(uint8_t oldID, uint8_t newID)
 {
-	packetLength = PACKET_LENGTH_BYTES::HEEPWRITE_LENGTH_1;
-	// old one was : packetLength = 0x0A;  this does seem correct, so i created the HEEPWRITE_LENGTH_1, for writeRegistryEEP it's different
-	additionalDataLength = PACKET_LENGTH_BYTES::HEEPWRITE_DATA_LENGTH_1; 
-	//strange because the packetLength before was 3, but in the other ones it had been one less than the number of optional data
-
-	pID   = ID_Old;
-	CMD   = COMMAND::HEEPWRITE; 
-	
-	checksumData[0]= 0x06;               // 8. Address
-	checksumData[1]= 0x01;               // 9. Length
-	checksumData[2]= ID_New;             // 10. ServoID NEW
-  	
-	// base packet
-	packet[0] = PACKET_CONSTS::PACKET_HEADER;
-	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetLength;
-	packet[3] = pID;
-	packet[4] = CMD;
-	
-	// optional data
-	packet[7] = checksumData[0]; 		// Address 52
-	packet[8] = checksumData[1]; 		// Length
-	packet[9] = checksumData[2]; 		// Value
-	
-	// checksum
-	checksumOne=calcChecksumOne();	
-	checksumTwo=calcChecksumTwo();	
-
-	packet[5] = checksumOne;
-	packet[6] = checksumTwo;
-
-	sendData(packet, packetLength);
-
+	uint8_t byteArray[1] = {newID};
+	writeToEEPRegister(oldID, EEP_REGISTER::ID, byteArray, 1);
+	reboot(oldID);
+	delay(500);
 }
 
 // clearError
@@ -279,7 +250,7 @@ void HerkulexClass::actionMoves(uint8_t playTime)
 // Call this on every bus BEFORE calling collectPosition on any bus so that all
 // motors can reply in parallel while the CPU is busy sending to the next bus.
 void HerkulexClass::sendPosRequest(int servoID) {
-	requestFromRamRegister(servoID, RAM_REGISTER::CALIBRATED_POS, PACKET_LENGTH_BYTES::HRAMREAD_DATA_LENGTH);
+	requestFromRamRegister(servoID, RAM_REGISTER::CALIBRATED_POS, PACKET_LENGTH_BYTES::REGISTER_INFO_LENGTH);
 	requestRead(PACKET_LENGTH_BYTES::GETPOS_RESPONSE);
 }
 
@@ -318,30 +289,9 @@ uint16_t HerkulexClass::getPosition(int servoID) {
     return collectPosition(servoID);
 }
 
-// reboot single servo - pay attention 253 - all servos doesn't work!
+// reboots servos
 void HerkulexClass::reboot(int servoID) {
 	sendPacket(servoID, {}, PACKET_LENGTH_BYTES::HREBOOT_DATA_LENGTH, COMMAND::HREBOOT);
-
-    // packetLength = PACKET_LENGTH_BYTES::HREBOOT_LENGTH;
-	// additionalDataLength = PACKET_LENGTH_BYTES::HREBOOT_DATA_LENGTH;
-
-	// pID   = servoID;
-	// CMD   = COMMAND::HREBOOT;
-
-	// // base packet
-	// packet[0] = PACKET_CONSTS::PACKET_HEADER;
-	// packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	// packet[2] = packetLength;
-	// packet[3] = pID;
-	// packet[4] = CMD;
-
-	// checksumOne = calcChecksumOne();
-    // checksumTwo = calcChecksumTwo();
-	
-	// packet[5] = checksumOne;	
-	// packet[6] = checksumTwo;
-	
-	// sendData(packet, packetLength);
 }
 
 void HerkulexClass::setLed(uint8_t servoID, LED_STATE valueLed)
@@ -474,7 +424,7 @@ void HerkulexClass::requestFromRegister(uint8_t servoID, uint8_t address, uint8_
 // GENERAL REGISTER IMPLEMENTATION: USE readFromRamRegisterBlocking OR ReadFromEEPRegisterBlocking INSTEAD
 bool HerkulexClass::readFromRegisterBlocking(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer, COMMAND cmd, COMMAND_RESPONSE cmd_res){
 	requestFromRegister(servoID, address, numRequestedBytes, cmd);
-	delayMicroseconds(1000);
+	delayMicroseconds(2000);
 
 	uint8_t replyOptionalLength = 4 + numRequestedBytes;
 	uint8_t replyBuff[replyOptionalLength];
