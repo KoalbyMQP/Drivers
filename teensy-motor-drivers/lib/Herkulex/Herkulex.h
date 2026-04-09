@@ -152,6 +152,28 @@ typedef enum {
 } ACK_POLICY_TYPE;
 
 typedef enum {
+  SPEED_1M   = 0x01,  // 1,000,000 bps
+  SPEED_667K = 0x02,  // 666,666 bps
+  SPEED_500K = 0x03,  // 500,000 bps
+  SPEED_400K = 0x04,  // 400,000 bps
+  SPEED_250K = 0x07,  // 250,000 bps
+  SPEED_200K = 0x09,  // 200,000 bps
+  SPEED_115K = 0x10,  // 115,200 bps (default)
+  SPEED_57K  = 0x22,  // 57,600 bps
+} BAUD_RATE;
+
+const std::unordered_map<BAUD_RATE, uint32_t> BAUD_RATE_MAP = {
+    {BAUD_RATE::SPEED_1M,   1'000'000},
+    {BAUD_RATE::SPEED_667K,   666'666},
+    {BAUD_RATE::SPEED_500K,   500'000},
+    {BAUD_RATE::SPEED_400K,   400'000},
+    {BAUD_RATE::SPEED_250K,   250'000},
+    {BAUD_RATE::SPEED_200K,   200'000},
+    {BAUD_RATE::SPEED_115K,   115'200},
+    {BAUD_RATE::SPEED_57K,     57'600},
+};
+
+typedef enum {
   BREAK_ON = 0x40,
   TORQUE_ON = 0x60,
   TORQUE_FREE = 0x00,
@@ -193,6 +215,7 @@ typedef enum {
 
 typedef enum {
   MOTOR_MODEL = 0x00,
+  BAUD_SETTING = 0x04,
 } EEP_REGISTER;
 
 // HERKULEX STATUS ERROR - See Manual p39
@@ -211,15 +234,17 @@ public:
   HerkulexClass();
   HerkulexClass(uint8_t serialPort);
 
-  void beginSerialBus(long baud);
+  void beginSerialBus(uint32_t baud);
+  void updateSerialBaud(uint32_t baud);
   void endSerialBus();
 
   void  initialize();
   byte  stat(int servoID);
   void  setACKPolicy(int valueACK);
   uint16_t checkModel(uint8_t servoID);
-  void  setID(int ID_Old, int ID_New);
-  void  clearError(int servoID);
+  void setID(int ID_Old, int ID_New);
+  void clearError(int servoID);
+  void setBaudRate(BAUD_RATE newBaud);
 
   void  torqueON(int servoID);
   void  torqueFree(int servoID);

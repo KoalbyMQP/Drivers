@@ -105,7 +105,7 @@ void HerkulexClass::resetClassVals(){
 
 
 // Begin serial bus communications
-void HerkulexClass::beginSerialBus(long baud){
+void HerkulexClass::beginSerialBus(uint32_t baud){
 	_serial->begin(baud);
 }
 
@@ -114,13 +114,19 @@ void HerkulexClass::endSerialBus(){
 	_serial->end();
 }
 
+void HerkulexClass::updateSerialBaud(uint32_t baud){
+	_serial->flush();
+	_serial->end();
+	_serial->begin(baud);
+}
+
 // initialize servos
 void HerkulexClass::initialize(){
 		resetClassVals();
         delay(100);       
         setACKPolicy(ACK_POLICY_TYPE::REPLY_TO_READ);
         delay(10);
-        torqueON(PACKET_CONSTS::ALL_SERVOS);		// torqueON for all servos
+        torqueON(PACKET_CONSTS::ALL_SERVOS);    // torqueON for all servos
         delay(10);
         clearError(PACKET_CONSTS::ALL_SERVOS);	// clear error for all servos
         delay(10);
@@ -191,6 +197,16 @@ void HerkulexClass::setACKPolicy(int valueACK)
 {	
 	uint8_t byteArray[1] = {ACK_POLICY_TYPE::REPLY_TO_READ};
 	writeToRamRegister(PACKET_CONSTS::ALL_SERVOS, RAM_REGISTER::ACK_POLICY, byteArray, 1);
+}
+
+
+// sets baud rate for bus, meaning all motors on bus update their baud rate
+// also updates bus serial baud rate.
+void HerkulexClass::setBaudRate(BAUD_RATE newBaud){
+	uint8_t byteArray[1] = {newBaud};
+	writeToEEPRegister(PACKET_CONSTS::ALL_SERVOS, EEP_REGISTER::BAUD_SETTING, byteArray, 1);
+	delayMicroseconds(1000);
+	updateSerialBaud(BAUD_RATE_MAP.at(newBaud));
 }
 
 // return full model number as specified in datasheet
