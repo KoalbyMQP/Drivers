@@ -21,6 +21,7 @@ class SerialBusManager {
 
         static void createBus(uint8_t serialPort);
         static HerkulexClass& getBus(uint8_t serialPort);
+        static void updateBaudRateWithReport(const MotorRef* motors, uint8_t count, BAUD_RATE baud);
 
         static void actionAll(int playTimeMs);
 

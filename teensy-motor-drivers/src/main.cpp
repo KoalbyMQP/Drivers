@@ -88,9 +88,10 @@ void setup(){
   // Each entry is {busId, servoId}. Order here determines order in rawPositions[], can mix and match serial buses
   // Add or remove entries to match the motors needed
   for (int i = 0; i < MOTOR_COUNT; i++) motorRefs[i] = motors[i].getMotorRef();
-  for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(0.0);
+  for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(-20.0);
   delay(2000);
 
+  SerialBusManager::updateBaudRateWithReport(motorRefs, MOTOR_COUNT, BAUD_RATE::SPEED_667K);
 
   for (int i = 0; i < MOTOR_COUNT; i++){
     uint16_t model = motors[i].getModel();
@@ -100,12 +101,6 @@ void setup(){
       Serial.println(model);
     }
   }
-
-  // Futur print for testing
-  //Serial.println(SerialBusManager::getBus(BUS_R_LEG).stat())
-
-
-
 }
 
 
@@ -165,7 +160,7 @@ void loop(){
           motorPositions[i] = motors[i].rawToDegs(motorPositionsRaw[i]);
           Serial.println(motorPositions[i]);
         }
-        delay(2000);
+        delay(4000);
         count++;
         robotState = SETTING_MOTOR_POS;
       };
