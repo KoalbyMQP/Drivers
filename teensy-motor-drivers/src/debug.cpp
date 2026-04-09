@@ -54,10 +54,9 @@ static const char* busName(int b) {
 
 
 //find_all_motors_on_bus
-int find_all_motors_on_bus(){
+int find_all_motors_on_bus(HerkulexClass SerialBus){
     // loop through all possible pIDs (0-253), every time a motor is found, print and add to motor out
     // packet = data for servos (50) + 8 for move multiple length. See herkulex.h for more details.
-    HerkulexClass Herkulex;
     byte status;
     int motorCount = 0;
 
@@ -85,7 +84,7 @@ int find_all_motors_on_bus(){
             Serial.print("Motor at ID: ");
             Serial.println(pID);
 
-            int modelNo = Herkulex.checkModel(pID);
+            int modelNo = SerialBus.checkModel(pID);
             MotorModel model = decodeModel(modelNo);
 
             Serial.print("Motor model: ");
@@ -94,7 +93,6 @@ int find_all_motors_on_bus(){
     }
     return motorCount;
 }
-
 
 // function that goes through every motor and tests latency for getting and sending position
 void test_motor_latency(HerkulexMotor* motors, int motors_size){
