@@ -83,6 +83,7 @@ int find_all_motors_on_bus(HerkulexClass& SerialBus){
             } else {
                 Serial.println("Motor model: [READ FAILED]");
             }
+            Serial.println();
         } else {
             // Serial.print("Broadcast on ID ");
             // Serial.print(pID);

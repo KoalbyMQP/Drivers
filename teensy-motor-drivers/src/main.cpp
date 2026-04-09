@@ -71,10 +71,12 @@ void setup(){
   delay(2000);
 
   //scan the serial buses for unknown motor ids
+  Serial.println();
   Serial.println("Scanning BUS_R_LEG...");
   int countR = find_all_motors_on_bus(SerialBusManager::getBus(BUS_R_LEG));
   Serial.print("Found motors on R_LEG: ");
   Serial.println(countR);
+  Serial.println();
 
   for (int i = 0; i < MOTOR_COUNT; i++){
     motors[i].setLed(LED_STATE::LED_BLUE);

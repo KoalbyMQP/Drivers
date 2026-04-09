@@ -589,12 +589,12 @@ bool HerkulexClass::readPacketReply(uint8_t servoID, uint8_t* outputBuffer, uint
     packetLength = PACKET_LENGTH_BYTES::BASE_LENGTH + optionalDataLength;
 
     if (!readBlocking(packetLength)){
-		Serial.println("readBlocking returned nothing."); 
+		// Serial.println("readBlocking returned nothing."); 
 		return false;
 	}
 	// Something is going wrong in verifyInputPacket
     if (!verifyInputPacket(inputBuffer, packetLength)){
-		Serial.println("Packet cannot be verified.");
+		// Serial.println("Packet cannot be verified.");
 		return false;
 	}
 
@@ -681,9 +681,9 @@ void HerkulexClass::updateRead(){
 
 bool HerkulexClass::readBlocking(uint8_t length){
     readStartTime = micros();
-	Serial.print("Attempting to read ");
-	Serial.print(packetLength);
-	Serial.println(" bytes");
+	// Serial.print("Attempting to read ");
+	// Serial.print(packetLength);
+	// Serial.println(" bytes");
     while(_serial->available() < length){
         delayMicroseconds(50);
         if (micros() - readStartTime >= SERIAL_READ_TIMEOUT_US){
@@ -692,10 +692,10 @@ bool HerkulexClass::readBlocking(uint8_t length){
     }
 	if(_serial->available() >= length){
 		_serial->readBytes(inputBuffer, length);
-		for (uint8_t i = 0; i < length; i++) {
-			printHexByte(inputBuffer[i]);
-		}
-		Serial.println();
+		// for (uint8_t i = 0; i < length; i++) {
+		// 	printHexByte(inputBuffer[i]);
+		// }
+		// Serial.println();
     	return true;
 	} else {
 		return false;
