@@ -208,15 +208,17 @@ void HerkulexClass::setACKPolicy(int valueACK)
 }
 
 // return full model number as specified in datasheet
-uint16_t HerkulexClass::checkModel(uint8_t servoID)
+bool HerkulexClass::checkModel(uint8_t servoID, uint16_t* model)
 {
-
 	uint8_t result[2];
 
-    if (!readFromEEPRegisterBlocking(servoID, EEP_REGISTER::MOTOR_MODEL, 2, result)) return -1;
+    if (!readFromEEPRegisterBlocking(servoID, EEP_REGISTER::MOTOR_MODEL, 2, result)) {
+		return false;
+	}
 	
 	// model no is 16 bit int, shift over by 8 for correct model number
-    return (result[1] << 8 | result[0]);
+	*model = (result[1] << 8) | result[0];
+    return true;
 
 	// packetLength = PACKET_LENGTH_BYTES::HEEPREAD_LENGTH;
 	// additionalDataLength = PACKET_LENGTH_BYTES::HEEPREAD_DATA_LENGTH;
