@@ -34,7 +34,10 @@ HerkulexClass& SerialBusManager::getBus(uint8_t serialPort){
 }
 
 void SerialBusManager::updateBaudRateWithReport(const MotorRef* motors, uint8_t count, BAUD_RATE baud){
-for (int i = 0; i < SerialBusManager::MAX_BUS_COUNT; i++) {
+    uint8_t stat_error;
+    uint8_t stat_detail;
+
+    for (int i = 0; i < SerialBusManager::MAX_BUS_COUNT; i++) {
 
         // if we have a serial port created
         if (SerialBusManager::_busesTracker[i] == 1) {
@@ -47,20 +50,20 @@ for (int i = 0; i < SerialBusManager::MAX_BUS_COUNT; i++) {
             for (int motor_idx = 0; motor_idx < count; motor_idx++) {
                 if (motors[motor_idx].busId != (i + 1)) continue; // do as per-bus report
 
-                byte preStat = SerialBusManager::_buses[i].stat(motors[motor_idx].servoId);
                 Serial.print("  Motor 0x");
                 Serial.print(motors[motor_idx].servoId, HEX);
-                Serial.print(" STAT: 0x");
-                Serial.println(preStat, HEX);
-            }
 
+                if(SerialBusManager::_buses[i].stat(motors[motor_idx].servoId, &stat_error, &stat_detail)){
+                    Serial.print(" STAT_ERROR: 0x");
+                    Serial.print(stat_error, HEX);
+                    Serial.print(" STAT_DETAIL: 0x");
+                    Serial.println(stat_detail, HEX);
+                }else{
+                    Serial.println("  NO STAT RESPONSE");
+                }
+            }
             // update baud rate of motors
             SerialBusManager::_buses[i].setBaudRate(baud);
-
-            // Restart the serial bus at the new baud rate
-            SerialBusManager::_buses[i].updateSerialBaud(BAUD_RATE_MAP.at(baud));
-
-            delayMicroseconds(100);
 
             // --- POST-UPDATE STAT ---
             Serial.print("[Bus ");
@@ -69,27 +72,16 @@ for (int i = 0; i < SerialBusManager::MAX_BUS_COUNT; i++) {
             Serial.print(BAUD_RATE_MAP.at(baud));
             Serial.println(" bps):");
 
-            for (int m = 0; m < count; m++) {
-                if (motors[m].busId != (i + 1)) continue;
+            for (int motor_idx = 0; motor_idx < count; motor_idx++) {
+                if (motors[motor_idx].busId != (i + 1)) continue;
 
-                byte postStat = SerialBusManager::_buses[i].stat(motors[m].servoId);
-                Serial.print("  Motor 0x");
-                Serial.print(motors[m].servoId, HEX);
-                Serial.print(" STAT: 0x");
-                Serial.print(postStat, HEX);
-
-                if (postStat == H_STATUS_OK) {
-                    Serial.println(" [OK]");
-                } else {
-                    Serial.print(" [ERR:");
-                    if (postStat & H_ERROR_INPUT_VOLTAGE)     Serial.print(" VOLTAGE");
-                    if (postStat & H_ERROR_POS_LIMIT)         Serial.print(" POS_LIMIT");
-                    if (postStat & H_ERROR_TEMPERATURE_LIMIT) Serial.print(" TEMP");
-                    if (postStat & H_ERROR_INVALID_PKT)       Serial.print(" INVALID_PKT");
-                    if (postStat & H_ERROR_OVERLOAD)          Serial.print(" OVERLOAD");
-                    if (postStat & H_ERROR_DRIVER_FAULT)      Serial.print(" DRIVER_FAULT");
-                    if (postStat & H_ERROR_EEPREG_DISTORT)    Serial.print(" EEPREG_DISTORT");
-                    Serial.println("]");
+                if(SerialBusManager::_buses[i].stat(motors[motor_idx].servoId, &stat_error, &stat_detail)){
+                    Serial.print(" STAT_ERROR: 0x");
+                    Serial.print(stat_error, HEX);
+                    Serial.print(" STAT_DETAIL: 0x");
+                    Serial.println(stat_detail, HEX);
+                }else{
+                    Serial.println("  NO STAT RESPONSE");
                 }
             }
         }

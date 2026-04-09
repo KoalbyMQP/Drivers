@@ -118,7 +118,6 @@ void HerkulexClass::endSerialBus(){
 
 void HerkulexClass::updateSerialBaud(uint32_t baud){
 	if (_serial == nullptr) return;
-	_serial->flush();
 	_serial->end();
 	_serial->begin(baud);
 }
@@ -146,53 +145,11 @@ bool HerkulexClass::stat(uint8_t servoID, uint8_t* statError, uint8_t* statDetai
 	if(!readPacketReply(servoID, buffer, 2, COMMAND_RESPONSE::HSTAT_RESPONSE)){
 		return false;
 	}
+
 	*statError = buffer[0];
 	*statDetail = buffer[1];
+
 	return true;
-
-	//Previous stat code
-	/*
-	packetLength = PACKET_LENGTH_BYTES::HSTAT_LENGTH;
-	additionalDataLength = PACKET_LENGTH_BYTES::HSTAT_DATA_LENGTH;
-
-	pID      = servoID;
-	CMD      = COMMAND::HSTAT;
-  
-	// base packet
-	packet[0] = PACKET_CONSTS::PACKET_HEADER;
-	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetLength;
-	packet[3] = pID;
-	packet[4] = CMD;
-
-	// checksum
-	// because we added an additionalDataLength of 0, the checksum can be calculated with the functions
-	checksumOne = calcChecksumOne();
-    checksumTwo = calcChecksumTwo();
-
-	packet[5] = checksumOne;	
-	packet[6] = checksumTwo;	
-	     
-	sendData(packet, packetLength);
-	delay(2);
-	if(!readBlocking(9)) return -3; 	// read 9 bytes from serial, return -3 if nothing
-
-	// second part of the function where it reads the data
-	packetLength = packet[2];       
-	pID   = packet[3];        
-	CMD   = packet[4];       
-	checksumData[0]=packet[7];
-    checksumData[1]=packet[8];
-    packetLength=2; // ??
-
-	checksumOne = calcChecksumOne(); // old one: checksumOne = (dataEx[2]^dataEx[3]^dataEx[4]^dataEx[7]^dataEx[8]) & 0xFE; 
-	checksumTwo = calcChecksumTwo();			
-	
-	if (checksumOne != packet[5]) return -1; //checksum verify
-	if (checksumTwo != packet[6]) return -2;
-
-	return packet[7];			// return status
-	*/
 }
 
 // torque on - 
@@ -222,8 +179,12 @@ void HerkulexClass::setACKPolicy(int valueACK)
 void HerkulexClass::setBaudRate(BAUD_RATE newBaud){
 	uint8_t byteArray[1] = {newBaud};
 	writeToEEPRegister(PACKET_CONSTS::ALL_SERVOS, EEP_REGISTER::BAUD_SETTING, byteArray, 1);
-	delayMicroseconds(1000);
+	delay(10);
+	reboot(PACKET_CONSTS::ALL_SERVOS);
+	delay(500);
 	updateSerialBaud(BAUD_RATE_MAP.at(newBaud));
+	initialize();
+	delay(10);
 }
 
 // return full model number as specified in datasheet
@@ -236,58 +197,9 @@ bool HerkulexClass::checkModel(uint8_t servoID, uint16_t* model)
 	}
 	
 	// model no is 16 bit int, shift over by 8 for correct model number
-	*model = (result[1] << 8) | result[0];
+	*model = (result[0] << 8) | result[1];
     return true;
 
-	// packetLength = PACKET_LENGTH_BYTES::HEEPREAD_LENGTH;
-	// additionalDataLength = PACKET_LENGTH_BYTES::HEEPREAD_DATA_LENGTH;
-
-		           
-	// CMD   = COMMAND::HEEPREAD;
-
-	// checksumData[0]=0x00;               // 8. Address
-	// checksumData[1]=0x01;               // 9. Lenght
-  	
-	// // base packet
-	// packet[0] = PACKET_CONSTS::PACKET_HEADER;
-	// packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	// packet[2] = packetLength;
-	// packet[3] = pID;
-	// packet[4] = CMD;
-	
-	// // optional data
-	// packet[7] = checksumData[0]; 		// Address
-	// packet[8] = checksumData[1]; 		// Length
-
-	// // checksum
-	// checksumOne = calcChecksumOne();	
-	// checksumTwo = calcChecksumTwo();					
-
-	// packet[5] = checksumOne;		
-	// packet[6] = checksumTwo;
-
-    // sendData(packet, packetLength);
-
-	// delay(1);
-	// if (!readBlocking(11)) return -3;
-
-    // packetLength = packet[2];
-    // pID = packet[3];
-    // CMD = packet[4];
-
-    // checksumData[0] = packet[7];
-    // checksumData[1] = packet[8];
-    // checksumData[2] = packet[9];
-    // checksumData[3] = packet[10];
-    // packetLength = 4; // ??
-
-    // checksumOne = calcChecksumOne();
-    // checksumTwo = calcChecksumTwo();
-
-    // if (checksumOne != packet[5]) return -1;
-    // if (checksumTwo != packet[6]) return -2;
-
-    // return packet[9] | (packet[10] << 8);
 }
 
 // setID - Need to restart the servo
@@ -408,26 +320,28 @@ uint16_t HerkulexClass::getPosition(int servoID) {
 
 // reboot single servo - pay attention 253 - all servos doesn't work!
 void HerkulexClass::reboot(int servoID) {
-    packetLength = PACKET_LENGTH_BYTES::HREBOOT_LENGTH;
-	additionalDataLength = PACKET_LENGTH_BYTES::HREBOOT_DATA_LENGTH;
+	sendPacket(servoID, {}, PACKET_LENGTH_BYTES::HREBOOT_DATA_LENGTH, COMMAND::HREBOOT);
 
-	pID   = servoID;
-	CMD   = COMMAND::HREBOOT;
+    // packetLength = PACKET_LENGTH_BYTES::HREBOOT_LENGTH;
+	// additionalDataLength = PACKET_LENGTH_BYTES::HREBOOT_DATA_LENGTH;
 
-	// base packet
-	packet[0] = PACKET_CONSTS::PACKET_HEADER;
-	packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	packet[2] = packetLength;
-	packet[3] = pID;
-	packet[4] = CMD;
+	// pID   = servoID;
+	// CMD   = COMMAND::HREBOOT;
 
-	checksumOne = calcChecksumOne();
-    checksumTwo = calcChecksumTwo();
+	// // base packet
+	// packet[0] = PACKET_CONSTS::PACKET_HEADER;
+	// packet[1] = PACKET_CONSTS::PACKET_HEADER;
+	// packet[2] = packetLength;
+	// packet[3] = pID;
+	// packet[4] = CMD;
+
+	// checksumOne = calcChecksumOne();
+    // checksumTwo = calcChecksumTwo();
 	
-	packet[5] = checksumOne;	
-	packet[6] = checksumTwo;
+	// packet[5] = checksumOne;	
+	// packet[6] = checksumTwo;
 	
-	sendData(packet, packetLength);
+	// sendData(packet, packetLength);
 }
 
 void HerkulexClass::setLed(uint8_t servoID, LED_STATE valueLed)
