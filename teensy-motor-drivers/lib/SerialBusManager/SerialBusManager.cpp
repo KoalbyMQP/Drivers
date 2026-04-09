@@ -33,7 +33,7 @@ HerkulexClass& SerialBusManager::getBus(uint8_t serialPort){
     return SerialBusManager::_buses[serialPort - 1];
 }
 
-static void updateBaudRateWithReport(const MotorRef* motors, uint8_t count, BAUD_RATE baud){
+void SerialBusManager::updateBaudRateWithReport(const MotorRef* motors, uint8_t count, BAUD_RATE baud){
 for (int i = 0; i < SerialBusManager::MAX_BUS_COUNT; i++) {
 
         // if we have a serial port created
@@ -44,12 +44,12 @@ for (int i = 0; i < SerialBusManager::MAX_BUS_COUNT; i++) {
             Serial.print(i + 1);
             Serial.println("] PRE-baud rate update status:");
 
-            for (int m = 0; m < count; m++) {
-                if (motors[m].busId != (i + 1)) continue; // do as per-bus report
+            for (int motor_idx = 0; motor_idx < count; motor_idx++) {
+                if (motors[motor_idx].busId != (i + 1)) continue; // do as per-bus report
 
-                byte preStat = SerialBusManager::_buses[i].stat(motors[m].servoId);
+                byte preStat = SerialBusManager::_buses[i].stat(motors[motor_idx].servoId);
                 Serial.print("  Motor 0x");
-                Serial.print(motors[m].servoId, HEX);
+                Serial.print(motors[motor_idx].servoId, HEX);
                 Serial.print(" STAT: 0x");
                 Serial.println(preStat, HEX);
             }
