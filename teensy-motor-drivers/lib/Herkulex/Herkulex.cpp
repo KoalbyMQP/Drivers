@@ -106,15 +106,18 @@ void HerkulexClass::resetClassVals(){
 
 // Begin serial bus communications
 void HerkulexClass::beginSerialBus(uint32_t baud){
+	if (_serial == nullptr) return;
 	_serial->begin(baud);
 }
 
 // End serial bus communications
 void HerkulexClass::endSerialBus(){
+	if (_serial == nullptr) return;
 	_serial->end();
 }
 
 void HerkulexClass::updateSerialBaud(uint32_t baud){
+	if (_serial == nullptr) return;
 	_serial->flush();
 	_serial->end();
 	_serial->begin(baud);
