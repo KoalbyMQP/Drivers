@@ -94,7 +94,11 @@ void HerkulexMotor::setLed(LED_STATE ledColor){
 }
 
 uint16_t HerkulexMotor::getModel(){
-    return SerialBusManager::getBus(_busId).checkModel(_id);
+    uint16_t modelNo;   // hold the model number returned by checkModel here
+    if (SerialBusManager::getBus(_busId).checkModel(_id, &modelNo)) {
+        return modelNo;
+    }
+    return 0xFFFF;
 }
 
 

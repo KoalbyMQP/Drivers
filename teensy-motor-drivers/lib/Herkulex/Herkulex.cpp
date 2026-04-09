@@ -136,9 +136,22 @@ void HerkulexClass::initialize(){
 }
 
 // stat
-byte HerkulexClass::stat(int servoID)
+bool HerkulexClass::stat(uint8_t servoID, uint8_t* statError, uint8_t* statDetail)
 {
-	// sendPacket();
+	sendPacket(servoID, nullptr, 0, COMMAND::HSTAT);
+	delayMicroseconds(1000);
+
+	uint8_t buffer[2];
+
+	if(!readPacketReply(servoID, buffer, 2, COMMAND_RESPONSE::HSTAT_RESPONSE)){
+		return false;
+	}
+	*statError = buffer[0];
+	*statDetail = buffer[1];
+	return true;
+
+	//Previous stat code
+	/*
 	packetLength = PACKET_LENGTH_BYTES::HSTAT_LENGTH;
 	additionalDataLength = PACKET_LENGTH_BYTES::HSTAT_DATA_LENGTH;
 
@@ -179,6 +192,7 @@ byte HerkulexClass::stat(int servoID)
 	if (checksumTwo != packet[6]) return -2;
 
 	return packet[7];			// return status
+	*/
 }
 
 // torque on - 
@@ -213,13 +227,17 @@ void HerkulexClass::setBaudRate(BAUD_RATE newBaud){
 }
 
 // return full model number as specified in datasheet
-uint16_t HerkulexClass::checkModel(uint8_t servoID)
+bool HerkulexClass::checkModel(uint8_t servoID, uint16_t* model)
 {
-
 	uint8_t result[2];
 
-    if (!readFromEEPRegisterBlocking(servoID, EEP_REGISTER::MOTOR_MODEL, 2, result)) return -1;
-    return (result[1] << 4 | result[0]);
+    if (!readFromEEPRegisterBlocking(servoID, EEP_REGISTER::MOTOR_MODEL, 2, result)) {
+		return false;
+	}
+	
+	// model no is 16 bit int, shift over by 8 for correct model number
+	*model = (result[1] << 8) | result[0];
+    return true;
 
 	// packetLength = PACKET_LENGTH_BYTES::HEEPREAD_LENGTH;
 	// additionalDataLength = PACKET_LENGTH_BYTES::HEEPREAD_DATA_LENGTH;
@@ -543,8 +561,15 @@ void HerkulexClass::requestFromRegister(uint8_t servoID, uint8_t address, uint8_
 bool HerkulexClass::readFromRegisterBlocking(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer, COMMAND cmd, COMMAND_RESPONSE cmd_res){
 	requestFromRegister(servoID, address, numRequestedBytes, cmd);
 	delayMicroseconds(1000);
-	return readPacketReply(servoID, buffer, numRequestedBytes, cmd_res);
+
+	uint8_t replyOptionalLength = 4 + numRequestedBytes;
+	uint8_t replyBuff[replyOptionalLength];
 	
+	// Since we are taking address and status echo into account, replybuff[2] is where we need to memcpy
+	if (!readPacketReply(servoID, replyBuff, replyOptionalLength, cmd_res)) return false;
+	memcpy(buffer, &replyBuff[2], numRequestedBytes);
+    return true;
+
 }
 
 
@@ -583,8 +608,15 @@ void HerkulexClass::sendPacket(uint8_t servoID, uint8_t* optionalData, uint8_t o
 bool HerkulexClass::readPacketReply(uint8_t servoID, uint8_t* outputBuffer, uint8_t optionalDataLength, COMMAND_RESPONSE cmd_res){
     packetLength = PACKET_LENGTH_BYTES::BASE_LENGTH + optionalDataLength;
 
-    if (!readBlocking(packetLength)) return false;
-    if (!verifyInputPacket(inputBuffer, packetLength)) return false;
+    if (!readBlocking(packetLength)){
+		// Serial.println("readBlocking returned nothing."); 
+		return false;
+	}
+	// Something is going wrong in verifyInputPacket
+    if (!verifyInputPacket(inputBuffer, packetLength)){
+		// Serial.println("Packet cannot be verified.");
+		return false;
+	}
 
     memcpy(outputBuffer, &inputBuffer[7], optionalDataLength);
     return true;
@@ -666,17 +698,27 @@ void HerkulexClass::updateRead(){
 }
 
 
+
 bool HerkulexClass::readBlocking(uint8_t length){
-	readStartTime = micros();
-	while(_serial->available() < length){
-		delayMicroseconds(50);
-		if (micros() - readStartTime >= SERIAL_READ_TIMEOUT_US){
-			return false;
-		}
-		if (_serial->available() >= length){
-			_serial->readBytes(inputBuffer, length);
-			return true;
-		}
+    readStartTime = micros();
+	// Serial.print("Attempting to read ");
+	// Serial.print(packetLength);
+	// Serial.println(" bytes");
+    while(_serial->available() < length){
+        delayMicroseconds(50);
+        if (micros() - readStartTime >= SERIAL_READ_TIMEOUT_US){
+            return false;
+        }
+    }
+	if(_serial->available() >= length){
+		_serial->readBytes(inputBuffer, length);
+		// for (uint8_t i = 0; i < length; i++) {
+		// 	printHexByte(inputBuffer[i]);
+		// }
+		// Serial.println();
+    	return true;
+	} else {
+		return false;
 	}
 }
 

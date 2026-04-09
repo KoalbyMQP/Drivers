@@ -58,18 +58,25 @@ void setup(){
   Serial8.begin(9600); //begin serial communication with the raspberry pi, this has been changed to Serial 8 instead of 1
   delay(2000);
 
-  // if (!imu1.begin()) {
-  //     Serial.println("ERROR: IMU not detected. Check wiring!");
-  //     while (1);
-  // }
+  if (!imu1.begin()) {
+      Serial.println("ERROR: IMU not detected. Check wiring!");
+      while (1);
+  }
 
   // initialize all serial buses
   SerialBusManager::createBus(SERIAL_BUS::BUS_L_LEG); // begin serial communications with motor, these are on Serial 2
   SerialBusManager::createBus(SERIAL_BUS::BUS_R_LEG);
   SerialBusManager::startAllBuses(115200);
-  SerialBusManager::initAllMotors();
-
+  // SerialBusManager::initAllMotors();
   delay(2000);
+
+  //scan the serial buses for unknown motor ids
+  Serial.println();
+  Serial.println("Scanning BUS_R_LEG...");
+  int countR = find_all_motors_on_bus(SerialBusManager::getBus(BUS_R_LEG));
+  Serial.print("Found motors on R_LEG: ");
+  Serial.println(countR);
+  Serial.println();
 
   for (int i = 0; i < MOTOR_COUNT; i++){
     motors[i].setLed(LED_STATE::LED_BLUE);
@@ -87,11 +94,13 @@ void setup(){
   SerialBusManager::updateBaudRateWithReport(motorRefs, MOTOR_COUNT, BAUD_RATE::SPEED_667K);
 
   for (int i = 0; i < MOTOR_COUNT; i++){
-    Serial.println(motors[i].getModel());
+    uint16_t model = motors[i].getModel();
+    if (model == 0xFFFF) {
+      Serial.println("Read failed");
+    } else {
+      Serial.println(model);
+    }
   }
-
-  
-
 }
 
 
