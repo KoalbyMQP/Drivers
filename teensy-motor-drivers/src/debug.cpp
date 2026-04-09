@@ -22,9 +22,9 @@
 MotorModel decodeModel(int rawModel)
 {
     switch (rawModel) {
-        case 0x0201: return DRS_0201;
-        case 0x0601: return DRS_0601;
-        case 0x0602: return DRS_0602;
+        case 0x0102: return DRS_0201;
+        case 0x0106: return DRS_0601;
+        case 0x0206: return DRS_0602;
         default:     return UNKNOWN_MODEL;
     }
 }
