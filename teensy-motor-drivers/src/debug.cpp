@@ -63,6 +63,8 @@ int find_all_motors_on_bus(HerkulexClass& SerialBus){
     for (uint8_t pID = 0; pID < 0xFE; pID++){
         // send packet with current pID and wait for ACK packet
         // comments for debugging
+        Serial.print("scanning: ");
+        Serial.println(pID);
         
         uint8_t error, detail;
 
@@ -85,15 +87,9 @@ int find_all_motors_on_bus(HerkulexClass& SerialBus){
             }
             Serial.println();
         } else {
-            // Serial.print("Broadcast on ID ");
-            // Serial.print(pID);
-            // Serial.print("   Error: ");
-            // Serial.print(error, HEX);
-            // Serial.print("   Detail: ");
-            // Serial.print(detail, HEX);
             continue;
         }
-        delayMicroseconds(500);     // Short delay to not overwelm calls on bus
+        delay(500);     // Short delay to not overwelm calls on bus
     }
     return motorCount;
 }

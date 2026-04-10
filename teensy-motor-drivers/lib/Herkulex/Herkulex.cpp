@@ -138,7 +138,7 @@ void HerkulexClass::initialize(){
 bool HerkulexClass::stat(uint8_t servoID, uint8_t* statError, uint8_t* statDetail)
 {
 	sendPacket(servoID, nullptr, 0, COMMAND::HSTAT);
-	delayMicroseconds(1000);
+	delayMicroseconds(2000);
 
 	uint8_t buffer[2];
 

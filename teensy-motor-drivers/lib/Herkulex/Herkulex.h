@@ -52,7 +52,7 @@ struct motorMoveInfo {
 
 #define DATA_SIZE	 30		               // buffer for input data
 #define DATA_MOVE  	 50		             // max 10 servos <---- change this for more servos!
-#define SERIAL_READ_TIMEOUT_US  2000   // timeout serial communication (microseconds)
+#define SERIAL_READ_TIMEOUT_US  5000   // timeout serial communication (microseconds)
 
 #define CONVERT_PLAYTIME_TO_MS 11.2 // conversion factor for turning a playtime duration sent to and used by the servo into a millisecond duration
 

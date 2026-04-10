@@ -45,4 +45,28 @@ struct MotorRef {
     MotorModel type;       // DRS 0601, DRS 0602... etc.,
 };
 
+
+// MotorGroup — a named slice of MotorRef descriptors belonging to one body segment.
+// Groups a contiguous array of MotorRefs with its element count so callers can
+// iterate without knowing array sizes at compile time.
+//
+// Typical use: populate an array of MotorGroups (one per bus / limb) and pass it
+// to SerialBusManager::requestAllPositions / collectAllPositions instead of
+// managing each segment's array separately.
+//
+// Example:
+//   MotorGroup allGroups[] = {
+//     { rightLegMotors, BUS_R_LEG_COUNT },
+//     { leftLegMotors,  BUS_L_LEG_COUNT },
+//     { chestMotors,    BUS_CHEST_COUNT  },
+//   };
+//
+// NOTE: `motors` is a non-owning pointer — the underlying MotorRef array must
+// outlive any MotorGroup that references it.
+struct MotorGroup {
+    MotorRef* motors;
+    size_t count;
+};
+
+
 #endif
