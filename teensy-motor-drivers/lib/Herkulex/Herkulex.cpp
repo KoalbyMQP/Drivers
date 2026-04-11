@@ -207,6 +207,7 @@ void HerkulexClass::setID(uint8_t oldID, uint8_t newID)
 {
 	uint8_t byteArray[1] = {newID};
 	writeToEEPRegister(oldID, EEP_REGISTER::ID, byteArray, 1);
+	delay(100);
 	reboot(oldID);
 	delay(500);
 }
@@ -291,7 +292,7 @@ uint16_t HerkulexClass::getPosition(int servoID) {
 
 // reboots servos
 void HerkulexClass::reboot(int servoID) {
-	sendPacket(servoID, {}, PACKET_LENGTH_BYTES::HREBOOT_DATA_LENGTH, COMMAND::HREBOOT);
+	sendPacket(servoID, nullptr, PACKET_LENGTH_BYTES::HREBOOT_DATA_LENGTH, COMMAND::HREBOOT);
 }
 
 void HerkulexClass::setLed(uint8_t servoID, LED_STATE valueLed)
