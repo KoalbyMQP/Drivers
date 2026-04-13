@@ -96,11 +96,8 @@ int find_all_motors_on_bus(HerkulexClass& SerialBus){
             response.trim();
 
             if(response == "y" || response == "Y"){
-                while (Serial.available() == 0) {}
-                Serial.println("Please input new motor ID");
-                String newIDStr = Serial.readStringUntil('\n');
-                newIDStr.trim();
-                uint8_t newID = (uint8_t)newIDStr.toInt();
+
+                uint8_t newID = 3;
 
                 if (newID >= 0xFE) {
                     Serial.println("Invalid ID (must be 0-253). Skipping.");

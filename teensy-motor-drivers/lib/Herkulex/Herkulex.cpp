@@ -149,6 +149,7 @@ bool HerkulexClass::stat(uint8_t servoID, uint8_t* statError, uint8_t* statDetai
 	*statError = buffer[0];
 	*statDetail = buffer[1];
 
+
 	return true;
 }
 
@@ -480,7 +481,7 @@ bool HerkulexClass::readPacketReply(uint8_t servoID, uint8_t* outputBuffer, uint
 	}
 	// Something is going wrong in verifyInputPacket
     if (!verifyInputPacket(inputBuffer, packetLength)){
-		// Serial.println("Packet cannot be verified.");
+		//Serial.println("Packet cannot be verified.");
 		return false;
 	}
 
