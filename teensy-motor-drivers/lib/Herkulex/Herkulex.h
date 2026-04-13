@@ -30,6 +30,12 @@
  
   For Arduino Mega, please use baud rate 115.200
 
+
+  02/25/2026
+  The library has been edited from Arduino Uno/2009 - Arduino Mega to also work on Teensy 4.1
+  The Software Serial functionality has been removed due to the lat of necessity and the abundance of UART ports on the Teensy
+  Edits by Max Inman and Pau Alcolea Vila (Worcester Polytechnic Institute, 2026)
+
  *****************************************************************************
  Contact: alegiaco@gmail.com
  Web:     http://robottini.altervista.org
@@ -75,17 +81,11 @@ typedef enum {
 typedef enum {
 
   BASE_LENGTH = 0x07,
-  //setID
-  HEEPWRITE_LENGTH_1 = 0x0A, 
-  HEEPWRITE_DATA_LENGTH_1 = 0x03,
-
-
   REGISTER_INFO_LENGTH = 0x02,
   HSJOG_MOVEONE_DATA_LENGTH = 0x05,
   HSJOG_MOVEMULTIPLE_DATA_LENGTH = 0x01,
   HSTAT_DATA_LENGTH = 0x00,
   HREBOOT_DATA_LENGTH = 0x00,
-  
   GETPOS_RESPONSE = 13,    // bytes expected back from a RAMREAD position query
 
 } PACKET_LENGTH_BYTES;
@@ -195,112 +195,105 @@ typedef enum {
 
 
 class HerkulexClass {
-public:
-  HerkulexClass();
-  HerkulexClass(uint8_t serialPort);
+  public:
+    // constructors
+    HerkulexClass();
+    HerkulexClass(uint8_t serialPort);
 
-  void beginSerialBus(uint32_t baud);
-  void updateSerialBaud(uint32_t baud);
-  void endSerialBus();
+    // serial port methods
+    void beginSerialBus(uint32_t baud);
+    void updateSerialBaud(uint32_t baud);
+    void endSerialBus();
+    void setBaudRate(BAUD_RATE newBaud);
 
-  void  initialize();
-  bool  stat(uint8_t servoID, uint8_t* statError, uint8_t* statDetail);
-  void  setACKPolicy(int valueACK);
-  bool checkModel(uint8_t servoID, uint16_t* model);
-  void setID(uint8_t oldID, uint8_t newID);
-  void clearError(int servoID);
-  void setBaudRate(BAUD_RATE newBaud);
 
-  void  torqueON(int servoID);
-  void  torqueFree(int servoID);
+    // motor initialization/check methods
+    void initialize();
+    bool stat(uint8_t servoID, uint8_t* statError, uint8_t* statDetail);
+    void setACKPolicy(int valueACK);
+    bool getModel(uint8_t servoID, uint16_t* model);
+    void setID(uint8_t oldID, uint8_t newID);
+    void clearError(int servoID);
+    void reboot(int servoID);
+    void setLed(uint8_t servoID, LED_STATE valueLed);
+    void torqueON(int servoID);
+    void torqueFree(int servoID);
+    void moveOne(motorMoveInfo moveInfo);
+    uint16_t getPositionBlocking(int servoID);
+    uint16_t getSpeed(int servoID);
 
-  void  queueMove(motorMoveInfo moveInfo);
-  void  actionMoves(uint8_t playTime);
+    // simultaneous move methods
+    void queueMove(motorMoveInfo moveInfo);
+    void actionMoves(uint8_t playTime);
 
-  void  moveOne(motorMoveInfo moveInfo);
-
-  uint16_t getPosition(int servoID);
-  void sendPosRequest(int servoID);
-  uint16_t collectPosition(int servoID);
-
-  uint16_t getSpeed(int servoID);
+    // cross-bus position read methods
+    void sendPosRequest(int servoID);
+    void updateRead();
+    uint16_t collectPosition(int servoID);
+    boolean isReplyReady();
     
-  void  reboot(int servoID);
-  void  setLed(uint8_t servoID, LED_STATE valueLed);
+    
+    private:
+      int _serialPort;
+      HardwareSerial* _serial = nullptr; // store pointer to serial object
+      
+      void resetClassVals();
 
-  
-  void sendData(uint8_t* buffer, uint8_t length);
-  void requestRead(uint8_t length);
-  void updateRead();
-  boolean isReplyReady();
-  
-  
-  private:
-  
-  
-  int _serialPort;
-  HardwareSerial* _serial = nullptr; // store pointer to serial object
-  
-  uint8_t calcChecksumOne();
-  uint8_t calcChecksumTwo();
-  
-  
-  void resetClassVals();
-  
-  void clearBuffer();
-  void printHexByte(byte x);
-  
-  void writeToRegister(uint8_t servoID, uint8_t address, uint8_t* writeData, uint8_t writeDataLength, COMMAND cmd);
-  void writeToRamRegister(uint8_t servoID, RAM_REGISTER address, uint8_t* writeData, uint8_t writeDataLength);
-  void writeToEEPRegister(uint8_t servoID, EEP_REGISTER address, uint8_t* writeData, uint8_t writeDataLength);
+      void sendData(uint8_t* buffer, uint8_t length);
+      bool readBlocking(uint8_t length);
+      
+      // REGISTER WRITE METHODS
+      void writeToRegister(uint8_t servoID, uint8_t address, uint8_t* writeData, uint8_t writeDataLength, COMMAND cmd);
+      void writeToRamRegister(uint8_t servoID, RAM_REGISTER address, uint8_t* writeData, uint8_t writeDataLength);
+      void writeToEEPRegister(uint8_t servoID, EEP_REGISTER address, uint8_t* writeData, uint8_t writeDataLength);
 
-  void requestFromRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, COMMAND cmd);
-  void requestFromRamRegister(uint8_t servoID, RAM_REGISTER address, uint8_t numRequestedBytes);
-  void requestFromEEPRegister(uint8_t servoID, EEP_REGISTER address, uint8_t numRequestedBytes);
-  bool readFromRegisterBlocking(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer, COMMAND cmd, COMMAND_RESPONSE cmd_res);
-  bool readFromRamRegisterBlocking(uint8_t servoID, RAM_REGISTER address, uint8_t numRequestedBytes, uint8_t* buffer);
-  bool readFromEEPRegisterBlocking(uint8_t servoID, EEP_REGISTER address, uint8_t numRequestedBytes, uint8_t* buffer);
+      // REGISTER READ METHODS
+      void requestFromRegister(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, COMMAND cmd);
+      void requestFromRamRegister(uint8_t servoID, RAM_REGISTER address, uint8_t numRequestedBytes);
+      void requestFromEEPRegister(uint8_t servoID, EEP_REGISTER address, uint8_t numRequestedBytes);
+      bool readFromRegisterBlocking(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer, COMMAND cmd, COMMAND_RESPONSE cmd_res);
+      bool readFromRamRegisterBlocking(uint8_t servoID, RAM_REGISTER address, uint8_t numRequestedBytes, uint8_t* buffer);
+      bool readFromEEPRegisterBlocking(uint8_t servoID, EEP_REGISTER address, uint8_t numRequestedBytes, uint8_t* buffer);
 
-  void buildPacket(uint8_t servoID, uint8_t* optionalData, uint8_t optionalDataLength, COMMAND cmd);
-  void sendPacket(uint8_t servoID, uint8_t* data, uint8_t dataLength, COMMAND cmd);
+      // PACKET TRANSMISSION METHODS
+      void buildPacket(uint8_t servoID, uint8_t* optionalData, uint8_t optionalDataLength, COMMAND cmd);
+      void sendPacket(uint8_t servoID, uint8_t* data, uint8_t dataLength, COMMAND cmd);
+      
+      // PACKET RECEIVING METHODS
+      bool verifyInputPacket(uint8_t* inputPacket, uint8_t inputPacketLength);
+      bool readPacketReply(uint8_t servoID, uint8_t* outputBuffer, uint8_t optionalDataLength, COMMAND_RESPONSE cmd_res);
+    
+      uint8_t calcChecksumOne();
+      uint8_t calcChecksumTwo();
 
-  bool verifyInputPacket(uint8_t* inputPacket, uint8_t inputPacketLength);
-  bool readPacketReply(uint8_t servoID, uint8_t* outputBuffer, uint8_t optionalDataLength, COMMAND_RESPONSE cmd_res);
-  
-  uint8_t queuedPacketCount;
+      // serial reading logic helpers
+      boolean newDataInInputBuffer;
+      boolean readPending;
+      uint8_t inputLength;
+      uint32_t readStartTime;
+
+      // base packet info
+      uint8_t packetLength; 
+      uint8_t pID;            // Servo ID
+      uint8_t CMD;            // Command Type
+      uint8_t checksumOne;
+      uint8_t checksumTwo;
+
+      uint8_t additionalDataLength; // length of additional data
+
+      // servo jog "optional data"
+      uint8_t playTime;
+      uint8_t goalLSB; // lower 8 bits of goal
+      uint8_t goalMSB; // upper 8 bits of goal : in total 16 bit goal
+      uint8_t SET; // called in datasheet, it contains multiple bits of distinct info
+      uint8_t ID; // seperate from pID in datasheet but same for our use case
 
 
-  // serial reading logic helpers
-  boolean newDataInInputBuffer;
-  boolean readPending;
-  uint8_t inputLength;
-  uint32_t readStartTime;
-
-  bool readBlocking(uint8_t length);
-  
-
-  // base packet info
-  uint8_t packetLength; 
-  uint8_t pID;            // Servo ID
-  uint8_t CMD;            // Command Type
-  uint8_t checksumOne;
-  uint8_t checksumTwo;
-
-  uint8_t additionalDataLength; // length of additional data
-
-  // servo jog "optional data"
-  uint8_t playTime;
-  uint8_t goalLSB; // lower 8 bits of goal
-  uint8_t goalMSB; // upper 8 bits of goal : in total 16 bit goal
-  uint8_t SET; // called in datasheet, it contains multiple bits of distinct info
-  uint8_t ID; // seperate from pID in datasheet but same for our use case
-
-  uint8_t packet[DATA_MOVE + PACKET_LENGTH_BYTES::BASE_LENGTH + PACKET_LENGTH_BYTES::HSJOG_MOVEONE_DATA_LENGTH]; // stores full packet to send
-
-  uint8_t packetQueue[DATA_MOVE];  // stores move packets for simulataneous jog
-
-  uint8_t inputBuffer[DATA_MOVE]; // stores input HOW LARGE DOES THIS NEED TO BE?
-  uint8_t checksumData[PACKET_LENGTH_BYTES::BASE_LENGTH];  // stores checksumdata for input validation 
+      uint8_t queuedPacketCount;
+      uint8_t packet[DATA_MOVE + PACKET_LENGTH_BYTES::BASE_LENGTH + PACKET_LENGTH_BYTES::HSJOG_MOVEONE_DATA_LENGTH]; // stores full packet to send
+      uint8_t packetQueue[DATA_MOVE];  // stores move packets for simulataneous jog
+      uint8_t inputBuffer[DATA_MOVE]; // stores input HOW LARGE DOES THIS NEED TO BE?
+      uint8_t checksumData[PACKET_LENGTH_BYTES::BASE_LENGTH];  // stores checksumdata for input validation 
 };
 
 #endif

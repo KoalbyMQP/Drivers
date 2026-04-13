@@ -8,6 +8,7 @@ enum MotorModel{
     DRS_0201,
     DRS_0601,
     DRS_0602,
+    DRS_0602_GEARBOX,
     UNKNOWN_MODEL,
 };
 
@@ -32,7 +33,10 @@ const HerkulexMotorSpec ModelInfo[] = {
 
   // DRS_0602
   // bounds are  full supported 16bit int range (max what 0602 can read)
-  {0, 65535, 16384, 0xFFFF, 0.02778f}
+  {0, 65535, 16384, 0xFFFF, 0.02778f},
+
+  // DRS_0602_GEARBOX
+  {0, 65535, 16384, 0xFFFF, 0.08334f},
 };
 
 

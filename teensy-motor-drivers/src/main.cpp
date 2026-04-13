@@ -135,3 +135,17 @@ void loop(){
     }
   }
 }
+
+
+
+void moveToZeroPositions(){
+
+  // move knees first
+
+  // then do the rest of the legs
+
+  // then do chest
+
+  // then do arms
+
+}

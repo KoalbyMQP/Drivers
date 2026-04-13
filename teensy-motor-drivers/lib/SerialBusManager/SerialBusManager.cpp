@@ -49,7 +49,7 @@ void SerialBusManager::infoAllMotors(const MotorRef* motors, uint8_t count){
                 }
                 Serial.print(motors[motor_idx].servoId);
 
-                if (!SerialBusManager::_buses[i].checkModel(motors[motor_idx].servoId, &model)){
+                if (!SerialBusManager::_buses[i].getModel(motors[motor_idx].servoId, &model)){
                     model = 0xFFFF;
                 };
 
