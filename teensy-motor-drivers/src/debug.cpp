@@ -77,7 +77,7 @@ int find_all_motors_on_bus(HerkulexClass& SerialBus){
 
             uint16_t modelNo;   // hold the model number returned by checkModel here
             
-            if (SerialBus.checkModel(pID, &modelNo)) {
+            if (SerialBus.getModel(pID, &modelNo)) {
                 MotorModel model = decodeModel(modelNo);
 
                 Serial.print("Motor model: ");
