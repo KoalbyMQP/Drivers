@@ -207,6 +207,7 @@ void HerkulexClass::setID(uint8_t oldID, uint8_t newID)
 {
 	uint8_t byteArray[1] = {newID};
 	writeToEEPRegister(oldID, EEP_REGISTER::ID, byteArray, 1);
+	// Added this small delay. Don't reboot until we actually write to the EEP register. If we don't have this delay, it may not finish and reset id to default (219 in decimal)
 	delay(100);
 	reboot(oldID);
 	delay(500);

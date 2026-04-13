@@ -55,6 +55,8 @@ void setup(){
   Serial.println();
   Serial.println("Scanning BUS_L_LEG...");
   find_all_motors_on_bus(SerialBusManager::getBus(BUS_L_LEG));
+
+  
   
   // SerialBusManager::infoAllMotors(rightLegMotors, BUS_R_LEG_COUNT);
   // SerialBusManager::initAllMotors();
