@@ -89,7 +89,10 @@ int find_all_motors_on_bus(HerkulexClass& SerialBus){
             } else {
                 Serial.println("Motor model: [READ FAILED]");
             }
+            
 
+            // Uncomment the following block if you wish to change the ids of a bus
+            /*
             Serial.println("Would you like to change the motor ID? (y/n)");
             while(Serial.available() == 0){}
             String response = Serial.readStringUntil('\n');
@@ -110,6 +113,8 @@ int find_all_motors_on_bus(HerkulexClass& SerialBus){
                 }
             }
             Serial.println();
+            */
+           
         } else {
             continue;
         }

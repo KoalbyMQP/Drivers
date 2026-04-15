@@ -50,22 +50,45 @@ void setup(){
   SerialBusManager::createBus(SERIAL_BUS::BUS_L_LEG);
   SerialBusManager::createBus(SERIAL_BUS::BUS_R_LEG);
   SerialBusManager::createBus(SERIAL_BUS::BUS_CHEST);
+  SerialBusManager::createBus(SERIAL_BUS::BUS_L_ARM);
+  SerialBusManager::createBus(SERIAL_BUS::BUS_R_ARM);
   SerialBusManager::startAllBuses(BAUD_RATE::SPEED_115K);
   
   delay(2000);
   
+
+  // The following snippet is to test the wiring by looking for all the motor ids on each bus
+  /*
   Serial.println();
   Serial.println("Scanning BUS_L_LEG...");
-  //find_all_motors_on_bus(SerialBusManager::getBus(BUS_L_LEG));
-  //find_all_motors_on_bus(SerialBusManager::getBus(BUS_R_LEG));
-  //find_all_motors_on_bus(SerialBusManager::getBus(BUS_CHEST));
+  find_all_motors_on_bus(SerialBusManager::getBus(BUS_L_LEG));
 
+  Serial.println();
+  Serial.println("Scanning BUS_R_LEG..");
+  find_all_motors_on_bus(SerialBusManager::getBus(BUS_R_LEG));
+
+  Serial.println();
+  Serial.println("Scanning BUS_CHEST..");
+  find_all_motors_on_bus(SerialBusManager::getBus(BUS_CHEST));
+
+  Serial.println();
+  Serial.println("Scanning BUS_L_ARM...");
+  find_all_motors_on_bus(SerialBusManager::getBus(BUS_L_ARM));
+
+  Serial.println();
+  Serial.println("Scanning BUS_R_ARM..");
+  find_all_motors_on_bus(SerialBusManager::getBus(BUS_R_ARM));
+  */
+
+
+  // The following snippet is for testing the error on a specifc motor id on a specific bus
+  /*
   uint8_t error;
   uint8_t detail;
-
-  SerialBusManager::getBus(BUS_L_LEG).stat(22, &error, &detail);
+  SerialBusManager::getBus(BUS_L_LEG).stat(19, &error, &detail);
   Serial.println(error);
   Serial.println(detail);
+  */
 
   
   
@@ -139,11 +162,11 @@ void loop(){
       //   count++;
       //   robotState = SETTING_MOTOR_POS;
       // };
-      // break;
+      break;
     }
     case(IDLE):
     {
-      delay(1000);
+      // delay(1000);
       break;
     }
   }
