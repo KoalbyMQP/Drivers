@@ -1,8 +1,11 @@
 #include "SerialBusManager.h"
-#include "Herkulex.h"
 
 HerkulexClass SerialBusManager::_buses[SerialBusManager::MAX_BUS_COUNT];
 int SerialBusManager::_busesTracker[SerialBusManager::MAX_BUS_COUNT];
+uint8_t SerialBusManager::busDoneCount = 0;
+uint8_t SerialBusManager::activeBusCount = 0;
+bool SerialBusManager::doneCollecting = false;
+SerialBusManager::BusQueue SerialBusManager::queues[SerialBusManager::MAX_BUS_COUNT];
 
 
 void SerialBusManager::createBus(uint8_t serialPort){
@@ -23,6 +26,76 @@ void SerialBusManager::createBus(uint8_t serialPort){
     Serial.println(serialPort);
 }
 
+void SerialBusManager::infoAllMotors(const MotorRef* motors, uint8_t count){
+    uint8_t stat_error;
+    uint8_t stat_detail;
+    uint16_t model;
+
+    for (int i = 0; i < SerialBusManager::MAX_BUS_COUNT; i++){
+        if (SerialBusManager::_busesTracker[i] == 1){
+            Serial.print("\n[Bus ");
+            Serial.print(i + 1);
+            Serial.println("]:");
+
+            for (int motor_idx = 0; motor_idx < count; motor_idx++) {
+                if (motors[motor_idx].busId != (i + 1)) continue; // do as per-bus report
+
+                Serial.print("  Motor ID: ");
+                if (motors[motor_idx].servoId < 10){
+                    Serial.print(0);
+                }
+                if (motors[motor_idx].servoId < 100){
+                    Serial.print(0);
+                }
+                Serial.print(motors[motor_idx].servoId);
+
+                if (!SerialBusManager::_buses[i].getModel(motors[motor_idx].servoId, &model)){
+                    model = 0xFFFF;
+                };
+
+                Serial.print(" Model: DRS-0");
+                Serial.print(model, HEX);
+                Serial.print(" ");
+
+
+                if(SerialBusManager::_buses[i].stat(motors[motor_idx].servoId, &stat_error, &stat_detail)){
+                    Serial.print(" STAT_ERROR:  0x");
+                    Serial.print(stat_error, HEX);
+                    if (stat_error == 0x0){
+                        Serial.print(0);
+                    }
+                    Serial.print(" Meaning: ");
+                    if (stat_error == STATUS_ERROR_TYPE::H_STATUS_OK)             Serial.print("│ No errors               │ ");
+                    if (stat_error &  STATUS_ERROR_TYPE::H_EXCEED_INPUT_VOLTAGE)  Serial.print("│ Input voltage exceeded  │ ");
+                    if (stat_error &  STATUS_ERROR_TYPE::H_EXCEED_POT_LIMIT)      Serial.print("│ Pot limit exceeded      │ ");
+                    if (stat_error &  STATUS_ERROR_TYPE::H_EXCEED_TEMP_LIMIT)     Serial.print("│ Temperature exceeded    │ ");
+                    if (stat_error &  STATUS_ERROR_TYPE::H_INVALID_PACKET)        Serial.print("│ Invalid packet          │ ");
+                    if (stat_error &  STATUS_ERROR_TYPE::H_OVERLOAD_DETECTED)     Serial.print("│ Overload detected       │ ");
+                    if (stat_error &  STATUS_ERROR_TYPE::H_EEP_REG_DISTORTED)     Serial.print("│ EEP register distorted  │ ");
+                    
+                    Serial.println();
+                    Serial.print("                                 STAT_DETAIL: 0x");
+                    Serial.print(stat_detail, HEX);
+                    Serial.print(" Meaning: ");
+                    if (stat_detail == STATUS_DETAIL::H_NO_DETAILS)               Serial.print("│ No Error                │ ");
+                    if (stat_detail &  STATUS_DETAIL::H_MOVING_FLAG)              Serial.print("│ Moving                  │ ");
+                    if (stat_detail &  STATUS_DETAIL::H_INPOSITION_FLAG)          Serial.print("│ In position             │ ");
+                    if (stat_detail &  STATUS_DETAIL::H_CHECKSUM_ERROR)           Serial.print("│ Checksum error          │ ");
+                    if (stat_detail &  STATUS_DETAIL::H_UNKNOWN_COMMAND)          Serial.print("│ Unknown command         │ ");
+                    if (stat_detail &  STATUS_DETAIL::H_EXCEED_REG_RANGE)         Serial.print("│ Register range exceeded │ ");
+                    if (stat_detail &  STATUS_DETAIL::H_GARBAGE_DETECTED)         Serial.print("│ Garbage detected        │ ");
+                    if (stat_detail &  STATUS_DETAIL::H_TORQUE_ON)                Serial.print("│ Torque on               │ ");
+                    Serial.println();
+                }
+                else{
+                    Serial.println("NO STAT RESPONSE");
+                }
+            }
+        }
+    }
+}
+
+
 HerkulexClass& SerialBusManager::getBus(uint8_t serialPort){
 
     if ((serialPort < 1) || (serialPort > SerialBusManager::MAX_BUS_COUNT)) return;
@@ -30,18 +103,40 @@ HerkulexClass& SerialBusManager::getBus(uint8_t serialPort){
     return SerialBusManager::_buses[serialPort - 1];
 }
 
-void SerialBusManager::startAllBuses(long baud){
+void SerialBusManager::updateBaudRateWithReport(const MotorRef* motors, uint8_t count, BAUD_RATE baud){
+    Serial.println("PRE-baud rate update status:");
+    infoAllMotors(motors, count);
+    
+    for (int i = 0; i < SerialBusManager::MAX_BUS_COUNT; i++) {
+
+        // if we have a serial port created
+        if (SerialBusManager::_busesTracker[i] == 1) {
+            
+            // update baud rate of motors
+            SerialBusManager::_buses[i].setBaudRate(baud);
+
+        }
+    }
+
+    Serial.println();
+    Serial.print("POST-baud rate update status (now ");
+    Serial.print(BAUD_RATE_MAP.at(baud));
+    Serial.println(" bps):");
+    infoAllMotors(motors, count);
+}
+
+void SerialBusManager::startAllBuses(BAUD_RATE baud){
     for (int i = 0; i < SerialBusManager::MAX_BUS_COUNT; i++){
 
         // if we have a serial port created
         if (SerialBusManager::_busesTracker[i] == 1){
 
             // then start it
-            SerialBusManager::_buses[i].beginSerialBus(baud);
-            delayMicroseconds(10);
+            SerialBusManager::_buses[i].beginSerialBus(BAUD_RATE_MAP.at(baud));
+            delay(10);
         }
     }
-    delayMicroseconds(100);
+    delay(10);
 }
 
 void SerialBusManager::endAllBuses(){
@@ -82,17 +177,102 @@ void SerialBusManager::actionAll(int playTimeMs){
     }       
 }
 
-void SerialBusManager::requestAllPositions(const MotorRef* motors, uint8_t count){
-    // iterate through all of the motors in the referece table (all motors we are using)
-    for (uint8_t i = 0; i < count; i++){
-        uint8_t busIndex = motors[i].busId - 1;  // _buses[] is 0-indexed; busId starts at 2
-        // it is busIndex and not i because i is used for all of the motors, we are not iterating through the buses like the other methods
-        if (SerialBusManager::_busesTracker[busIndex] == 1){
-            SerialBusManager::_buses[busIndex].sendPosRequest(motors[i].servoId);
+bool SerialBusManager::isDoneCollecting(){
+    return doneCollecting;
+}
+
+void SerialBusManager::tick(const MotorRef* motors, uint16_t* results, uint8_t count){
+    // loop through all the serial buses
+    busDoneCount = 0;
+    if(!doneCollecting){
+        for (uint8_t busIndex = 0; busIndex < MAX_BUS_COUNT; busIndex++) {
+            // store reference to bus in q
+            BusQueue& q = queues[busIndex];
+
+            // exit if the bus is done (no more collects)
+            if (q.allDone()){
+                if (q.total > 0) busDoneCount++;
+                continue;
+            }
+
+            // if we are waiting for a response
+            if (q.waiting) {
+
+                // update the uart read
+                _buses[busIndex].updateRead();
+
+                // if there is a reply sitting in the uart buffer
+                if (_buses[busIndex].isReplyReady()) {
+                    // resultIdx is the index of where to put the motor position back into results
+                    uint8_t resultIdx = q.resultIndices[q.nextCollect];
+                    uint8_t servoId   = q.servoIds[q.nextCollect];
+
+                    results[resultIdx] = _buses[busIndex].collectPosition(servoId);
+
+
+                    // move onto the next motor to collect
+                    q.nextCollect++;
+                    q.waiting = false; // no longer waiting for a response
+                }
+
+            } else if (q.readyToSend()) {
+                // Bus is idle and has another motor to query.
+                Serial.print("Sending position request from: ");
+                Serial.println();
+                _buses[busIndex].sendPosRequest(q.servoIds[q.nextSend]);
+                q.nextSend++;
+                q.waiting = true;
+            }
+        }
+
+        if(busDoneCount >= activeBusCount){
+            doneCollecting = true;
         }
     }
 }
 
+// we need to give the motorrefs and the results to insert error flags into position readings
+void SerialBusManager::requestAllPositions(const MotorRef* motors, uint16_t* results, uint8_t count){
+    // build per-bus queues
+    memset(queues, 0, sizeof(queues));
+
+    // iterate through all of the motors sent as MotorRef objects
+    for (uint8_t i = 0; i < count; i++) {
+
+        // get bus that the motor is on
+        uint8_t busIndex = motors[i].busId - 1;
+
+        // if the bus isn't initiailized or the bus is out of range
+        if (busIndex >= MAX_BUS_COUNT || _busesTracker[busIndex] != 1) {
+            results[i] = 0xF0F0;  // preload results for motor with flag value
+            continue;
+        }
+
+        // if the bus is all good, then get the BusQueue object for the motor's bus
+        BusQueue& q = queues[busIndex];
+        
+        // if there are more motors on the bus than the bus can handle
+        if (q.total >= BusQueue::MAX_MOTORS_PER_BUS) {
+            results[i] = 0xF1F1;  // preload results for motor with flag value
+            continue;
+        }
+
+        // if everything is fine, then set the motor data
+        q.resultIndices[q.total] = i;
+        q.servoIds[q.total] = motors[i].servoId;
+        q.total++;
+    }
+
+    activeBusCount = 0;
+    for (uint8_t i = 0; i < MAX_BUS_COUNT; i++){
+        if (queues[i].total > 0) activeBusCount++;
+    }
+
+    doneCollecting = false;
+}
+
+// LEGACY
+// not needed, tick() collects all positions
 void SerialBusManager::collectAllPositions(const MotorRef* motors, uint16_t* results, uint8_t count){
     for (uint8_t i = 0; i < count; i++){
         uint8_t busIndex = motors[i].busId - 1;
@@ -104,6 +284,8 @@ void SerialBusManager::collectAllPositions(const MotorRef* motors, uint16_t* res
     }
 }
 
+
+// LEGACY
 // getAllPositionsParallel — cross-bus parallel, per-bus serial position read.
 //
 // Each Herkulex bus is a shared half-duplex line: only one request/reply

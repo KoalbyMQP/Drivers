@@ -17,8 +17,22 @@
 #include <debug.h>
 #include <HerkulexMotor.h>
 #include <Herkulex.h>
+#include <MotorModel.h>
 
-// Helper function that makes the motor type readible
+MotorModel decodeModel(int rawModel)
+{
+    switch (rawModel) {
+        case 0x0102: return DRS_0201;
+        case 0x0106: return DRS_0601;
+        case 0x0206: return DRS_0602;
+        case 0x0601: return DRS_0601;
+        case 0x0201: return DRS_0201;
+        case 0x0602: return DRS_0602;
+        default:     return UNKNOWN_MODEL;
+    }
+}
+
+// Helper function that makes the motor type readable
 static const char* modelName(MotorModel t) {
     switch (t) {
         case DRS_0201: return "DRS-0201";
@@ -30,14 +44,112 @@ static const char* modelName(MotorModel t) {
 
 static const char* busName(int b) {
     switch (b) {
-        case 2:  return "Left_leg";
-        case 3:  return "Right_leg";
-        case 4:  return "Chest";
-        case 5:  return "Left_arm";
-        case 6:  return "Right_arm";
-        case 7:  return "Extra_1";
-        case 8:  return "Extra_2";
+        case 1:  return "Left_leg";
+        case 2:  return "Right_leg";
+        case 3:  return "Chest";
+        case 4:  return "Left_arm";
+        case 5:  return "Right_arm";
+        case 6:  return "Extra_1";
+        case 7:  return "Extra_2";
         default: return "Unknown_bus";
+    }
+}
+
+
+//find_all_motors_on_bus
+int find_all_motors_on_bus(HerkulexClass& SerialBus){
+    // loop through all possible pIDs (0-253), every time a motor is found, print and add to motor out
+    // packet = data for servos (50) + 8 for move multiple length. See herkulex.h for more details.
+    byte status;
+    int motorCount = 0;
+
+    for (uint8_t pID = 0; pID < 0xFE; pID++){
+        // send packet with current pID and wait for ACK packet
+        // comments for debugging
+        // Serial.print("scanning: ");
+        // Serial.println(pID);
+        
+        uint8_t error, detail;
+
+        if (SerialBus.stat(pID, &error, &detail)) {
+            // no errors and there is a motor at that id
+            Serial.print("Motor at ID: ");
+            Serial.println(pID);
+
+            motorCount++;
+
+            uint16_t modelNo;   // hold the model number returned by checkModel here
+            
+            if (SerialBus.getModel(pID, &modelNo)) {
+                MotorModel model = decodeModel(modelNo);
+
+                Serial.print("Motor model: ");
+                Serial.println(modelName(model));
+
+            } else {
+                Serial.println("Motor model: [READ FAILED]");
+            }
+            
+
+            // Uncomment the following block if you wish to change the ids of a bus
+            /*
+            Serial.println("Would you like to change the motor ID? (y/n)");
+            while(Serial.available() == 0){}
+            String response = Serial.readStringUntil('\n');
+            response.trim();
+
+            if(response == "y" || response == "Y"){
+
+                uint8_t newID = 3;
+
+                if (newID >= 0xFE) {
+                    Serial.println("Invalid ID (must be 0-253). Skipping.");
+                } else {
+                    SerialBus.setID(pID, newID);
+                    Serial.print("Motor ID changed from ");
+                    Serial.print(pID);
+                    Serial.print(" to ");
+                    Serial.println(newID);
+                }
+            }
+            Serial.println();
+            */
+           
+        } else {
+            continue;
+        }
+        delay(500);     // Short delay to not overwelm calls on bus
+    }
+    Serial.println("Done checking all of the possible ids");
+    return motorCount;
+}
+
+// function that goes through every motor and tests latency for getting and sending position
+void test_motor_latency(HerkulexMotor* motors, int motors_size){
+    for (int i = 0; i < motors_size; i++){
+        HerkulexMotor& motor = motors[i];
+
+        unsigned long start = micros();
+        float pos = motor.getPos();
+        unsigned long stop = micros();
+
+        unsigned long elapsed = stop - start;
+        unsigned long totalElapsed = elapsed;
+
+        Serial.print("Total time to read Motor ");
+        Serial.print(motor.getId());
+        Serial.print(" position: ");
+        Serial.print(elapsed);
+        Serial.println(" us");
+
+        Serial.println("");
+        Serial.print("Estimated Round Trip Time: "); Serial.println(totalElapsed);
+
+        Serial.println("Press any key to continue to next motor...");
+        while (Serial.available() == 0) {}
+        while (Serial.available() > 0) Serial.read();
+
+        Serial.println("==========================================");
     }
 }
 

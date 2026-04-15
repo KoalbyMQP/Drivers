@@ -1,7 +1,4 @@
-#include "Arduino.h"
 #include "HerkulexMotor.h"
-#include "Herkulex.h"
-#include "SerialBusManager.h"
 
 // the functions that before were just Herkulex.function are now SerialBusManager::getBus(_busId).function
 // what this does is it calls the Serial Bus Manager class, which, with the motor's id, looks at the proper bus instance and calls the function properly on that
@@ -42,7 +39,7 @@ HerkulexMotor::HerkulexMotor(int id, MotorModel type, uint8_t busId, float lower
 // these functions wrap the core Herkulex library functions and convert to degrees (usuable units) from raw HerkuleX motor information
 float HerkulexMotor::getPos(){
     // this function is no longer used with the new requestAll and collectAll but can be used for debugging
-    uint16_t rawPos = SerialBusManager::getBus(_busId).getPosition(_id) & ModelInfo[static_cast<int>(_type)].posBitMask;
+    uint16_t rawPos = SerialBusManager::getBus(_busId).getPositionBlocking(_id) & ModelInfo[static_cast<int>(_type)].posBitMask;
     return stepsToDeg(rawPos, _type);
 }
 
@@ -74,7 +71,7 @@ void HerkulexMotor::queueMove(float posDeg){
     uint16_t boundedPos = boundPos(rawPos);
 
     // playTime is set to 0 as playTime is set when actionMoves is called
-    struct motorMoveInfo moveInfo = {boundedPos, LED_RED, _id, 0};
+    struct motorMoveInfo moveInfo = {boundedPos, LED_BLUE, _id, 0};
 
     SerialBusManager::getBus(_busId).queueMove(moveInfo);
 }
@@ -84,12 +81,24 @@ void HerkulexMotor::reboot(){
 }
 
 MotorRef HerkulexMotor::getMotorRef() const {
-    return MotorRef{_busId, _id};
+    return MotorRef{_busId, _id, _type};
 }
 
 float HerkulexMotor::rawToDegs(uint16_t rawPos) {
     uint16_t masked = rawPos & ModelInfo[static_cast<int>(_type)].posBitMask;
     return stepsToDeg(masked, _type);
+}
+
+void HerkulexMotor::setLed(LED_STATE ledColor){
+    SerialBusManager::getBus(_busId).setLed(_id, ledColor);
+}
+
+uint16_t HerkulexMotor::getModel(){
+    uint16_t modelNo;   // hold the model number returned by checkModel here
+    if (SerialBusManager::getBus(_busId).getModel(_id, &modelNo)) {
+        return modelNo;
+    }
+    return 0xFFFF;
 }
 
 
