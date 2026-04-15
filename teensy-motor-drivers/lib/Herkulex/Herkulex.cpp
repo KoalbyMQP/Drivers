@@ -189,7 +189,7 @@ void HerkulexClass::setBaudRate(BAUD_RATE newBaud){
 }
 
 // return full model number as specified in datasheet
-bool HerkulexClass::checkModel(uint8_t servoID, uint16_t* model)
+bool HerkulexClass::getModel(uint8_t servoID, uint16_t* model)
 {
 	uint8_t result[2];
 
@@ -231,9 +231,6 @@ void HerkulexClass::queueMove(motorMoveInfo moveInfo)
 
 // move all servos with the same execution time
 // DO NOT USE IN MAIN: USE HerkulexMotor::actionMoves(int playTimeMs) instead
-// TODO: refactor sendPacket into buildPacket and sendPacket functions
-// as we have to use buildPacket here then append the packetQueue after it, then send the whole bigass packet
-// TODO: update to get rid of optionalData declaration, instead implement queuedPacketIndex and just implement logic on packetQueue
 void HerkulexClass::actionMoves(uint8_t playTime)
 {
 	uint8_t optionalDataLength = PACKET_LENGTH_BYTES::HSJOG_MOVEMULTIPLE_DATA_LENGTH + queuedPacketCount;
@@ -254,7 +251,11 @@ void HerkulexClass::actionMoves(uint8_t playTime)
 // motors can reply in parallel while the CPU is busy sending to the next bus.
 void HerkulexClass::sendPosRequest(int servoID) {
 	requestFromRamRegister(servoID, RAM_REGISTER::CALIBRATED_POS, PACKET_LENGTH_BYTES::REGISTER_INFO_LENGTH);
-	requestRead(PACKET_LENGTH_BYTES::GETPOS_RESPONSE);
+
+	newDataInInputBuffer = false;
+	readPending = true;
+	inputLength = PACKET_LENGTH_BYTES::GETPOS_RESPONSE;
+	readStartTime = micros();
 }
 
 boolean HerkulexClass::isReplyReady(){
@@ -282,11 +283,11 @@ uint16_t HerkulexClass::collectPosition(int servoID) {
 	return (uint16_t)((inputBuffer[10] << 8) | inputBuffer[9]);
 }
 
-// getPosition -- original blocking API, preserved for single-motor or debug use.
+// getPositionBlocking -- original blocking API, preserved for single-motor or debug use.
 // Internally calls requestPosition then collectPosition back-to-back.
 // When querying multiple motors across different buses, prefer using
 // SerialBusManager::requestAllPositions() + collectAllPositions() instead.
-uint16_t HerkulexClass::getPosition(int servoID) {
+uint16_t HerkulexClass::getPositionBlocking(int servoID) {
     sendPosRequest(servoID);
     delayMicroseconds(100); // minimum turnaround time for motor to begin replying
     return collectPosition(servoID);
@@ -310,58 +311,6 @@ uint16_t HerkulexClass::getSpeed(int servoID) {
 		return (((uint16_t)dataBuffer[1] << 8) | dataBuffer[0]) & 0x03FF; // build 16 bit int, then mask to 10 bits (max 1023)
 	}
 	return -1;
-  	// int speedy  = 0;
-
-	// packetLength = PACKET_LENGTH_BYTES::HRAMREAD_LENGTH;
-	// additionalDataLength = PACKET_LENGTH_BYTES::HRAMREAD_DATA_LENGTH;
-
-	// pID   = servoID;     	   	  
-	// CMD   = COMMAND::HRAMREAD;      
-
-	// checksumData[0]=0x40;               // 8. Address
-	// checksumData[1]=0x02;               // 9. Lenght
-
-  
-	// // base packet
-	// packet[0] = PACKET_CONSTS::PACKET_HEADER;
-	// packet[1] = PACKET_CONSTS::PACKET_HEADER;
-	// packet[2] = packetLength;
-	// packet[3] = pID;
-	// packet[4] = CMD;
-  
-	// //optional data
-	// packet[7] = checksumData[0]; 	    // Address  
-	// packet[8] = checksumData[1]; 		// Length
-  
-	// // checksum
-	// checksumOne=calcChecksumOne();		
-	// checksumTwo=calcChecksumTwo();		
-  
-	// packet[5] = checksumOne;
-	// packet[6] = checksumTwo;	
-	
-	// sendData(packet, packetLength);
-
-	// delay(1);
-	// readBlocking(13);
-
-
-	// // This is the second half of the function that uses the read data
-	// packetLength =    inputBuffer[2];    
-	// pID   =           inputBuffer[3]; 
-	// CMD   =           inputBuffer[4];
-
-	// packetLength = 6;
-	// memcpy(&packet[7], &inputBuffer[7], packetLength);
-
-	// checksumOne=calcChecksumOne();	
-	// checksumTwo=calcChecksumTwo();	
-
-	// if (checksumOne != inputBuffer[5]) return -1;
-	// if (checksumTwo != inputBuffer[6]) return -1;
-
-	// speedy = ((packet[10]&0xFF)<<8) | packet[9];
-	// return speedy;
 }
 
 // moves one motor with the set moveInfo of goal, ID, LED color, and playTime
@@ -539,13 +488,6 @@ void HerkulexClass::sendData(uint8_t* buffer, uint8_t length){
 	_serial->write(buffer, length);
 }
 
-void HerkulexClass::requestRead(uint8_t length){
-	newDataInInputBuffer = false;
-	readPending = true;
-	inputLength = length;
-	readStartTime = micros();
-}
-
 // update the read request MUST CALL REQUEST READ BEFOREHAND
 void HerkulexClass::updateRead(){
 	// do nothing if no read is requested
@@ -568,9 +510,6 @@ void HerkulexClass::updateRead(){
 
 bool HerkulexClass::readBlocking(uint8_t length){
     readStartTime = micros();
-	// Serial.print("Attempting to read ");
-	// Serial.print(packetLength);
-	// Serial.println(" bytes");
     while(_serial->available() < length){
         delayMicroseconds(50);
         if (micros() - readStartTime >= SERIAL_READ_TIMEOUT_US){
@@ -579,120 +518,8 @@ bool HerkulexClass::readBlocking(uint8_t length){
     }
 	if(_serial->available() >= length){
 		_serial->readBytes(inputBuffer, length);
-		// for (uint8_t i = 0; i < length; i++) {
-		// 	printHexByte(inputBuffer[i]);
-		// }
-		// Serial.println();
     	return true;
 	} else {
 		return false;
 	}
-}
-
-// LEGACY
-// Figure out if we can delete
-//clear buffer in the serial port - better - try to do this
-void HerkulexClass::clearBuffer()
-{
-  switch (_serialPort)
-	{
-	#if defined (__AVR_ATmega1280__) || defined (__AVR_ATmega128__) || defined (__AVR_ATmega2560__)
-	case HSerial1:
-				Serial1.flush();
-				while (Serial1.available()){
-				Serial1.read();
-				delayMicroseconds(200);
-				}
-
-		break;
-	case HSerial2:
-	            Serial2.flush();
-				while (Serial2.available()){
-				Serial2.read();
-				delayMicroseconds(200);
-				}
-		break;
-	case HSerial3:
-	            Serial3.flush();
-				while (Serial3.available()){
-					Serial3.read();
-					delayMicroseconds(200);
-				}
-
-		break;
-	#elif defined (ARDUINO_TEENSY41)
-	case HSerial1:
-				Serial1.flush();
-				while (Serial1.available()){
-				Serial1.read();
-				delayMicroseconds(200);
-				}
-
-		break;
-	case HSerial2:
-	            Serial2.flush();
-				while (Serial2.available()){
-				Serial2.read();
-				delayMicroseconds(200);
-				}
-		break;
-	case HSerial3:
-	            Serial3.flush();
-				while (Serial3.available()){
-					Serial3.read();
-					delayMicroseconds(200);
-				}
-
-		break;
-	case HSerial4:
-				Serial4.flush();
-				while (Serial4.available()){
-				Serial4.read();
-				delayMicroseconds(200);
-				}
-
-		break;
-	case HSerial5:
-	            Serial5.flush();
-				while (Serial5.available()){
-				Serial5.read();
-				delayMicroseconds(200);
-				}
-		break;
-	case HSerial6:
-	            Serial6.flush();
-				while (Serial6.available()){
-					Serial6.read();
-					delayMicroseconds(200);
-				}
-
-		break;
-	case HSerial7:
-				Serial7.flush();
-				while (Serial7.available()){
-				Serial7.read();
-				delayMicroseconds(200);
-				}
-
-		break;
-	case HSerial8:
-	            Serial8.flush();
-				while (Serial8.available()){
-				Serial8.read();
-				delayMicroseconds(200);
-				}
-		break;
-	#endif
-	}
-}
-
-void HerkulexClass::printHexByte(byte x)
-{
-  Serial.print("0x");
-  if (x < 16) {
-    Serial.print('0');
-  }
-    Serial.print(x, HEX);
-    Serial.print(" ");
-
 }

@@ -39,7 +39,7 @@ HerkulexMotor::HerkulexMotor(int id, MotorModel type, uint8_t busId, float lower
 // these functions wrap the core Herkulex library functions and convert to degrees (usuable units) from raw HerkuleX motor information
 float HerkulexMotor::getPos(){
     // this function is no longer used with the new requestAll and collectAll but can be used for debugging
-    uint16_t rawPos = SerialBusManager::getBus(_busId).getPosition(_id) & ModelInfo[static_cast<int>(_type)].posBitMask;
+    uint16_t rawPos = SerialBusManager::getBus(_busId).getPositionBlocking(_id) & ModelInfo[static_cast<int>(_type)].posBitMask;
     return stepsToDeg(rawPos, _type);
 }
 
@@ -95,7 +95,7 @@ void HerkulexMotor::setLed(LED_STATE ledColor){
 
 uint16_t HerkulexMotor::getModel(){
     uint16_t modelNo;   // hold the model number returned by checkModel here
-    if (SerialBusManager::getBus(_busId).checkModel(_id, &modelNo)) {
+    if (SerialBusManager::getBus(_busId).getModel(_id, &modelNo)) {
         return modelNo;
     }
     return 0xFFFF;
