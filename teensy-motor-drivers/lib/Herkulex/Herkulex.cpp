@@ -149,6 +149,7 @@ bool HerkulexClass::stat(uint8_t servoID, uint8_t* statError, uint8_t* statDetai
 	*statError = buffer[0];
 	*statDetail = buffer[1];
 
+
 	return true;
 }
 
@@ -207,7 +208,8 @@ void HerkulexClass::setID(uint8_t oldID, uint8_t newID)
 {
 	uint8_t byteArray[1] = {newID};
 	writeToEEPRegister(oldID, EEP_REGISTER::ID, byteArray, 1);
-	delayMicroseconds(1000);
+	// Added this small delay. Don't reboot until we actually write to the EEP register. If we don't have this delay, it may not finish and reset id to default (219 in decimal)
+	delay(100);
 	reboot(oldID);
 	delay(500);
 }
@@ -293,7 +295,7 @@ uint16_t HerkulexClass::getPositionBlocking(int servoID) {
 
 // reboots servos
 void HerkulexClass::reboot(int servoID) {
-	sendPacket(servoID, {}, PACKET_LENGTH_BYTES::HREBOOT_DATA_LENGTH, COMMAND::HREBOOT);
+	sendPacket(servoID, nullptr, PACKET_LENGTH_BYTES::HREBOOT_DATA_LENGTH, COMMAND::HREBOOT);
 }
 
 void HerkulexClass::setLed(uint8_t servoID, LED_STATE valueLed)
@@ -428,7 +430,7 @@ bool HerkulexClass::readPacketReply(uint8_t servoID, uint8_t* outputBuffer, uint
 	}
 	// Something is going wrong in verifyInputPacket
     if (!verifyInputPacket(inputBuffer, packetLength)){
-		// Serial.println("Packet cannot be verified.");
+		//Serial.println("Packet cannot be verified.");
 		return false;
 	}
 

@@ -48,13 +48,26 @@ void setup(){
 
   // initialize all serial buses
   SerialBusManager::createBus(SERIAL_BUS::BUS_L_LEG);
+  SerialBusManager::createBus(SERIAL_BUS::BUS_R_LEG);
+  SerialBusManager::createBus(SERIAL_BUS::BUS_CHEST);
   SerialBusManager::startAllBuses(BAUD_RATE::SPEED_115K);
   
   delay(2000);
   
   Serial.println();
   Serial.println("Scanning BUS_L_LEG...");
-  find_all_motors_on_bus(SerialBusManager::getBus(BUS_L_LEG));
+  //find_all_motors_on_bus(SerialBusManager::getBus(BUS_L_LEG));
+  //find_all_motors_on_bus(SerialBusManager::getBus(BUS_R_LEG));
+  //find_all_motors_on_bus(SerialBusManager::getBus(BUS_CHEST));
+
+  uint8_t error;
+  uint8_t detail;
+
+  SerialBusManager::getBus(BUS_L_LEG).stat(22, &error, &detail);
+  Serial.println(error);
+  Serial.println(detail);
+
+  
   
   // SerialBusManager::infoAllMotors(rightLegMotors, BUS_R_LEG_COUNT);
   // SerialBusManager::initAllMotors();
