@@ -28,6 +28,15 @@ class HerkulexMotor{
         int getBusId() const { return _busId; }
         MotorModel getType() const { return _type; }
 
+
+        // functions on motor refs as opposed to using the motor objects
+        static void motorRefSetPos(const MotorRef &ref, float posDeg);
+        static void motorRefQueueMove(const MotorRef &ref, float posDeg);
+        static void motorRefReboot(const MotorRef &ref);
+        static float motorRefRawToDegs(const MotorRef &ref, uint16_t rawPos);
+        static uint16_t boundPosFromRef(const MotorRef &ref, int32_t rawPos);
+
+
     private:
         uint8_t _id;
         uint8_t _busId;
@@ -35,9 +44,9 @@ class HerkulexMotor{
         uint16_t _bounds[2];    // motor bounds, in steps
         uint16_t _zeroPos;      // zero position in steps
         
-        int32_t degToSteps(float deg, MotorModel type);
+        static int32_t degToSteps(float deg, MotorModel type);
         uint16_t boundPos(int32_t rawPos);
-        float stepsToDeg(uint16_t steps, MotorModel type);
+        static float stepsToDeg(uint16_t steps, MotorModel type);
 };
 
 #endif

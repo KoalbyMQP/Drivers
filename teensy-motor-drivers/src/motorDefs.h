@@ -23,7 +23,7 @@ enum SERIAL_BUS {
 };
 
 inline MotorRef rightLegMotors[BUS_R_LEG_COUNT] = {
-  (HerkulexMotor(1, MotorModel::DRS_0201, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
+  (HerkulexMotor(1, MotorModel::DRS_0201, SERIAL_BUS::BUS_R_LEG, -10, 10)).getMotorRef(), // to show how we would to by adding the bounds for all of the motors
   (HerkulexMotor(2, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
   (HerkulexMotor(3, MotorModel::DRS_0602, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
   (HerkulexMotor(4, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),

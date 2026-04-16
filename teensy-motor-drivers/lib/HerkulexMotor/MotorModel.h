@@ -47,6 +47,9 @@ struct MotorRef {
     uint8_t busId;      // which serial bus this motor lives on
     uint8_t servoId;    // the motor's hardware ID on that bus
     MotorModel type;       // DRS 0601, DRS 0602... etc.,
+    uint16_t zeroPos;
+    uint16_t boundsMin;
+    uint16_t boundsMax;
 };
 
 

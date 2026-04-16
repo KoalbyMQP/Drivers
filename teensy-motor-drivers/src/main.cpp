@@ -18,7 +18,7 @@ uint32_t elapsedMicros;
 uint32_t startTime;
 elapsedMillis imuTimer; 
 
-const uint8_t MOTOR_COUNT = BUS_L_LEG_COUNT;
+const uint8_t MOTOR_COUNT = TOTAL_COUNT;
 const uint8_t PACKET_SIZE = 192;   // this depends on the number of motors used, HOW???
 
 
@@ -51,14 +51,14 @@ void setup(){
   SerialBusManager::createBus(SERIAL_BUS::BUS_R_LEG);
   SerialBusManager::createBus(SERIAL_BUS::BUS_CHEST);
   SerialBusManager::createBus(SERIAL_BUS::BUS_L_ARM);
-  SerialBusManager::createBus(SERIAL_BUS::BUS_R_ARM);
+  // SerialBusManager::createBus(SERIAL_BUS::BUS_R_ARM);
   SerialBusManager::startAllBuses(BAUD_RATE::SPEED_115K);
   
   delay(2000);
   
 
   // The following snippet is to test the wiring by looking for all the motor ids on each bus
-  /*
+
   Serial.println();
   Serial.println("Scanning BUS_L_LEG...");
   find_all_motors_on_bus(SerialBusManager::getBus(BUS_L_LEG));
@@ -75,10 +75,10 @@ void setup(){
   Serial.println("Scanning BUS_L_ARM...");
   find_all_motors_on_bus(SerialBusManager::getBus(BUS_L_ARM));
 
-  Serial.println();
-  Serial.println("Scanning BUS_R_ARM..");
-  find_all_motors_on_bus(SerialBusManager::getBus(BUS_R_ARM));
-  */
+  // Serial.println();
+  // Serial.println("Scanning BUS_R_ARM..");
+  // find_all_motors_on_bus(SerialBusManager::getBus(BUS_R_ARM));
+
 
 
   // The following snippet is for testing the error on a specifc motor id on a specific bus
@@ -135,8 +135,8 @@ void loop(){
       // // }
       // SerialBusManager::actionAll(10);
 
-      // robotState = READING_ROBOT_STATE;
-      // // SerialBusManager::requestAllPositions(allGroups, motorPositionsRaw, MOTOR_COUNT);
+      robotState = READING_ROBOT_STATE;
+      SerialBusManager::requestAllPositions(allMotors, motorPositionsRaw, MOTOR_COUNT);
       // startTime = micros();
       // //imu1.requestRead();
       
@@ -144,24 +144,27 @@ void loop(){
     }
     case(READING_ROBOT_STATE):
     {
-      // // SerialBusManager::tick(motorRefs, motorPositionsRaw, MOTOR_COUNT);
-      // // imu1.tick(imuReadBuffer, imuReadBufferSize); // imuReadBufferSize should be a const, it's defined somewhere in the IMU stack
+      // SerialBusManager::tick(motorRefs, motorPositionsRaw, MOTOR_COUNT);
+      // imu1.tick(imuReadBuffer, imuReadBufferSize); // imuReadBufferSize should be a const, it's defined somewhere in the IMU stack
 
-      // if (SerialBusManager::isDoneCollecting()){ // && imu1.doneCollecting()){
-      //   // put data togehter into one packet
-      //   // send packet to RPI
-      //   elapsedMicros = micros() - startTime;
-      //   Serial.print("Elapsed time: ");
-      //   Serial.print(elapsedMicros);
-      //   Serial.println(" microseconds");
-      //   for (int i = 0; i < MOTOR_COUNT; i++){
-      //     motorPositions[i] = motors[i].rawToDegs(motorPositionsRaw[i]);
-      //     Serial.println(motorPositions[i]);
-      //   }
-      //   delay(4000);
-      //   count++;
-      //   robotState = SETTING_MOTOR_POS;
-      // };
+      if (SerialBusManager::isDoneCollecting()){ // && imu1.doneCollecting()){
+        // // put data togehter into one packet
+        // // send packet to RPI
+        // elapsedMicros = micros() - startTime;
+        // Serial.print("Elapsed time: ");
+        // Serial.print(elapsedMicros);
+        // Serial.println(" microseconds");
+
+        for (int i = 0; i < MOTOR_COUNT; i++){
+          // allmotors is an array of motor refs, as opposed to holding motor objects like motors did before
+          motorPositions[i] = HerkulexMotor::motorRefRawToDegs(allMotors[i], motorPositionsRaw[i]);
+          // allMotors[i].rawToDegs(motorPositionsRaw[i]);
+          Serial.println(motorPositions[i]);
+        }
+        delay(4000);
+        // count++;
+        robotState = SETTING_MOTOR_POS;
+      };
       break;
     }
     case(IDLE):
