@@ -159,6 +159,10 @@ void loop(){
           // allmotors is an array of motor refs, as opposed to holding motor objects like motors did before
           motorPositions[i] = HerkulexMotor::motorRefRawToDegs(allMotors[i], motorPositionsRaw[i]);
           // allMotors[i].rawToDegs(motorPositionsRaw[i]);
+          
+          Serial.print("Motor: ");
+          Serial.print(allMotors[i].busId);
+          Serial.print("  ");
           Serial.println(motorPositions[i]);
         }
         delay(4000);

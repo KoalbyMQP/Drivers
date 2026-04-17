@@ -217,7 +217,7 @@ void SerialBusManager::tick(const MotorRef* motors, uint16_t* results, uint8_t c
 
             } else if (q.readyToSend()) {
                 // Bus is idle and has another motor to query.
-                Serial.print("Sending position request from: ");
+                Serial.print("[SerialBusManager::tick] Sending position request from: ");
                 Serial.println();
                 _buses[busIndex].sendPosRequest(q.servoIds[q.nextSend]);
                 q.nextSend++;
