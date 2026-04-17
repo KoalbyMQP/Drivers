@@ -12,7 +12,7 @@ enum STATE {
   IDLE // allows us to not run code in main
 };
 
-uint8_t robotState = IDLE;
+uint8_t robotState = SETTING_MOTOR_POS;
 
 uint32_t elapsedMicros;
 uint32_t startTime;
@@ -51,14 +51,14 @@ void setup(){
   SerialBusManager::createBus(SERIAL_BUS::BUS_R_LEG);
   SerialBusManager::createBus(SERIAL_BUS::BUS_CHEST);
   SerialBusManager::createBus(SERIAL_BUS::BUS_L_ARM);
-  // SerialBusManager::createBus(SERIAL_BUS::BUS_R_ARM);
+  SerialBusManager::createBus(SERIAL_BUS::BUS_R_ARM);
   SerialBusManager::startAllBuses(BAUD_RATE::SPEED_115K);
   
   delay(2000);
   
 
   // The following snippet is to test the wiring by looking for all the motor ids on each bus
-
+  /*
   Serial.println();
   Serial.println("Scanning BUS_L_LEG...");
   find_all_motors_on_bus(SerialBusManager::getBus(BUS_L_LEG));
@@ -75,10 +75,10 @@ void setup(){
   Serial.println("Scanning BUS_L_ARM...");
   find_all_motors_on_bus(SerialBusManager::getBus(BUS_L_ARM));
 
-  // Serial.println();
-  // Serial.println("Scanning BUS_R_ARM..");
-  // find_all_motors_on_bus(SerialBusManager::getBus(BUS_R_ARM));
-
+  Serial.println();
+  Serial.println("Scanning BUS_R_ARM..");
+  find_all_motors_on_bus(SerialBusManager::getBus(BUS_R_ARM));
+  */
 
 
   // The following snippet is for testing the error on a specifc motor id on a specific bus
@@ -137,6 +137,7 @@ void loop(){
 
       robotState = READING_ROBOT_STATE;
       SerialBusManager::requestAllPositions(allMotors, motorPositionsRaw, MOTOR_COUNT);
+      Serial.println("Requesting position and switching to RREADIING_ROBOT_STATE");
       // startTime = micros();
       // //imu1.requestRead();
       
@@ -144,9 +145,8 @@ void loop(){
     }
     case(READING_ROBOT_STATE):
     {
-      // SerialBusManager::tick(motorRefs, motorPositionsRaw, MOTOR_COUNT);
+      SerialBusManager::tick(allMotors, motorPositionsRaw, MOTOR_COUNT);
       // imu1.tick(imuReadBuffer, imuReadBufferSize); // imuReadBufferSize should be a const, it's defined somewhere in the IMU stack
-
       if (SerialBusManager::isDoneCollecting()){ // && imu1.doneCollecting()){
         // // put data togehter into one packet
         // // send packet to RPI
