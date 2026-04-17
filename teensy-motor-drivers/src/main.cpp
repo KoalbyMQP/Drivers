@@ -144,9 +144,7 @@ void loop(){
     }
     case(IDLE):
     {
-      if (rpi.uartRead() == 1){
-        robotState = READING_ROBOT_STATE;
-      }
+      delay(1000);
       break;
     }
     case(STOP):
