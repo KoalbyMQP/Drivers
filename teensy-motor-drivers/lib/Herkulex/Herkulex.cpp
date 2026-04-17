@@ -127,11 +127,11 @@ void HerkulexClass::initialize(){
 		resetClassVals();
         delay(100);       
         setACKPolicy(ACK_POLICY_TYPE::REPLY_TO_READ);
-        delay(10);
-        torqueON(PACKET_CONSTS::ALL_SERVOS);    // torqueON for all servos
-        delay(10);
+        delay(100);
+        // torqueON(PACKET_CONSTS::ALL_SERVOS);    // torqueON for all servos
+        delay(100);
         clearError(PACKET_CONSTS::ALL_SERVOS);	// clear error for all servos
-        delay(10);
+        delay(100);
 }
 
 // stat
@@ -209,9 +209,9 @@ void HerkulexClass::setID(uint8_t oldID, uint8_t newID)
 	uint8_t byteArray[1] = {newID};
 	writeToEEPRegister(oldID, EEP_REGISTER::ID, byteArray, 1);
 	// Added this small delay. Don't reboot until we actually write to the EEP register. If we don't have this delay, it may not finish and reset id to default (219 in decimal)
-	delay(100);
+	delay(1000);
 	reboot(oldID);
-	delay(500);
+	delay(1000);
 }
 
 // clearError
@@ -376,7 +376,7 @@ void HerkulexClass::requestFromRegister(uint8_t servoID, uint8_t address, uint8_
 // GENERAL REGISTER IMPLEMENTATION: USE readFromRamRegisterBlocking OR ReadFromEEPRegisterBlocking INSTEAD
 bool HerkulexClass::readFromRegisterBlocking(uint8_t servoID, uint8_t address, uint8_t numRequestedBytes, uint8_t* buffer, COMMAND cmd, COMMAND_RESPONSE cmd_res){
 	requestFromRegister(servoID, address, numRequestedBytes, cmd);
-	delayMicroseconds(2000);
+	delayMicroseconds(4000);
 
 	uint8_t replyOptionalLength = 4 + numRequestedBytes;
 	uint8_t replyBuff[replyOptionalLength];

@@ -53,12 +53,15 @@ void SerialBusManager::infoAllMotors(const MotorRef* motors, uint8_t count){
                     model = 0xFFFF;
                 };
 
+                delay(10);
+
                 Serial.print(" Model: DRS-0");
                 Serial.print(model, HEX);
                 Serial.print(" ");
 
 
                 if(SerialBusManager::_buses[i].stat(motors[motor_idx].servoId, &stat_error, &stat_detail)){
+                    delay(10);
                     Serial.print(" STAT_ERROR:  0x");
                     Serial.print(stat_error, HEX);
                     if (stat_error == 0x0){

@@ -22,55 +22,55 @@ enum SERIAL_BUS {
     EXTRA_2 = 7,
 };
 
-inline MotorRef rightLegMotors[BUS_R_LEG_COUNT] = {
-  (HerkulexMotor(1, MotorModel::DRS_0201, SERIAL_BUS::BUS_R_LEG, -10, 10)).getMotorRef(), // to show how we would to by adding the bounds for all of the motors
-  (HerkulexMotor(2, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(3, MotorModel::DRS_0602_GEARBOX, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(4, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(5, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
+inline MotorRef leftLegMotors[BUS_L_LEG_COUNT] = {
+  (HerkulexMotor(1, MotorModel::DRS_0601,         SERIAL_BUS::BUS_L_LEG)).getMotorRef(),
+  (HerkulexMotor(2, MotorModel::DRS_0601,         SERIAL_BUS::BUS_L_LEG)).getMotorRef(),
+  (HerkulexMotor(3, MotorModel::DRS_0601,         SERIAL_BUS::BUS_L_LEG)).getMotorRef(),
+  (HerkulexMotor(4, MotorModel::DRS_0602_GEARBOX, SERIAL_BUS::BUS_L_LEG)).getMotorRef(),
+  (HerkulexMotor(5, MotorModel::DRS_0201,         SERIAL_BUS::BUS_L_LEG)).getMotorRef(),
 };
 
-inline MotorRef leftLegMotors[BUS_L_LEG_COUNT] = {
-  (HerkulexMotor(1, MotorModel::DRS_0201, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(2, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(3, MotorModel::DRS_0602_GEARBOX, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(4, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(5, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
+inline MotorRef rightLegMotors[BUS_R_LEG_COUNT] = {
+  (HerkulexMotor(1, MotorModel::DRS_0601,         SERIAL_BUS::BUS_R_LEG)).getMotorRef(), // to show how we would to by adding the bounds for all of the motors
+  (HerkulexMotor(2, MotorModel::DRS_0601,         SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
+  (HerkulexMotor(3, MotorModel::DRS_0601,         SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
+  (HerkulexMotor(4, MotorModel::DRS_0602_GEARBOX, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
+  (HerkulexMotor(5, MotorModel::DRS_0201,         SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
 };
 
 inline MotorRef chestMotors[BUS_CHEST_COUNT] = {
-  (HerkulexMotor(1, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(2, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(3, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(4, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(5, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
+  (HerkulexMotor(1, MotorModel::DRS_0602, SERIAL_BUS::BUS_CHEST)).getMotorRef(),
+  (HerkulexMotor(2, MotorModel::DRS_0602, SERIAL_BUS::BUS_CHEST)).getMotorRef(),
+  (HerkulexMotor(3, MotorModel::DRS_0601, SERIAL_BUS::BUS_CHEST)).getMotorRef(),
+  (HerkulexMotor(4, MotorModel::DRS_0601, SERIAL_BUS::BUS_CHEST)).getMotorRef(),
+  (HerkulexMotor(5, MotorModel::DRS_0601, SERIAL_BUS::BUS_CHEST)).getMotorRef(),
 };
 
 inline MotorRef leftArmMotors[BUS_L_ARM_COUNT] = {
-  (HerkulexMotor(1, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(2, MotorModel::DRS_0602_GEARBOX, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(3, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(4, MotorModel::DRS_0201, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(5, MotorModel::DRS_0201, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
+  (HerkulexMotor(1, MotorModel::DRS_0601,         SERIAL_BUS::BUS_L_ARM)).getMotorRef(),
+  (HerkulexMotor(2, MotorModel::DRS_0602_GEARBOX, SERIAL_BUS::BUS_L_ARM)).getMotorRef(),
+  (HerkulexMotor(3, MotorModel::DRS_0601,         SERIAL_BUS::BUS_L_ARM)).getMotorRef(),
+  (HerkulexMotor(4, MotorModel::DRS_0201,         SERIAL_BUS::BUS_L_ARM)).getMotorRef(),
+  (HerkulexMotor(5, MotorModel::DRS_0201,         SERIAL_BUS::BUS_L_ARM)).getMotorRef(),
 };
 
 inline MotorRef rightArmMotors[BUS_R_ARM_COUNT] = {
-  (HerkulexMotor(1, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(2, MotorModel::DRS_0602_GEARBOX, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(3, MotorModel::DRS_0601, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(4, MotorModel::DRS_0201, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
-  (HerkulexMotor(5, MotorModel::DRS_0201, SERIAL_BUS::BUS_R_LEG)).getMotorRef(),
+  (HerkulexMotor(1, MotorModel::DRS_0601,         SERIAL_BUS::BUS_R_ARM)).getMotorRef(),
+  (HerkulexMotor(2, MotorModel::DRS_0602_GEARBOX, SERIAL_BUS::BUS_R_ARM)).getMotorRef(),
+  (HerkulexMotor(3, MotorModel::DRS_0601,         SERIAL_BUS::BUS_R_ARM)).getMotorRef(),
+  (HerkulexMotor(4, MotorModel::DRS_0201,         SERIAL_BUS::BUS_R_ARM)).getMotorRef(),
+  (HerkulexMotor(5, MotorModel::DRS_0201,         SERIAL_BUS::BUS_R_ARM)).getMotorRef(),
 };
 
 inline MotorRef allMotors[TOTAL_COUNT];
 
 inline void createAvaMotorDef() {
     size_t offset = 0;
-    memcpy(allMotors + offset, rightLegMotors, sizeof(rightLegMotors)); offset += BUS_R_LEG_COUNT;
-    memcpy(allMotors + offset, leftLegMotors,  sizeof(leftLegMotors));  offset += BUS_L_LEG_COUNT;
-    memcpy(allMotors + offset, chestMotors,    sizeof(chestMotors));    offset += BUS_CHEST_COUNT;
-    memcpy(allMotors + offset, leftArmMotors,  sizeof(leftArmMotors));  offset += BUS_L_ARM_COUNT;
-    memcpy(allMotors + offset, rightArmMotors, sizeof(rightArmMotors));
+    memcpy(allMotors + offset, leftLegMotors,   sizeof(leftLegMotors));  offset += BUS_L_LEG_COUNT;
+    memcpy(allMotors + offset, rightLegMotors,  sizeof(rightLegMotors)); offset += BUS_R_LEG_COUNT;
+    memcpy(allMotors + offset, chestMotors,     sizeof(chestMotors));    offset += BUS_CHEST_COUNT;
+    memcpy(allMotors + offset, leftArmMotors,   sizeof(leftArmMotors));  offset += BUS_L_ARM_COUNT;
+    memcpy(allMotors + offset, rightArmMotors,  sizeof(rightArmMotors));
 }
 
 #endif
