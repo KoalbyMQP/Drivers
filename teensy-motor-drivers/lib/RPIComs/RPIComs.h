@@ -12,7 +12,7 @@ class RPIComs{
 
         // RPIComs() = default;
 
-        void uartRead();
+        int uartRead();
         void uartSend();
         const char* getPacket();     // returns nullptr if none
         void enqueueTXPacket(const char* pkt);  // const because we are only reading it

@@ -17,23 +17,47 @@ uint16_t elapsedTimeRPI = 0;
 uint16_t rxPos = 0;
 uint16_t txPos = 0;
 
-void RPIComs::uartRead(){
+
+/*
+    Following function returns an integer representing a command code:
+    |  -1   |   Terminate / End Loop    |
+    |   0   |   No Command from Pi Read |
+    |   1   |   Begin startup           |
+*/
+int RPIComs::uartRead(){
     while(Serial1.available() > 0){
         // should we update 0 with the expected packet size? if it will be constant... of course when we know what it is
         // Set temp char to the packets with .read
+
         char c = (char)Serial1.read();
 
-        // Check if newline character for packet completion
-        if(c == '\n'){
-            rxBuf[rxPos] = '\0';
+        // -1 Case
+        if (rxPos == 0 && (unsigned char)c == 0xFF) {
 
+            while (Serial1.available()) {
+                if (Serial1.read() == '\n') break;
+            }
+
+            return -1;
+        } else if(rxPos == 0 && (unsigned char)c == 0x01){
+            while (Serial1.available()) {
+                if (Serial1.read() == '\n') break;
+            }
+            return 1;
+        }
+
+        if (c == '\n') {
+            rxBuf[rxPos] = '\0';
             rxPos = 0;
-            if(testing_serial) {
+
+            if (testing_serial) {
                 startTimeRPI = micros();
             }
+
             _rxPacketQueue.enqueue(rxBuf);
             continue;
         }
+
 
         // Set next character in the packet buffer. If the buffer has reached the size limit, stop overflow by just making rxPos = 0 and reset
         if(rxPos < RX_BUF_SIZE - 1) {
@@ -47,6 +71,7 @@ void RPIComs::uartRead(){
         }
 
     }
+    return 0;
 }
 
 const char* RPIComs::getPacket(){
