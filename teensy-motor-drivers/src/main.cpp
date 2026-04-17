@@ -9,7 +9,8 @@ enum STATE {
   READING_FROM_RPI,
   SETTING_MOTOR_POS,
   READING_ROBOT_STATE,
-  IDLE // allows us to not run code in main
+  IDLE, // allows us to not run code in main
+  STOP,
 };
 
 uint8_t robotState = SETTING_MOTOR_POS;
@@ -35,7 +36,7 @@ void setup(){
 
   Serial.println("Beginning... ");
 
-  Serial8.begin(9600); // begin serial communication with the raspberry pi, this has been changed to Serial 8 instead of 1
+  Serial8.begin(1000000); // begin serial communication with the raspberry pi, this has been changed to Serial 8 instead of 1
   delay(2000);
 
   if (!imu1.begin()) {
@@ -101,7 +102,11 @@ void loop(){
   switch (robotState){
     case(READING_FROM_RPI):
     {
-      // rpi.uartRead();
+      if (rpi.uartRead() == -1){
+        robotState == STOP;
+        break;
+      }
+      else if (rpi.uartRead == 0){
       // // If a packet arrived, handle it
       // const char* pkt = rpi.getPacket();
       // if (pkt != nullptr) {
@@ -120,10 +125,15 @@ void loop(){
       //   // done receiving packet now, we set position
       //   robotState = SETTING_MOTOR_POS;
       // }
+      }
       break;
     }
     case(SETTING_MOTOR_POS):
     {
+      if (rpi.uartRead() == -1){
+        robotState == STOP;
+        break;
+      }
       // // queue all motors in a loop
       // // does this line up with the correct motors?
       // // for (int i = 0; i < MOTOR_COUNT; i++) {
@@ -174,6 +184,11 @@ void loop(){
     case(IDLE):
     {
       // delay(1000);
+      break;
+    }
+    case(STOP):
+    {
+      delay(1000);
       break;
     }
   }
