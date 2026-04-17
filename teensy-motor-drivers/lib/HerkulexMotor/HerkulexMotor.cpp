@@ -81,7 +81,7 @@ void HerkulexMotor::reboot(){
 }
 
 MotorRef HerkulexMotor::getMotorRef() const {
-    return MotorRef{_busId, _id, _type};
+    return MotorRef{_busId, _id, _type, _zeroPos, _bounds[0], _bounds[1]};
 }
 
 float HerkulexMotor::rawToDegs(uint16_t rawPos) {
@@ -99,6 +99,51 @@ uint16_t HerkulexMotor::getModel(){
         return modelNo;
     }
     return 0xFFFF;
+}
+
+
+uint16_t HerkulexMotor::boundPosFromRef(const MotorRef &ref, int32_t rawPos) {
+    int32_t boundedPos = rawPos;
+
+    boundedPos = boundedPos > ref.boundsMax ? ref.boundsMax : boundedPos;
+    boundedPos = boundedPos < ref.boundsMin ? ref.boundsMin : boundedPos;
+
+    return (uint16_t) boundedPos;
+}
+
+void HerkulexMotor::motorRefSetPos(const MotorRef &ref, float posDeg){
+    int32_t rawPos = degToSteps(posDeg, ref.type);
+    uint16_t boundedPos = boundPosFromRef(ref, rawPos);
+
+    int playTimeMs = 100;
+    uint8_t playTime = (uint8_t) (playTimeMs / CONVERT_PLAYTIME_TO_MS);
+
+    struct motorMoveInfo moveInfo = {boundedPos, LED_BLUE, ref.servoId, playTime};
+    SerialBusManager::getBus(ref.busId).moveOne(moveInfo);
+}
+
+void HerkulexMotor::motorRefQueueMove(const MotorRef &ref, float posDeg){
+    int32_t rawPos = degToSteps(posDeg, ref.type);
+
+    uint16_t boundedPos = boundPosFromRef(ref, rawPos);
+
+    // playTime is set to 0 as playTime is set when actionMoves is called
+    struct motorMoveInfo moveInfo = {boundedPos, LED_BLUE, ref.servoId, 0};
+
+    SerialBusManager::getBus(ref.busId).queueMove(moveInfo);
+}
+
+void HerkulexMotor::motorRefReboot(const MotorRef &ref){
+    SerialBusManager::getBus(ref.busId).reboot(ref.servoId);
+}
+
+float HerkulexMotor::motorRefRawToDegs(const MotorRef &ref, uint16_t rawPos){
+    uint16_t masked = rawPos & ModelInfo[static_cast<int>(ref.type)].posBitMask;
+    return stepsToDeg(masked, ref.type);
+
+    // const HerkulexMotorSpec& m = ModelInfo[static_cast<int>(ref.type)];
+    // int32_t centered = (int32_t)masked - (int32_t)m.zeroSteps;
+    // return m.degPerStep * (float)centered;
 }
 
 

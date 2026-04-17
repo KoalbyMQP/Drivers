@@ -5,45 +5,55 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
-#include <utility/imumaths.h>
 
+// IMUData holds raw accelerometer readings in m/s²
+// Index mapping:
+//   accel[0] = X  (remapped: physical -Y)
+//   accel[1] = Y  (remapped: physical +X)
+//   accel[2] = Z  (remapped: physical +Z)
 struct IMUData {
-    float heading;
-    float roll;
-    float pitch;
-    float qw;
-    float qx;
-    float qy;
-    float qz;
-    uint8_t cal_sys;
-    uint8_t cal_gyro;
-    uint8_t cal_accel;
-    uint8_t cal_mag;
+    float accel[3];         // [0]=X, [1]=Y, [2]=Z  in m/s²
+    uint8_t cal_accel;      // 0-3, 3 = fully calibrated
 };
 
 class IMU {
     public:
         IMU(int32_t sensorID = 55, uint8_t address = BNO055_ADDRESS_A);
 
+        // Initializes I2C, applies axis remap, starts ACCONLY mode.
+        // Returns false if sensor not detected.
         bool begin();
 
-        // Phase 1: write register address to BNO055 TX buffer and send.
-        // endTransmission(false) sends without a STOP condition, keeping
-        // the bus held so the follow-up requestFrom can issue a restart.
+        // Phase 1: prime the BNO055 to serve accel bytes.
+        // endTransmission(false) holds bus open for follow-up read.
         void requestUpdate();
 
-        // Phase 2: read all bytes out of the RX buffer in one call.
+        // Phase 2: read accel bytes from RX buffer.
         // Call after other work has been done in the loop.
         bool collectUpdate();
 
-        IMUData getData()  const;
-        int formatPacket(char* buf, size_t bufSize) const;
-        bool isCalibrated() const;
+        // Returns full IMUData struct
+        IMUData getData() const;
 
-        float getHeading() const { return _data.heading; }
-        float getRoll()    const { return _data.roll;    }
-        float getPitch()   const { return _data.pitch;   }
-        
+        // Returns pointer to internal accel array [X, Y, Z] in m/s²
+        // Usage: const float* a = imu.getAccel();  → a[0], a[1], a[2]
+        const float* getAccel() const { return _data.accel; }
+
+        // Individual axis accessors
+        float getAccelX() const { return _data.accel[0]; }
+        float getAccelY() const { return _data.accel[1]; }
+        float getAccelZ() const { return _data.accel[2]; }
+
+        // Copies accel values into a user-provided array[3]
+        // Usage: float buf[3]; imu.getAccelArray(buf);
+        void getAccelArray(float out[3]) const;
+
+        // Accel calibration status (0-3)
+        uint8_t getCalAccel() const { return _data.cal_accel; }
+
+        // Formats accel as CSV: "X,Y,Z,cal_accel"
+        int formatPacket(char* buf, size_t bufSize) const;
+
         bool isDoneCollecting() const { return !_requested; }
 
     private:
@@ -52,9 +62,21 @@ class IMU {
         uint8_t _address;
         bool _requested = false;
 
-        static constexpr uint8_t READ_LEN = 18;
-        static constexpr uint8_t START_REG = Adafruit_BNO055::BNO055_EULER_H_LSB_ADDR;
+        // Accelerometer registers
+        // BNO055 register 0x08: ACC_DATA_X_LSB — 6 bytes total (X, Y, Z)
+        // Calibration status register: 0x35
+        static constexpr uint8_t ACCEL_START_REG = 0x08;  // ACC_DATA_X_LSB
+        static constexpr uint8_t ACCEL_READ_LEN  = 6;     // X_LSB, X_MSB, Y_LSB, Y_MSB, Z_LSB, Z_MSB
+        static constexpr uint8_t CALIB_STAT_REG  = 0x35;  // calibration status register
 
+        // Axis remap registers
+        static constexpr uint8_t BNO055_OPR_MODE_ADDR  = 0x3D;
+        static constexpr uint8_t BNO055_AXIS_MAP_CONFIG = 0x41;
+        static constexpr uint8_t BNO055_AXIS_MAP_SIGN   = 0x42;
+        static constexpr uint8_t MODE_CONFIG            = 0x00;
+        static constexpr uint8_t MODE_ACCONLY           = 0x01;  // accel only, no gyro/mag
+
+        void writeRegister(uint8_t reg, uint8_t val);
         void parseBuffer(uint8_t* buf);
 };
 

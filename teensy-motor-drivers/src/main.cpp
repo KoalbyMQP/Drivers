@@ -13,13 +13,13 @@ enum STATE {
   STOP,
 };
 
-uint8_t robotState = IDLE;
+uint8_t robotState = SETTING_MOTOR_POS;
 
 uint32_t elapsedMicros;
 uint32_t startTime;
 elapsedMillis imuTimer; 
 
-const uint8_t MOTOR_COUNT = BUS_L_LEG_COUNT;
+const uint8_t MOTOR_COUNT = TOTAL_COUNT;
 const uint8_t PACKET_SIZE = 192;   // this depends on the number of motors used, HOW???
 
 
@@ -145,8 +145,9 @@ void loop(){
       // // }
       // SerialBusManager::actionAll(10);
 
-      // robotState = READING_ROBOT_STATE;
-      // // SerialBusManager::requestAllPositions(allGroups, motorPositionsRaw, MOTOR_COUNT);
+      robotState = READING_ROBOT_STATE;
+      SerialBusManager::requestAllPositions(allMotors, motorPositionsRaw, MOTOR_COUNT);
+      Serial.println("Requesting position and switching to RREADIING_ROBOT_STATE");
       // startTime = micros();
       // //imu1.requestRead();
       
@@ -154,28 +155,30 @@ void loop(){
     }
     case(READING_ROBOT_STATE):
     {
-      if (rpi.uartRead() == -1){
-        robotState == STOP;
-        break;
-      }
-      // // SerialBusManager::tick(motorRefs, motorPositionsRaw, MOTOR_COUNT);
-      // // imu1.tick(imuReadBuffer, imuReadBufferSize); // imuReadBufferSize should be a const, it's defined somewhere in the IMU stack
+      SerialBusManager::tick(allMotors, motorPositionsRaw, MOTOR_COUNT);
+      // imu1.tick(imuReadBuffer, imuReadBufferSize); // imuReadBufferSize should be a const, it's defined somewhere in the IMU stack
+      if (SerialBusManager::isDoneCollecting()){ // && imu1.doneCollecting()){
+        // // put data togehter into one packet
+        // // send packet to RPI
+        // elapsedMicros = micros() - startTime;
+        // Serial.print("Elapsed time: ");
+        // Serial.print(elapsedMicros);
+        // Serial.println(" microseconds");
 
-      // if (SerialBusManager::isDoneCollecting()){ // && imu1.doneCollecting()){
-      //   // put data togehter into one packet
-      //   // send packet to RPI
-      //   elapsedMicros = micros() - startTime;
-      //   Serial.print("Elapsed time: ");
-      //   Serial.print(elapsedMicros);
-      //   Serial.println(" microseconds");
-      //   for (int i = 0; i < MOTOR_COUNT; i++){
-      //     motorPositions[i] = motors[i].rawToDegs(motorPositionsRaw[i]);
-      //     Serial.println(motorPositions[i]);
-      //   }
-      //   delay(4000);
-      //   count++;
-      //   robotState = SETTING_MOTOR_POS;
-      // };
+        for (int i = 0; i < MOTOR_COUNT; i++){
+          // allmotors is an array of motor refs, as opposed to holding motor objects like motors did before
+          motorPositions[i] = HerkulexMotor::motorRefRawToDegs(allMotors[i], motorPositionsRaw[i]);
+          // allMotors[i].rawToDegs(motorPositionsRaw[i]);
+          
+          Serial.print("Motor: ");
+          Serial.print(allMotors[i].busId);
+          Serial.print("  ");
+          Serial.println(motorPositions[i]);
+        }
+        delay(4000);
+        // count++;
+        robotState = SETTING_MOTOR_POS;
+      };
       break;
     }
     case(IDLE):
