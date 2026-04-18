@@ -154,12 +154,12 @@ void test_motor_latency(HerkulexMotor* motors, int motors_size){
 }
 
 // go through all of the motors and print the desired information
-void debug_motors(HerkulexMotor* motors, int motors_size) {
+void debug_motors(const MotorRef* motors, int motors_size) {
     
     // turn all the motors's leds off 
     for (int j = 0; j < motors_size; j++) {
-        HerkulexMotor& motor = motors[j];    
-        SerialBusManager::getBus(motor.getBusId()).setLed(motor.getId(), LED_STATE::LED_OFF);
+        const MotorRef& motor = motors[j];
+        SerialBusManager::getBus(motor.busId).setLed(motor.servoId, LED_STATE::LED_OFF);
     }
 
     // divider
@@ -168,15 +168,18 @@ void debug_motors(HerkulexMotor* motors, int motors_size) {
     for (int i = 0; i < motors_size; i ++) {
         
         // reference of the motor instead of just making a copy
-        HerkulexMotor& motor = motors[i];
+        const MotorRef& motor = motors[i];
         
         // Turn on the LED green
-        SerialBusManager::getBus(motor.getBusId()).setLed(motor.getId(), LED_STATE::LED_BLUE); // Blue
+        SerialBusManager::getBus(motor.busId).setLed(motor.servoId, LED_STATE::LED_BLUE); // Blue
 
-        Serial.print("Motor id:    "); Serial.println(motor.getId());
-        Serial.print("Type:        "); Serial.println(modelName(motor.getType()));
-        Serial.print("Serial bus:  "); Serial.println(busName(motor.getBusId()));
-        Serial.print("Position:    "); Serial.print(motor.getPos()); Serial.println(" deg");
+        uint16_t rawPos = SerialBusManager::getBus(motor.busId).getPositionBlocking(motor.servoId);
+        float posDeg = HerkulexMotor::motorRefRawToDegs(motor, rawPos);
+
+        Serial.print("Motor id:    "); Serial.println(motor.servoId);
+        Serial.print("Type:        "); Serial.println(modelName(motor.type));
+        Serial.print("Serial bus:  "); Serial.println(busName(motor.busId));
+        Serial.print("Position:    "); Serial.print(posDeg); Serial.println(" deg");
         Serial.println("Press any key for next motor...");
         
         // Wait to press a key and then flush the input
@@ -186,7 +189,7 @@ void debug_motors(HerkulexMotor* motors, int motors_size) {
         Serial.println("==========================================");
         
         // turn off the LED
-        SerialBusManager::getBus(motor.getBusId()).setLed(motor.getId(), LED_STATE::LED_OFF);
+        SerialBusManager::getBus(motor.busId).setLed(motor.servoId, LED_STATE::LED_OFF);
     }
 
     Serial.println("All motors tested.");
