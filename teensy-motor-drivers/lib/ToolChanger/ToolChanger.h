@@ -2,10 +2,6 @@
 #define ToolChanger_h
 
 #include "Arduino.h"
-#include "Servo.h"
-
-#define SERVO_MIN_US 500
-#define SERVO_MAX_US 2500
 
 // specs for each tool, including the analog value range that corresponds to each tool and a tool ID that can be used in the code to identify the tool
 struct Tool {
@@ -30,26 +26,23 @@ class ToolChanger{
     public:
         ToolChanger(
             int statusPin, 
-            int servoPin);
-        ToolChanger(
-            int statusPin, 
             int servoPin, 
-            int dockPos, 
+            int attachPos, 
             int lockPos, 
-            int ejectPos);
+            int depositPos);
         int getToolStatus();
         int readRawStatus();
-        void dockTool();
+        void attachTool();
         void lockTool();
-        void ejectTool();
+        void depositTool();
         void initialize();
         
     private:   
         int _statusPin; // analog pin for reading tool status
         int _servoPin; // INJORA INJS2065 pin
-        uint16_t _servoPos[3]; // positions for the servo to move to for docking, locking, and ejecting
+        uint16_t _servoPos[3]; // positions for the servo to move to for attaching, locking, and depositing
         Tool _currentTool;
-        Servo wrist; // servo object for controlling the tool changer servo
+        void setServoPulse(float pulse_us);
 };
 
 #endif

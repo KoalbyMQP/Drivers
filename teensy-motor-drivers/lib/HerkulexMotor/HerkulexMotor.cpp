@@ -5,6 +5,16 @@
 // the instancing of the buses allows the function to be called the same way and iterate through the loop of initialized serial buses.
 
 // constructor with normal motor bounds and no zero position offset
+HerkulexMotor::HerkulexMotor(){
+    _id = 0;
+    _busId = 0;
+    _type = UNKNOWN_MODEL;
+
+    _zeroPos   = 0;
+    _bounds[0] = 0;
+    _bounds[1] = 0;
+}
+
 HerkulexMotor::HerkulexMotor(int id, MotorModel type, uint8_t busId){
     _id = id;
     _busId = busId;

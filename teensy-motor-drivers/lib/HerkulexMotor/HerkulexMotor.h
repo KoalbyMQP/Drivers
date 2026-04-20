@@ -46,6 +46,7 @@ class HerkulexMotor{
         // HerkulexMotor(int id, MotorModel type);
         // HerkulexMotor(int id, MotorModel type, float lowerBoundDeg, float upperBoundDeg);
 
+        HerkulexMotor();
         HerkulexMotor(int id, MotorModel type, uint8_t busId);
         HerkulexMotor(int id, MotorModel type, uint8_t busId, float lowerBoundDeg, float upperBoundDeg);
         
