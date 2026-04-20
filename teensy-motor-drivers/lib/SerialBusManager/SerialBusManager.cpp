@@ -166,6 +166,18 @@ void SerialBusManager::initAllMotors(){
     }
 }
 
+void SerialBusManager::torqueOnAllMotors(){
+        for (int i = 0; i < SerialBusManager::MAX_BUS_COUNT; i++){
+
+        // if we have a serial port created
+        if (SerialBusManager::_busesTracker[i] == 1){
+
+            // then torque on the motors on it
+            SerialBusManager::_buses[i].torqueON(PACKET_CONSTS::ALL_SERVOS);
+        }
+    }
+}
+
 void SerialBusManager::actionAll(int playTimeMs){
     uint8_t playTime = (uint8_t) (playTimeMs / CONVERT_PLAYTIME_TO_MS);
 
@@ -220,8 +232,6 @@ void SerialBusManager::tick(const MotorRef* motors, uint16_t* results, uint8_t c
 
             } else if (q.readyToSend()) {
                 // Bus is idle and has another motor to query.
-                Serial.print("[SerialBusManager::tick] Sending position request from: ");
-                Serial.println();
                 _buses[busIndex].sendPosRequest(q.servoIds[q.nextSend]);
                 q.nextSend++;
                 q.waiting = true;

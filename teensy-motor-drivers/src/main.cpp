@@ -28,6 +28,9 @@ uint16_t motorPositionsRaw[MOTOR_COUNT] = {0};
 float motorPositions[MOTOR_COUNT] = {0};
 float RPIMotorInputs[MOTOR_COUNT] = {0};
 
+HerkulexMotor myMotor = HerkulexMotor(3, DRS_0601, BUS_R_LEG);
+
+
 RPIComs rpi = RPIComs();
 IMU imu1;  // uses sensorID=55 and address=0x28 automatically
 
@@ -55,10 +58,12 @@ void setup(){
   SerialBusManager::createBus(SERIAL_BUS::BUS_L_ARM);
   SerialBusManager::createBus(SERIAL_BUS::BUS_R_ARM);
   SerialBusManager::startAllBuses(BAUD_RATE::SPEED_115K);
-  
-  delay(2000);
-  
+  delay(1000);
   SerialBusManager::initAllMotors();
+  delay(1000);
+  
+  
+  // SerialBusManager::torqueOnAllMotors();
 
   // The following snippet is to test the wiring by looking for all the motor ids on each bus
   // Serial.println();
@@ -81,8 +86,7 @@ void setup(){
   // Serial.println("Scanning BUS_R_ARM..");
   // find_all_motors_on_bus(SerialBusManager::getBus(BUS_R_ARM));
 
-
-  SerialBusManager::infoAllMotors(allMotors, TOTAL_COUNT);
+  // SerialBusManager::infoAllMotors(allMotors, TOTAL_COUNT);
 }
 
 
@@ -153,7 +157,7 @@ void loop(){
         Serial.print(elapsedMicros);
         Serial.println(" microseconds");
 
-        for (int i = 0; i < MOTOR_COUNT; i++){
+        for (int i = 0; i < 5; i++){
           // allmotors is an array of motor refs, as opposed to holding motor objects like motors did before
           motorPositions[i] = HerkulexMotor::motorRefRawToDegs(allMotors[i], motorPositionsRaw[i]);          
           Serial.print("Bus ID: ");
@@ -183,14 +187,18 @@ void loop(){
 
 
 
+// THIS IS RELIANT ON MOTORDEFS. IF YOU CHANGE MOTORDEFS, YOU MUST UPDATE THIS
 void moveToZeroPositions(){
 
-  // move knees first
+  // move knees first  ids: 3, 8 on respective buses
+  
+  // then do the rest of the legs ids: 1, 2, 4, 6, 7, 9 on respective buses
 
-  // then do the rest of the legs
 
-  // then do chest
+  // pelvis ids: 0, 5 on respective buses
 
-  // then do arms
+  // then do chest ids:  10, 11, 12, 13, 14 on respective buses
+
+  // then do arms/neck ids: 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 on respective buses
 
 }

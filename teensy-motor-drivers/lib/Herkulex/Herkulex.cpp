@@ -128,8 +128,6 @@ void HerkulexClass::initialize(){
         delay(100);       
         setACKPolicy(ACK_POLICY_TYPE::REPLY_TO_READ);
         delay(100);
-        // torqueON(PACKET_CONSTS::ALL_SERVOS);    // torqueON for all servos
-        delay(100);
         clearError(PACKET_CONSTS::ALL_SERVOS);	// clear error for all servos
         delay(100);
 }

@@ -71,7 +71,7 @@ void HerkulexMotor::queueMove(float posDeg){
     uint16_t boundedPos = boundPos(rawPos);
 
     // playTime is set to 0 as playTime is set when actionMoves is called
-    struct motorMoveInfo moveInfo = {boundedPos, LED_BLUE, _id, 0};
+    struct motorMoveInfo moveInfo = {boundedPos, LED_PURPLE, _id, 0};
 
     SerialBusManager::getBus(_busId).queueMove(moveInfo);
 }

@@ -1,6 +1,8 @@
 #ifndef motorDefs_h
 #define motorDefs_h
 
+// FUNCTION MOVE TO ZERO IN MAIN IS RELIANT ON THIS. IF YOU UPDATE MOTORDEFS ORDER, UPDATE MOVETOZERO!
+
 #include <HerkulexMotor.h>
 
 enum SERIAL_BUS_COUNTS {
@@ -47,7 +49,7 @@ inline MotorRef chestMotors[BUS_CHEST_COUNT] = {
 };
 
 inline MotorRef leftArmMotors[BUS_L_ARM_COUNT] = {
-  (HerkulexMotor(1, MotorModel::DRS_0601,         SERIAL_BUS::BUS_L_ARM)).getMotorRef(),
+  (HerkulexMotor(1, MotorModel::DRS_0201,         SERIAL_BUS::BUS_L_ARM)).getMotorRef(),
   (HerkulexMotor(2, MotorModel::DRS_0602_GEARBOX, SERIAL_BUS::BUS_L_ARM)).getMotorRef(),
   (HerkulexMotor(3, MotorModel::DRS_0601,         SERIAL_BUS::BUS_L_ARM)).getMotorRef(),
   (HerkulexMotor(4, MotorModel::DRS_0201,         SERIAL_BUS::BUS_L_ARM)).getMotorRef(),
@@ -55,7 +57,7 @@ inline MotorRef leftArmMotors[BUS_L_ARM_COUNT] = {
 };
 
 inline MotorRef rightArmMotors[BUS_R_ARM_COUNT] = {
-  (HerkulexMotor(1, MotorModel::DRS_0601,         SERIAL_BUS::BUS_R_ARM)).getMotorRef(),
+  (HerkulexMotor(1, MotorModel::DRS_0201,         SERIAL_BUS::BUS_R_ARM)).getMotorRef(),
   (HerkulexMotor(2, MotorModel::DRS_0602_GEARBOX, SERIAL_BUS::BUS_R_ARM)).getMotorRef(),
   (HerkulexMotor(3, MotorModel::DRS_0601,         SERIAL_BUS::BUS_R_ARM)).getMotorRef(),
   (HerkulexMotor(4, MotorModel::DRS_0201,         SERIAL_BUS::BUS_R_ARM)).getMotorRef(),

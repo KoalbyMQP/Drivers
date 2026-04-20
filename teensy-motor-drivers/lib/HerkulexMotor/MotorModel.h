@@ -36,7 +36,7 @@ const HerkulexMotorSpec ModelInfo[] = {
   {0, 65535, 16384, 0xFFFF, 0.02778f},
 
   // DRS_0602_GEARBOX
-  {0, 65535, 16384, 0xFFFF, 0.08334f},
+  {0, 65535, 16384, 0xFFFF, 0.00926f},
 };
 
 

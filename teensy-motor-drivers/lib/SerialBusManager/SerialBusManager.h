@@ -32,6 +32,7 @@ class SerialBusManager {
 
         static void startAllBuses(BAUD_RATE baud);
         static void initAllMotors();
+        static void torqueOnAllMotors();
         static void endAllBuses();
 
         static void tick(const MotorRef* motors, uint16_t* results, uint8_t count); // updates all collection variables
@@ -39,7 +40,7 @@ class SerialBusManager {
         static void requestAllPositions(const MotorRef* motors, uint16_t* results, uint8_t count);
         static void collectAllPositions(const MotorRef* motors, uint16_t* results, uint8_t count);
 
-                // getAllPositionsParallel — reads positions from all motors across all buses
+        // getAllPositionsParallel — reads positions from all motors across all buses
         // with true cross-bus parallelism while keeping each bus strictly serial.
         //
         // Each bus can only have one request/reply in flight at a time — sending a
