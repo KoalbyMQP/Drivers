@@ -2,137 +2,317 @@ import torch
 import numpy as np
 import serial
 import time
+import signal
+import sys
+import json
+import os
 
 # CONFIGURATION
-SERIAL_PORT = "/dev/ttyAMA0"   # Pi GPIO UART
-BAUDRATE = 9600 #115200              # Must match Arduino Mega Serial in question
+SERIAL_PORT = "ttyAMA0" #/dev/pts/3"   # Pi GPIO UART ("/dev/pts/3" when testing)
+BAUDRATE = 1000000                # Must match Teensy baudrate
 CONTROL_HZ = 100               # Policy updates per second
+TIMEOUT = 0.01
 DT = 1.0 / CONTROL_HZ
 
-# POLICY_PATH = "/home/kfkartsen/avalocomotion/models/policy_ts.pt"
+POLICY_PATH = "./final_policy.pt"
+HEALTH_PATH = "/tmp/locomotion_health.json" # Allows Zara OS to monitor container functioning
 
-NUM_MOTORS = 27 #23?
-# Arduino expects joint positions in CSV order matching IDs on Mega
+# define flag values
+START = 1
+CONTINUE = 0
+STOP = -1
 
-JOINT_LIMITS = [
-    (-8, 8),      # chestturn
-    (-25, 25),    # waistlean
-    (-20, 10),    # Abdominalcrunch
-    (-15, 0),     # hiplift_left
-    (0, 15),      # hiplift_right
-    (-12, 12),    # hiprotate_left
-    (-12, 12),    # hiprotate_right
-    (-50, 30),    # thighlift_left
-    (-50, 30),    # thighlift_right
-    (0, 55),      # knee_left
-    (0, 55),      # knee_right
-    (-10, 8),     # ankle_left
-    (-10, 8),     # ankle_right
-    (-20, 20),    # neckturn
-    (-5, 10),     # headnod
-    (-60, 60),    # shoulderspin_left
-    (-60, 60),    # shoulderspin_right
-    (-50, 80),    # bicep_left
-    (-50, 80),    # bicep_right
-    (-90, 90),    # elbow_left
-    (-90, 90),    # elbow_right
-    (-60, 60),    # wristspin_left
-    (-60, 60),    # wristspin_right
-    (-90, 90),    # handcurl_left
-    (-90, 90),    # handcurl_right
-    (-1, 0),      # gripper_left
-    (-1, 0),      # gripper_right
-]
-phase = 0.0
-PHASE_SPEED = 1.5  # rad/sec
+START_BYTE = 0xAA
 
-# INITIALIZE SERIAL
-ser = serial.Serial(SERIAL_PORT, baudrate=BAUDRATE, timeout=0.01)
-time.sleep(2)  # Give Arduino time to reset on serial connect
+running = False
+ser = None
+policy = None
 
-# LOAD POLICY
-# policy = torch.jit.load(POLICY_PATH)              ### THIS HAS BEEN COMMENTED RIGHT NOW FOR TESTING SINCE THERE IS NO MODEL
-# policy.eval()                                     ### THIS HAS BEEN COMMENTED RIGHT NOW FOR TESTING SINCE THERE IS NO MODEL
+# SIGNAL HANDLER-- allows Zara OS to stop container
+# def handle_shutdown(signum, frame):
+#     global running
+#     print(f"Received signal {signum}. Shutting down.")
+#     running = False
+
+# signal.signal(signal.SIGTERM, handle_shutdown)
+# signal.signal(signal.SIGINT, handle_shutdown)
+
+# INITIALIZATION
+def init_serial():
+    global ser
+    try:
+        ser = serial.Serial(SERIAL_PORT, baudrate=BAUDRATE, timeout=TIMEOUT)
+        time.sleep(2)  # Give Teensy time to reset on serial connect
+        print(f"Serial connection established on {SERIAL_PORT} at {BAUDRATE} baud.")
+    except Exception as e:
+        print(f"Error initializing serial connection: {e}")
+        sys.exit(1)
+
+def init_policy():
+    global policy, NUM_MOTORS, last_action
+    policy = torch.jit.load(POLICY_PATH)
+    policy.eval()
+
+    with torch.no_grad():
+        dummy_obs = torch.zeros(1, 59)  # 1 x obs_dim
+        dummy_action = policy(dummy_obs)
+
+    NUM_MOTORS = dummy_action.numel()
+    print("NUM_MOTORS:", NUM_MOTORS)
+    last_action = np.zeros(NUM_MOTORS)
 
 # HELPER FUNCTIONS
-def get_observation():
+def read_serial():
+    """
+    Read from serial port and parse incoming data.
+    """
+    try:
+        raw = ser.readline() # Read a line of data (until newline) from serial port
+        if raw:
+            line = raw.decode('utf-8').strip()
+            # print(f"Raw: {raw} | Parsed: {line }")
+            return line
+        else:
+            return None
+    except Exception as e:
+        print(f"Error reading from serial port: {e}")
+        return None
+    
+def get_observation(test=False):
     """
     Collect sensor data from the robot.
     Return as a NumPy array matching training obs:
-    [joint_pos, joint_vel, imu_orientation, imu_gyro, foot_contacts, velocity_command]
-    
-    TODO: implement exact reads from IMU, foot contacts, joint encoders.
+    [base_ang_vel (3), proj_gravity (3), velocity_command (3), joint_pos (25), last_action (25)] = 59-dim obs
+    TODO: Format for compact data package
     """
-    # Example placeholders
-    joint_pos = np.zeros(NUM_MOTORS)       # e.g., degrees or radians
-    joint_vel = np.zeros(NUM_MOTORS)       # velocity of each joint
-    imu_orientation = np.zeros(3)          # roll, pitch, yaw
-    imu_gyro = np.zeros(3)                 # angular velocity x, y, z
-    #foot_contacts = np.zeros(4)            # Not doing foot sensors
-    velocity_command = np.zeros(3)         # target x, y, yaw
+    global last_action
+
+    if test:
+        # Return dummy observation for testing without serial input
+        return torch.zeros(59)
+    
+    line = read_serial()
+    if line is None:
+        return None
+    
+    try:
+        parts = line.split(",")
+        if len(parts) < 34:
+            print(f"Warning: Expected at least 34 data points, got {len(parts)}. Line: {line}")
+            return None
+        data = np.array([float(x) for x in parts])
+    except:
+        print(f"Error parsing line: {line}")
+        return None
+
+    base_ang_vel = data[0:3]
+    # accel, pitch, yaw = data[57:60]  #just accelerometer (first one)
+    # proj_gravity = accel
+    proj_gravity = data[3:6]  # for now (See above two lines)
+    velocity_command = data[6:9]
+    joint_pos = data[9:34]
 
     obs = np.concatenate([
-        joint_pos, joint_vel, imu_orientation, imu_gyro, velocity_command
+        base_ang_vel, proj_gravity, velocity_command, joint_pos, last_action
     ])
-    return torch.tensor(obs, dtype=torch.float32)
+    return torch.from_numpy(obs).float()
 
-def send_motor_commands(joint_targets):
+def send_motor_commands(joint_targets, flag):
     """
-    Send joint positions to Arduino Mega via UART.
-    Arduino expects CSV string with newline at end. 
-    TODO: Update when this changes to Arduino expects byte stream of motor positions
+    Scale joint targets x100, round, convert to int (e.g. 1.236 -> 123.6 -> 124. -> 124)
+    NOTE: .5 rounds to nearest **even** int
+    NOTE: int16 range is -32,768 to 32,767
+    Send joint targets to Teensy via UART as a byte stream.
+    Format: [flag (1), joint_targets (NUM_MOTORS)]
     """
     if len(joint_targets) != NUM_MOTORS:
         raise ValueError(f"Expected {NUM_MOTORS} joint_targets, got {len(joint_targets)}")
     
-    csv_str = ",".join(f"{j:.3f}" for j in joint_targets) + "\n"
-    ser.write(csv_str.encode('utf-8'))
+    joint_targets = np.clip(joint_targets, -327.68, 327.67)
+    joint_targets = np.round(joint_targets * 100).astype(np.int16)
+    flag_arr = np.array([flag], dtype=np.int16)
+    commands = np.concatenate([flag_arr, joint_targets])
+    packet = bytes([START_BYTE]) + commands.tobytes()
 
-#TEMPORARY
-def generate_placeholder_action():
+    try:
+        ser.write(commands.tobytes())   # Change to packet to include start byte if needed
+    except Exception as e:
+        print(f"Error sending motor commands: {e}")
+
+def write_health():
     """
-    Generates smooth sinusoidal motion within each joint's limits.
+    Writes whether container is active to json file.
+    Allows Zara OS to monitor health of container.
     """
-    global phase
-    phase += PHASE_SPEED * DT
+    try:
+        with open(HEALTH_PATH, "w") as f:
+            json.dump({
+                "alive": True,
+                "timestamp": time.time()
+            }, f)
+    except:
+        pass
 
-    action = []
-    for i, (low, high) in enumerate(JOINT_LIMITS):
-        center = (low + high) / 2.0
-        amplitude = (high - low) / 2.0
+def testing_results(n, time, pos):
+    model_dur = []
+    loop_dur = []
+    model_tot = 0
+    loop_tot = 0
 
-        # Phase offset per joint so they don't all move together
-        value = center + amplitude * np.sin(phase + i * 0.2)
-        action.append(value)
+    for i in range(n):
+        m_dur = time[i][2] - time[i][1]
+        model_dur.append(m_dur)
+        l_dur = time[i][3] - time[i][0]
+        loop_dur.append(l_dur)
 
-    return np.array(action, dtype=np.float32)
+    print("\nTime to query model:")
+    for i in range(n):
+        print(f"Loop {i+1}: {model_dur[i]}")
+        model_tot += model_dur[i]
+    print(f"Average time to query model: {model_tot / n}")
+    print(f"Maximum time to query model: {max(model_dur)}")
+
+    print("\nTime to run loop:")
+    for i in range(n):
+        print(f"Loop {i+1}: {loop_dur[i]}")
+        loop_tot += loop_dur[i]
+    print(f"Average time to run loop: {loop_tot / n}")
+    print(f"Maximum time to run loop: {max(loop_dur)}")
+
+    print("\nExpected pos:\tActual pos:")
+    for i in range(9):
+        print(f"{pos[i][0]}\n{pos[i][1]}")
 
 
 # MAIN CONTROL LOOP
-print("Policy control started.")
-try:
-    while True:
-        t0 = time.time()
+def run():
+    global running, last_action
 
-        # Read observations
-#        obs = get_observation()
+    init_serial()
+    init_policy()
+    print("Policy control started.")
 
-        # # Compute action from policy
-        # with torch.no_grad():
-        #     action = policy(obs.unsqueeze(0)).squeeze(0).numpy()
-        #     # action should be joint positions in degrees or radians (match training)
-        action = generate_placeholder_action()
+    next_time = time.time()
+    flag = START
+    running = True
 
-        # Send action to Arduino
-        send_motor_commands(action)
+    time.sleep(1)
 
-        # Maintain control rate
-        elapsed = time.time() - t0
-        sleep_time = DT - elapsed
+    while running:
+        try:
+            # Read observations
+            obs = get_observation()
+            if obs is not None:
+                assert obs.shape[0] == 59, f"Obs wrong shape: {obs.shape}"
+
+                # Compute action from policy
+                with torch.no_grad():
+                    action = policy(obs.unsqueeze(0)).squeeze(0).cpu().numpy().astype(np.float32)
+
+                last_action = action
+
+                # Send action to Teensy
+                send_motor_commands(action, flag=flag)
+                flag = CONTINUE
+
+                # Write health to health path when zara os implemented
+                # write_health()
+            
+        except KeyboardInterrupt:
+            print("Exiting control loop")
+            running = False
+
+        # Maintain control rate-- self-corrects for timing drifts
+        next_time = max(next_time + DT, time.time())
+        sleep_time = next_time - time.time()
         if sleep_time > 0:
             time.sleep(sleep_time)
 
-except KeyboardInterrupt:
-    print("Exiting control loop")
-    ser.close()
+    # Exit
+    print("Policy control stopping.")
+    send_motor_commands(np.zeros(NUM_MOTORS), flag=STOP)
 
+    if ser is not None:
+        ser.close()
+
+    print("Shutdown completed.")
+
+def run_test():
+    global running, last_action
+
+    use_serial = False
+
+    if use_serial:
+        init_serial()   #Don't initialize serial for testing without Teensy connected
+    init_policy()
+    print("Policy control started.")
+
+    next_time = time.time()
+    flag = START
+    running = True
+    time.sleep(1)
+
+    i = 0
+    time_test = []
+    pos_test = []
+
+    while running and i < 30:
+        try:
+            time_test.append([time.time()]) #start loop time
+
+            # Read observations
+            obs = get_observation(test=True)
+            if obs is not None:
+                assert obs.shape[0] == 59, f"Obs wrong shape: {obs.shape}"
+
+                if i > 0:
+                    pos_test[i-1].append([obs[9:34]]) #actual positions
+
+                time_test[i].append(time.time()) #send to model time
+
+                # Compute action from policy
+                with torch.no_grad():
+                    action = policy(obs.unsqueeze(0)).squeeze(0).cpu().numpy().astype(np.float32)
+
+                time_test[i].append(time.time()) #receive from model time
+
+                last_action = action
+                pos_test.append([last_action[9:34]]) #instructed positions
+
+                # Send action to Teensy
+                if use_serial:
+                    send_motor_commands(action, flag=flag)   #Don't send commands for testing without Teensy connected
+                flag = CONTINUE
+
+                # Write health to health path when zara os implemented
+                # write_health()
+
+        except KeyboardInterrupt:
+            print("Exiting control loop")
+            running = False
+
+        # Maintain control rate-- self-corrects for timing drifts
+        next_time = max(next_time + DT, time.time())
+        sleep_time = next_time - time.time()
+        time_test[i].append(time.time()) #end loop time
+        if sleep_time > 0:
+            time.sleep(sleep_time)
+
+        i = i + 1
+
+    # Exit
+    print("Policy control stopping.")
+    if use_serial:
+        send_motor_commands(np.zeros(NUM_MOTORS), flag=STOP)   #Don't send commands for testing without Teensy connected
+
+    testing_results(i, time_test, pos_test)
+
+    if ser is not None:
+        ser.close()
+
+    print("Shutdown completed.")
+
+
+# MAIN ENTRY
+if __name__ == "__main__":
+    run_test()
