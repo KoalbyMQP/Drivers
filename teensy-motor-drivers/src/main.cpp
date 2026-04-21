@@ -128,13 +128,7 @@ void loop(){
       }
       // // queue all motors in a loop
       // // does this line up with the correct motors?
-      // // for (int i = 0; i < MOTOR_COUNT; i++) {
-      // //   if (count % 2){
-      // //     motors[i].queueMove(dummyMotorInputs[i]);
-      // //   } else {
-      // //     motors[i].queueMove(dummyMotorInputsTwo[i]);
-      // //   }
-      // // }
+      // HerkulexMotor::motorRefQueueMove(allMotors, motorPositions, TOTAL_COUNT);
       // SerialBusManager::actionAll(10);
 
       robotState = READING_ROBOT_STATE;
@@ -190,15 +184,56 @@ void loop(){
 // THIS IS RELIANT ON MOTORDEFS. IF YOU CHANGE MOTORDEFS, YOU MUST UPDATE THIS
 void moveToZeroPositions(){
 
-  // move knees first  ids: 3, 8 on respective buses
+  // move knees first  positions in allMotors: 3, 8 on respective buses
+  HerkulexMotor::motorRefQueueMove(allMotors[3], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[8], 0.0);
+  SerialBusManager::actionAll(2000);
+
+  delay(10000);
   
-  // then do the rest of the legs ids: 1, 2, 4, 6, 7, 9 on respective buses
+  // then do the rest of the legs positions in allMotors: 1, 2, 4, 6, 7, 9 on respective buses
+  HerkulexMotor::motorRefQueueMove(allMotors[1], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[2], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[4], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[6], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[7], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[9], 0.0);
+  SerialBusManager::actionAll(2000);
+
+  delay(10000);
+
+  // pelvis positions in allMotors: 0, 5 on respective buses
+  HerkulexMotor::motorRefQueueMove(allMotors[0], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[5], 0.0);
+  SerialBusManager::actionAll(2000);
+
+  delay(10000);
 
 
-  // pelvis ids: 0, 5 on respective buses
+  // then do chest positions in allMotors:  10, 11, 12, 13, 14 on respective buses
+  HerkulexMotor::motorRefQueueMove(allMotors[10], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[11], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[12], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[13], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[14], 0.0);
+  SerialBusManager::actionAll(2000);
 
-  // then do chest ids:  10, 11, 12, 13, 14 on respective buses
+  delay(10000);
 
-  // then do arms/neck ids: 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 on respective buses
+
+  // then do arms/neck positions in allMotors: 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 on respective buses
+  HerkulexMotor::motorRefQueueMove(allMotors[15], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[16], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[17], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[18], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[19], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[20], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[21], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[22], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[23], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[24], 0.0);
+  SerialBusManager::actionAll(2000);
+
+  delay(10000);
 
 }

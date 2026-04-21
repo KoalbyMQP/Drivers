@@ -32,6 +32,7 @@ class HerkulexMotor{
         // functions on motor refs as opposed to using the motor objects
         static void motorRefSetPos(const MotorRef &ref, float posDeg);
         static void motorRefQueueMove(const MotorRef &ref, float posDeg);
+        static void motorRefQueueMove(const MotorRef* ref, float* posDeg, uint8_t count);
         static void motorRefReboot(const MotorRef &ref);
         static float motorRefRawToDegs(const MotorRef &ref, uint16_t rawPos);
         static uint16_t boundPosFromRef(const MotorRef &ref, int32_t rawPos);

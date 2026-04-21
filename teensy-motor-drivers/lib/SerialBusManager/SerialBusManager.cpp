@@ -284,6 +284,8 @@ void SerialBusManager::requestAllPositions(const MotorRef* motors, uint16_t* res
     doneCollecting = false;
 }
 
+
+
 // LEGACY
 // not needed, tick() collects all positions
 void SerialBusManager::collectAllPositions(const MotorRef* motors, uint16_t* results, uint8_t count){

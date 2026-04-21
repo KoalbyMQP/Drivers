@@ -133,6 +133,12 @@ void HerkulexMotor::motorRefQueueMove(const MotorRef &ref, float posDeg){
     SerialBusManager::getBus(ref.busId).queueMove(moveInfo);
 }
 
+void HerkulexMotor::motorRefQueueMove(const MotorRef* ref, float* posDeg, uint8_t count){
+    for(int i = 0; i < count; i++){
+        HerkulexMotor::motorRefQueueMove(ref[i], posDeg[i]);
+    }
+}
+
 void HerkulexMotor::motorRefReboot(const MotorRef &ref){
     SerialBusManager::getBus(ref.busId).reboot(ref.servoId);
 }
