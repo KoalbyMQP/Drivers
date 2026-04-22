@@ -33,11 +33,11 @@ IMU imu1;  // uses sensorID=55 and address=0x28 automatically
 
 void setup(){
   delay(2000);                  // a delay to have time for serial monitor opening on platformio after uploading
-  Serial.begin(9600);           // open serial communications with computer
+  Serial.begin(1000000);           // open serial communications with computer
 
   Serial.println("Beginning... ");
 
-  Serial8.begin(1000000); // begin serial communication with the raspberry pi, this has been changed to Serial 8 instead of 1
+  // Serial8.begin(1000000); // begin serial communication with the raspberry pi, this has been changed to Serial 8 instead of 1
   delay(2000);
 
   // if (!imu1.begin()) {
@@ -176,11 +176,11 @@ void loop(){
             RPIMotorInputs[i] = buffer[1 + i] / 100.0f;
         }
         // done receiving packet now, we set position
-        if (flag == 0xAA) {
-          moveToZeroPositions();
+        if (flag == START_BYTE) { // 1 is start
+          // moveToZeroPositions();  // uncomment for later implementation
           robotState = READING_FROM_RPI;
           break;
-        } else if (flag == STOP) {
+        } else if (flag == STOP_BYTE) { // -1 is stop
           robotState = STOP;
           break;
         } else { 
@@ -226,8 +226,9 @@ void loop(){
             motorPositions[i] = 0;
             rpi.enqueueTXPacket(test_packet);
             rpi.uartSend();
-            robotState = READING_FROM_RPI;
-        }
+          }
+          robotState = READING_FROM_RPI;
+          break;
       }
       SerialBusManager::tick(allMotors, motorPositionsRaw, MOTOR_COUNT);
       imu1.collectUpdate();

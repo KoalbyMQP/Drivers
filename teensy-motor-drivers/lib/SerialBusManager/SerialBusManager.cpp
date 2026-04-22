@@ -16,14 +16,11 @@ void SerialBusManager::createBus(uint8_t serialPort){
 
     // if busId is outside of set range
     if ((serialPort < 1) || (serialPort > SerialBusManager::MAX_BUS_COUNT)){
-        Serial.print("not making bus");
         return;
     }
     
     SerialBusManager::_busesTracker[serialPort - 1] = 1;
     SerialBusManager::_buses[serialPort - 1] = HerkulexClass(serialPort);
-    Serial.print("created bus: ");
-    Serial.println(serialPort);
 }
 
 void SerialBusManager::infoAllMotors(const MotorRef* motors, uint8_t count){

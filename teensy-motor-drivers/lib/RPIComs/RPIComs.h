@@ -9,6 +9,13 @@
 #define NUM_INT16 (1 + MOTOR_COUNT) // 1 for flag, rest for motor inputs
 #define PACKET_SIZE (NUM_INT16 * sizeof(int16_t))
 
+
+enum FLAG_BYTE{
+    START_BYTE = 1,
+    STOP_BYTE = -1,
+    CONTINUTE_BYTE = 0,
+};
+
 class RPIComs{
     public:
         static constexpr size_t RX_BUF_SIZE   = 256; // shorten this when we know the constant packet size?
