@@ -14,8 +14,8 @@ win._root.attributes("-fullscreen", True)
 # -------------------------
 # Eyes
 # -------------------------
-EYE_HEIGHT = 3
-EYE_WIDTH = 4   
+EYE_HEIGHT = 5
+EYE_WIDTH = 5  
 
 left_eye = turtle.Turtle()
 left_eye.shape("circle")
@@ -37,7 +37,7 @@ right_eye.shapesize(EYE_HEIGHT, EYE_WIDTH)
 mouth = turtle.Turtle()
 mouth.hideturtle()
 mouth.color("black")
-mouth.pensize(10)
+mouth.pensize(40)
 mouth.penup()
 mouth.goto(-250, -50)
 mouth.pendown()
