@@ -1,38 +1,59 @@
+#include <Wire.h>
 #include <HerkulexMotor.h>
 #include <RPIComs.h>
 #include <SerialBusManager.h>
 #include <IMU.h>
 #include <debug.h>
 #include <ToolChanger.h>
+#include <MAX30105.h>
+#include <heartRate.h>
 
-// start at serial 2 because the raspberry pi is connected through serial 1
+// the serial bus IDs for the different groups of motors, used for initialization and in the MotorRef table
 enum SERIAL_BUS {
     BUS_CHEST = 3,
     BUS_L_ARM = 4,
     BUS_R_ARM = 5,
 };
 
+// define the number of motors in the system, used for array sizes and loops. Adjust as needed.
 const uint8_t MOTOR_COUNT = 10;
+
+// global variables for the robot state machine
+bool leftArm = false;
+bool rightArm = false;
+
+// variables for oximeter readings
+const byte RATE_SIZE = 4;
+byte rates[RATE_SIZE]; // Array of heart rates
+byte rateSpot = 0;
+long lastBeat = 0; // Time at which the last beat occurred
+bool bufferFull = false; // Whether the rates array has been filled at least once
+
+float beatsPerMinute;
+float beatAvg;
 
 // robot state machine for the swapping sequence
 enum ROBOT_STATE {
   IDLE,
-  STATUS_STATE,
-  ATTACH_STATE,
-  DEPOSIT_STATE,
-  ELEVATOR_STATE,
+  RUN_TO,
+  END_EFFECTOR_STATUS,
+  OXIMETER,
 };
 
+// initialize in IDLE state
 ROBOT_STATE robotState = IDLE;
 
+// arrays to hold motor positions, updated by the position read state machine, used for the position write state machine
 uint16_t motorPositionsRaw[MOTOR_COUNT] = {0};
 float motorPositions[MOTOR_COUNT] = {0};
 
+// MotorRef table for parallelized position reads
 MotorRef motorRefs[MOTOR_COUNT];
 
+// motor intilization: {id, model, serial bus}
 HerkulexMotor motors[MOTOR_COUNT] = {
-  HerkulexMotor(7, MotorModel::DRS_0601, SERIAL_BUS::BUS_CHEST), // 
-  HerkulexMotor(11, MotorModel::DRS_0601, SERIAL_BUS::BUS_CHEST), // 
+  HerkulexMotor(7, MotorModel::DRS_0601, SERIAL_BUS::BUS_CHEST), // left shoulder 
+  HerkulexMotor(11, MotorModel::DRS_0601, SERIAL_BUS::BUS_CHEST), // right shoulder
   HerkulexMotor(6, MotorModel::DRS_0602, SERIAL_BUS::BUS_L_ARM),
   HerkulexMotor(9, MotorModel::DRS_0601, SERIAL_BUS::BUS_L_ARM),
   HerkulexMotor(14, MotorModel::DRS_0201, SERIAL_BUS::BUS_L_ARM),
@@ -44,18 +65,15 @@ HerkulexMotor motors[MOTOR_COUNT] = {
 };
 
 // status pin is analog
-ToolChanger TCR(A13, 36, 600, 400, 1600); // status pin, servo pin, attach pos, lock pos, deposit pos
-ToolChanger TCL(A12, 37, 800, 600, 1800);
+ToolChanger TCR(A13, 24, 600, 400, 1600); // status pin, servo pin, attach pos, lock pos, deposit pos
+ToolChanger TCL(A12, 25, 800, 600, 1800);
 
+// MAX30105 sensor for oximeter readings
+MAX30105 particleSensor;
 
 void setup(){
-  delay(2000); // a delay to have time for serial monitor opening on platformio after uploading
   Serial.begin(9600); // Open serial communications with computer
-  Serial.println("Serial initialized for debugging output");
-
-  // intiailize serial communications with esp32
-  Serial2.begin(115200);
-  Serial.println("Serial2 initialized for SwappingStation communication");
+  Serial.println("Teensy Initializing...");
 
   delay(2000);
 
@@ -78,262 +96,173 @@ void setup(){
   // Each entry is {busId, servoId}. Order here determines order in rawPositions[], can mix and match serial buses
   // Add or remove entries to match the motors needed
   for (int i = 0; i < MOTOR_COUNT; i++) motorRefs[i] = motors[i].getMotorRef();
-  for (int i = 0; i < MOTOR_COUNT; i++) motors[i].setPos(0.0);
+  for (int i = 0; i < MOTOR_COUNT; i++) motors[i].queueMove(0.0);
+  SerialBusManager::actionAll(10000); // execute the queued moves with a 1 second timeout
   delay(2000);
 
   // initialize the toolchangers
   TCR.initialize();
   TCL.initialize();
 
-  // wait until communication with the esp32 is established by waiting until it receives
-  // the message HC to establish communication that homing has been completed
-  while (true) {
-    if (Serial2.available()) {
-      String message = Serial2.readStringUntil('\n');
-      message.trim();  // Remove whitespace and carriage returns
-      Serial.print("Received message from ESP32: ");
-      Serial.println(message);
-      if (message == "HC") {
-        Serial.println("Homing completed.");
-        break;
-      }
-    }
-  }
+  Serial.println("Setup complete");
 }
 
 void loop(){
-  // state machine for the robot 
-  switch (robotState) {
+  // state machine to read serial from python for the motor positions and toolchanger commands, and execute the swapping sequence
+  static String lastCommand = "";
+  
+  switch (robotState){
     case IDLE:
-      // read input from the serial user interface to determine what state to switch to
-      if (Serial.available() > 0) {
-        String input = Serial.readStringUntil('\n');
-        input.trim();  // Remove whitespace and carriage returns
-        Serial.print("Received input: ");
-        Serial.println(input);
-        if (input == "status") {
-          robotState = STATUS_STATE;
-        } else if (input == "attach") {
-          robotState = ATTACH_STATE;
-        } else if (input == "deposit") {
-          robotState = DEPOSIT_STATE;
-        } else if (input == "elevator") {
-          robotState = ELEVATOR_STATE;
-        } else {
-          Serial.println("Invalid input. Please enter 'status', 'attach', 'deposit', or 'elevator'.");
+      // wait for command from python to start the swapping sequence, then transition to RUNNING_POSITIONS
+      if (Serial.available() > 0){
+        String command = Serial.readStringUntil('\n');
+        command.trim();
+        lastCommand = command;
+        
+        if (command.startsWith("DL")){
+          TCR.depositTool();
+        }
+        else if (command.startsWith("DR")){
+          TCL.depositTool();
+        }
+        else if (command.startsWith("AL")){
+          TCR.attachTool();
+        }
+        else if (command.startsWith("AR")){
+          TCL.attachTool();
+        }
+        else if (command.startsWith("LL")){
+          TCR.lockTool();
+        }
+        else if (command.startsWith("LR")){
+          TCL.lockTool();
+        }
+        else if (command.startsWith("M")){
+          robotState = RUN_TO;
+        }
+        else if (command.startsWith("OX")){
+          robotState = OXIMETER;
+        }
+        else if (command.startsWith("E")){
+          robotState = END_EFFECTOR_STATUS;
         }
       }
       break;
-    case STATUS_STATE:
-      // read the tool status and print it
-      int tcrStatus = TCR.getToolStatus();
-      int tclStatus = TCL.getToolStatus();
-      Serial.print("TCR Status: ");
-      Serial.print(tcrStatus);
-      Serial.print(" | TCL Status: ");
-      Serial.println(tclStatus);
-      robotState = IDLE; // go back to idle after printing status
+
+    case RUN_TO: {
+      // Parse command format: M0|50|10|40|-9999|1000
+      // Each position corresponds to a motor, -9999 means no movement
+      // Last value is the timing in milliseconds
+      
+      // Remove 'M' prefix and parse the pipe-separated values
+      String data = lastCommand.substring(1);
+      float positions[MOTOR_COUNT];
+      uint16_t timing = 0;
+      
+      // Parse positions and timing
+      int lastIndex = 0;
+      int motorIndex = 0;
+      for (int i = 0; i <= data.length() && motorIndex <= MOTOR_COUNT; i++) {
+        if (data[i] == '|' || i == data.length()) {
+          String value = data.substring(lastIndex, i);
+          if (motorIndex < MOTOR_COUNT) {
+            positions[motorIndex] = value.toFloat();
+          } else {
+            // Last value is timing
+            timing = value.toInt();
+          }
+          motorIndex++;
+          lastIndex = i + 1;
+        }
+      }
+      
+      // Queue moves for all motors
+      for (int i = 0; i < MOTOR_COUNT; i++) {
+        if (positions[i] != -9999) {
+          motors[i].queueMove(positions[i]);
+        }
+      }
+      
+      // Execute all moves with the specified timing
+      SerialBusManager::actionAll(timing);
+      delay(timing + 100); // Wait for moves to complete, add small buffer
+      Serial.println("M|COMPLETE");
+      
+      // Return to IDLE
+      robotState = IDLE;
       break;
-    case ATTACH_STATE:
-      motors[0].queueMove(20.0);
-      motors[1].queueMove(0.0);
-      motors[2].queueMove(-60.0);
-      motors[3].queueMove(0.0);
-      motors[4].queueMove(-100.0);
-      SerialBusManager::actionAll(4000);
-      delay(3000);
+    }
 
-      motors[0].queueMove(10.0);
-      motors[1].queueMove(0.0);
-      motors[2].queueMove(-60.0);
-      motors[3].queueMove(0.0);
-      motors[4].queueMove(-100.0);
-      SerialBusManager::actionAll(4000);
-      delay(3000);
+    case END_EFFECTOR_STATUS:
+      // print the end effector status to serial for python to read, format: E|TCR_status|TCL_status
+      Serial.print("E|");
+      Serial.print(TCR.getToolStatus());
+      Serial.print("|");
+      Serial.println(TCL.getToolStatus());
+      robotState = IDLE;
+      break;
 
-      motors[0].queueMove(-60.0);
-      motors[1].queueMove(0.0);
-      motors[2].queueMove(0.0);
-      motors[3].queueMove(0.0);
-      motors[4].queueMove(-10.0);
-      SerialBusManager::actionAll(4000);
-      delay(3000);
-
-      TCR.attachTool();
-      TCL.attachTool();
-
-      if(TCR.getToolStatus() == 1 || TCL.getToolStatus() == 1){
-        Serial.println("Tools attached successfully!");
-        TCR.lockTool();
-        TCL.lockTool();
-      } else {
-        Serial.println("Tool attachment failed. Please check the tool changers.");
+    case OXIMETER:
+      // Reset tracking variables
+      rateSpot = 0;
+      lastBeat = 0;
+      beatsPerMinute = 0;
+      beatAvg = 0;
+      
+      // Initialize rates array
+      for (byte i = 0; i < RATE_SIZE; i++) {
+        rates[i] = 0;
       }
 
-      motors[0].queueMove(10.0);
-      motors[1].queueMove(0.0);
-      motors[2].queueMove(-60.0);
-      motors[3].queueMove(0.0);
-      motors[4].queueMove(-100.0);
-      SerialBusManager::actionAll(4000);
-      delay(3000);
+      if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
+        Serial.println("OX|ERROR");
+        robotState = IDLE;
+        break;
+      }
+      particleSensor.setup(); // Configure sensor with default settings
+      delay(1000); // Wait for sensor to stabilize
 
-      motors[0].queueMove(20.0);
-      motors[1].queueMove(0.0);
-      motors[2].queueMove(-60.0);
-      motors[3].queueMove(0.0);
-      motors[4].queueMove(-100.0);
-      SerialBusManager::actionAll(4000);
-      delay(3000);
+      particleSensor.setPulseAmplitudeRed(0x0A); // Set Red LED to low brightness
+      particleSensor.setPulseAmplitudeGreen(0x0A); // Set Green LED to low brightness
+      long irValue = particleSensor.getIR();
+      
+      Serial.println("Waiting for finger on sensor...");
+      while (irValue < 50000) { // Wait for a finger to be placed on the sensor
+        irValue = particleSensor.getIR();
+        delay(100);
+      }
+      Serial.println("Finger detected, reading oximeter...");
+      
+      // read the average for the time passed through the command from serial after OX
+      // example OX|10000, where 10000 is the time in milliseconds to read for
+      long startTime = millis();
+      long readDuration = lastCommand.substring(3).toInt();
+      while (millis() - startTime < readDuration) {
+        irValue = particleSensor.getIR();
+        if (checkForBeat(irValue)) {
+          long currentTime = millis();
+          long beatInterval = currentTime - lastBeat;
+          lastBeat = currentTime;
 
-      motors[0].queueMove(0.0);
-      motors[1].queueMove(0.0);
-      motors[2].queueMove(0.0);
-      motors[3].queueMove(0.0);
-      motors[4].queueMove(0.0);
-      SerialBusManager::actionAll(4000);
-      delay(3000);
+          beatsPerMinute = 60 / (beatInterval / 1000.0);
+          if (beatsPerMinute < 255 && beatsPerMinute > 20) {
+            rates[rateSpot] = (byte)beatsPerMinute;
+            rateSpot++;
+            rateSpot %= RATE_SIZE;
 
-      TCR.attachTool();
-      TCL.attachTool();
-
-      // go to the idle state after attaching
-      robotState = IDLE;
-      break;
-    case DEPOSIT_STATE:
-      motors[0].queueMove(20.0);
-      motors[1].queueMove(0.0);
-      motors[2].queueMove(-60.0);
-      motors[3].queueMove(0.0);
-      motors[4].queueMove(-100.0);
-      SerialBusManager::actionAll(4000);
-      delay(3000);
-
-      motors[0].queueMove(10.0);
-      motors[1].queueMove(0.0);
-      motors[2].queueMove(-60.0);
-      motors[3].queueMove(0.0);
-      motors[4].queueMove(-100.0);
-      SerialBusManager::actionAll(4000);
-      delay(3000);
-
-      motors[0].queueMove(-60.0);
-      motors[1].queueMove(0.0);
-      motors[2].queueMove(0.0);
-      motors[3].queueMove(0.0);
-      motors[4].queueMove(-10.0);
-      SerialBusManager::actionAll(4000);
-      delay(3000);
-
-      TCR.depositTool();
-      TCL.depositTool();
-
-      motors[0].queueMove(10.0);
-      motors[1].queueMove(0.0);
-      motors[2].queueMove(-60.0);
-      motors[3].queueMove(0.0);
-      motors[4].queueMove(-100.0);
-      SerialBusManager::actionAll(4000);
-      delay(3000);
-
-      motors[0].queueMove(20.0);
-      motors[1].queueMove(0.0);
-      motors[2].queueMove(-60.0);
-      motors[3].queueMove(0.0);
-      motors[4].queueMove(-100.0);
-      SerialBusManager::actionAll(4000);
-      delay(3000);
-
-      motors[0].queueMove(0.0);
-      motors[1].queueMove(0.0);
-      motors[2].queueMove(0.0);
-      motors[3].queueMove(0.0);
-      motors[4].queueMove(0.0);
-      SerialBusManager::actionAll(4000);
-      delay(3000);
-
-      TCR.attachTool();
-      TCL.attachTool();
-
-      // go to the idle state after depositing
-      robotState = IDLE;
-
-      break;
-    case ELEVATOR_STATE:
-      // move the elevator up and down
+            beatAvg = 0;
+            for (byte i = 0; i < RATE_SIZE; i++) {
+              beatAvg += rates[i];
+            }
+            beatAvg /= RATE_SIZE;
+          }
+        }
+        delay(100);
+      }
+      // print the average heart rate to serial for python to read, format: OX|avg_bpm
+      Serial.print("OX|");
+      Serial.println(beatAvg);
       robotState = IDLE;
       break;
   }
 }
-
-    // loop through every motor to test to twitch them
-    
-    // motors[0].queueMove(40.0);
-    // motors[1].queueMove(40.0);
-    // motors[2].queueMove(40.0);
-    // motors[3].queueMove(40.0);
-    // SerialBusManager::actionAll(4000);
-    // delay(3000);
-
-    // motors[0].queueMove(0.0);
-    // motors[1].queueMove(0.0);
-    // motors[2].queueMove(0.0);
-    // motors[3].queueMove(0.0);
-    // SerialBusManager::actionAll(4000);
-    // delay(3000);
-
-
-    // Serial.println("Running swap");
-
-    // motors[0].queueMove(20.0);
-    // motors[1].queueMove(0.0);
-    // motors[2].queueMove(-60.0);
-    // motors[3].queueMove(0.0);
-    // motors[4].queueMove(-100.0);
-    // SerialBusManager::actionAll(4000);
-    // delay(3000);
-
-    // motors[0].queueMove(10.0);
-    // motors[1].queueMove(0.0);
-    // motors[2].queueMove(-60.0);
-    // motors[3].queueMove(0.0);
-    // motors[4].queueMove(-100.0);
-    // SerialBusManager::actionAll(4000);
-    // delay(3000);
-
-    // motors[0].queueMove(-60.0);
-    // motors[1].queueMove(0.0);
-    // motors[2].queueMove(0.0);
-    // motors[3].queueMove(0.0);
-    // motors[4].queueMove(-10.0);
-    // SerialBusManager::actionAll(4000);
-    // delay(3000);
-
-    // // setServoPulse(33, 1300);  // eject
-
-    // motors[0].queueMove(10.0);
-    // motors[1].queueMove(0.0);
-    // motors[2].queueMove(-60.0);
-
-    // motors[3].queueMove(0.0);
-    // motors[4].queueMove(-100.0);
-    // SerialBusManager::actionAll(4000);
-    // delay(3000);
-
-    // motors[0].queueMove(20.0);
-    // motors[1].queueMove(0.0);
-    // motors[2].queueMove(-60.0);
-    // motors[3].queueMove(0.0);
-    // motors[4].queueMove(-100.0);
-    // SerialBusManager::actionAll(4000);
-    // delay(3000);
-
-    // motors[0].queueMove(0.0);
-    // motors[1].queueMove(0.0);
-    // motors[2].queueMove(0.0);
-    // motors[3].queueMove(0.0);
-    // motors[4].queueMove(0.0);
-    // SerialBusManager::actionAll(4000);
-    // delay(3000);
-
-
