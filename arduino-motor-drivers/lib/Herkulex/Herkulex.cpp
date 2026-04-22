@@ -866,6 +866,10 @@ void HerkulexClass::printHexByte(byte x)
 
 }
 
-
+void HerkulexClass::setPort(int portNumber) {
+    if (portNumber >= 1 && portNumber <= 4) {
+        port = portNumber;
+    }
+}
 
  HerkulexClass Herkulex;

@@ -98,6 +98,7 @@ public:
   void  setACKPolicy(int valueACK);
   byte  checkModel();
   void  setID(int ID_Old, int ID_New);
+  void setPort(int portNumber);
   void  clearError(int servoID);
   
   void  torqueON(int servoID);

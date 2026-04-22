@@ -1,165 +1,167 @@
-#include <Herkulex.h>
-#include <HerkulexMotor.h>
-#include <RPIComs.h>
+#include "HerkulexMotor.h"
+#include "MotorIDs.h"
+#include "Herkulex.h"
 
+// Function prototype
+void printJoints();
+void goToStartPosition();
 
-uint16_t startTime = 0;
-uint16_t elapsedTime = 0;
-boolean testSetPosBool = false;    // when runTest is true, the moving motor will run once upon restart and when the arduino is uploaded.
-boolean testQueueBool = false;
-boolean testRPi = true;
-boolean latency_queuing = false;
+// Define the motors
+// Right Arm (Serial Bus 1)
+HerkulexMotor shoulderR(shoulderspin_right, DRS_0601, 1);
+HerkulexMotor bicepR(biceplift_right, DRS_0602, 1);
+HerkulexMotor elbowR(elbow_right, DRS_0601, 1);
+HerkulexMotor wristR(wristspin_right, DRS_0201, 1);
+HerkulexMotor handR(handcurl_right, DRS_0201, 1);
+HerkulexMotor gripperR(gripper_right, DRS_0201, 1);
 
-HerkulexMotor myMotor = HerkulexMotor(12, MotorModel::DRS_0601);
-HerkulexMotor myMotor2 = HerkulexMotor(7, MotorModel::DRS_0602);
-RPIComs rpi = RPIComs();
+// Left Arm (Serial Bus 2)
+HerkulexMotor shoulderL(shoulderspin_left, DRS_0601, 2);
+HerkulexMotor bicepL(biceplift_left, DRS_0602, 2);
+HerkulexMotor elbowL(elbow_left, DRS_0601, 2);
+HerkulexMotor wristL(wristspin_left, DRS_0201, 2);
+HerkulexMotor handL(handcurl_left, DRS_0201, 2);
+HerkulexMotor gripperL(gripper_left, DRS_0201, 2);
 
+HerkulexMotor* allMotors[] = {
+    &shoulderR, &bicepR, &elbowR, &wristR, &handR, &gripperR,
+    &shoulderL, &bicepL, &elbowL, &wristL, &handL, &gripperL
+};
 
-void setup(){
-  delay(2000);  // a delay to have time for serial monitor opening on platformio after uploading
-  Serial.begin(9600);    // Open serial communications with computer
-  Serial.println("Begin");
+HerkulexMotor* rightArmMotors[] = { &shoulderR, &bicepR, &elbowR, &wristR, &handR, &gripperR };
+HerkulexMotor* leftArmMotors[] = { &shoulderL, &bicepL, &elbowL, &wristL, &handL, &gripperL };
 
-  Serial3.begin(9600); //begin serial communication with the raspberry pic
+void setup() {
 
-  HerkulexMotor::initSerialPorts(115200); // begin serial communications with motor
+  Serial.begin(9600);
+  while (!Serial); // Wait for Serial Monitor to open
+  Serial.println("System Starting...");
 
-  myMotor.reboot();
-  myMotor2.reboot();
+  // 1. Initialize Serial Ports at 115200 baud (standard for Herkulex on Mega)
+  HerkulexMotor::initSerialPorts(115200); 
+    
+  // 2. Clear errors and enable torque for all motors on all active buses
+  HerkulexMotor::initialize();
 
-  delay(500);
+  shoulderR.queueMove(0.0);
+  bicepR.queueMove(0.0);
+  elbowR.queueMove(0.0);
+  wristR.queueMove(0.0);
+  handR.queueMove(0.0);
+  gripperR.queueMove(0.0);
+    
+  shoulderL.queueMove(0.0);
+  bicepL.queueMove(0.0);
+  elbowL.queueMove(0.0);
+  wristL.queueMove(0.0);
+  handL.queueMove(0.0);
+  gripperL.queueMove(0.0);
 
-  HerkulexMotor::initialize(); // initialize all motors
+  HerkulexMotor::actionMoves(1000, allMotors, 12);
 
-  // set the motor positions to 0 to initialize
-  myMotor.setPos(0.0);
-  myMotor2.setPos(0.0);
-  delay(500);
-}
-
-
-void testingRPi(){
-    rpi.uartRead();
-    if (latency_queuing){
-      startTime = micros();
-    }
-    // If a packet arrived, handle it
-    const char* pkt = rpi.getPacket();
-    if (pkt != nullptr) {
-      if (latency_queuing) {
-        elapsedTime = micros() - startTime;
-        Serial.print("It took ");
-        Serial.print(elapsedTime);
-        Serial.println(" microseconds between putting the message in the queue (right after uartRead) and reading it");
-      }
-      Serial.print("Received: ");
-      Serial.println(pkt);
-    }
-
-}
-
-void testingQueue(){
-  startTime = micros();
-  // QUEUE the movements
-  myMotor.queueMove(-80.0);     // Queue motor 1
-  myMotor2.queueMove(158);     // Queue motor 2
-
-  elapsedTime = micros() - startTime;
-
-  Serial.print("time to queue 1 movement: ");
-  Serial.print(elapsedTime);
-  Serial.println(" microseconds");
-
-  delay(1200);  
-
-  startTime = micros();
-  // execute all of the queued movements
-  Herkulex.actionMoves(10);
-  elapsedTime = micros() - startTime;
-
-  Serial.print("time to execute 1 movement: ");
-  Serial.print(elapsedTime);
-  Serial.println(" microseconds");
-  Serial.println();
-
-  delay(3000);                // Wait for movement to complete
+  delay(1000);
   
-  float pos1 = myMotor.getPos();
-  float pos2 = myMotor2.getPos();
-  Serial.print("Motor 1 position: ");
-  Serial.println(pos1);
-  Serial.print("Motor 2 position: ");
-  Serial.println(pos2);
+  Serial.println("Set up Finished");
+
+  // delay(500);
+
+  // printJoints();
+
 }
 
-void testingSetPos(){
-  startTime = micros();
-  myMotor.setPos(0.0);
-  elapsedTime = micros() - startTime;
+void loop() {
 
+  Serial.println("Going to start position...");
 
-  Serial.print("time to send moveOne cmd: ");
-  Serial.print(elapsedTime);
-  Serial.println(" microseconds");
+  goToStartPosition();
 
-  delay(1200);
+  Serial.println("At start position.");
 
-  startTime = micros();
-  float myPos = myMotor.getPos();
-  elapsedTime = micros() - startTime;
+  printJoints();
 
-  Serial.print("position: ");
-  Serial.print(myPos);
-  Serial.println(" degrees");
-
-  Serial.print("time to read one: ");
-  Serial.print(elapsedTime);
-  Serial.println(" microseconds");
-
-  delay(1200);
-
-  startTime = micros();
-  myMotor.setPos(-90.0);
-  elapsedTime = micros() - startTime;
-
-
-  Serial.print("time to send moveOne cmd: ");
-  Serial.print(elapsedTime);
-  Serial.println(" microseconds");
-
-  delay(1200);
-
-  startTime = micros();
-  myPos = myMotor.getPos();
-  elapsedTime = micros() - startTime;
-
-  Serial.print("position: ");
-  Serial.print(myPos);
-  Serial.println(" degrees");
-
-  Serial.print("time to read one: ");
-  Serial.print(elapsedTime);
-  Serial.println(" microseconds");
+  while (true) {
+    // Stop here forever
+  } 
 }
 
+void printJoints(){
+  Serial.println("Reading joint positions...");
+  Serial.println("============================");
 
-void loop(){
+  // Right Arm
+  Serial.print("shoulderR: "); Serial.println(shoulderR.getPos());
+  Serial.print("bicepR:    "); Serial.println(bicepR.getPos());
+  Serial.print("elbowR:    "); Serial.println(elbowR.getPos());
+  Serial.print("wristR:    "); Serial.println(wristR.getPos());
+  Serial.print("handR:     "); Serial.println(handR.getPos());
+  Serial.print("gripperR:  "); Serial.println(gripperR.getPos());
 
-  // this loops
-  while(testRPi){
-    testingRPi();
-    testRPi = true;
-  }
+  Serial.println("----------------------------");
 
+  // Left Arm
+  Serial.print("shoulderL: "); Serial.println(shoulderL.getPos());
+  Serial.print("bicepL:    "); Serial.println(bicepL.getPos());
+  Serial.print("elbowL:    "); Serial.println(elbowL.getPos());
+  Serial.print("wristL:    "); Serial.println(wristL.getPos());
+  Serial.print("handL:     "); Serial.println(handL.getPos());
+  Serial.print("gripperL:  "); Serial.println(gripperL.getPos());
 
-  while(testSetPosBool){
-    testingSetPos();
-    testSetPosBool = false;
-  }
+  Serial.println("============================");
+  Serial.println("Done.");
+}
 
-  while (testQueueBool){
-    testingQueue();
-    testQueueBool = false;
-  }
+void goToStartPosition() {
+  shoulderR.queueMove(-2.28);
+  bicepR.queueMove(151.62);
+  elbowR.queueMove(1.14);
+  wristR.queueMove(5.52);
+  handR.queueMove(6.17);
+  gripperR.queueMove(-2.60);
+    
+  shoulderL.queueMove(2.28);
+  bicepL.queueMove(-151.62);
+  elbowL.queueMove(-1.14);
+  wristL.queueMove(-5.52);
+  handL.queueMove(-6.17);
+  gripperL.queueMove(2.60);
+
+  HerkulexMotor::actionMoves(1000, allMotors, 12);
+
+  delay(1000);
+
+  shoulderR.queueMove(89.16);
+  bicepR.queueMove(151.79);
+  elbowR.queueMove(0.65);
+  wristR.queueMove(5.20);
+  handR.queueMove(-2.27);
+  gripperR.queueMove(-2.60);
+
+  shoulderL.queueMove(-89.16);
+  bicepL.queueMove(-151.79);
+  elbowL.queueMove(-0.65);
+  wristL.queueMove(-5.20);
+  handL.queueMove(2.27);
+  gripperL.queueMove(2.60);
+
+  HerkulexMotor::actionMoves(1000, allMotors, 12);
+
+  delay(1000);
+
+  shoulderR.queueMove(80.52);
+  bicepR.queueMove(34.20);
+  elbowR.queueMove(8.03);
+  wristR.queueMove(5.20);
+  handR.queueMove(3.57);
+  gripperR.queueMove(-2.60);
   
+  shoulderL.queueMove(-80.52);
+  bicepL.queueMove(-34.20);
+  elbowL.queueMove(-8.03);
+  wristL.queueMove(-5.20);
+  handL.queueMove(-3.57);
+  gripperL.queueMove(2.60);
+
+  HerkulexMotor::actionMoves(1000, allMotors, 12);
+
+  delay(1000);
 }
