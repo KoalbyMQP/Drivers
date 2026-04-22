@@ -135,7 +135,7 @@ def send_motor_commands(joint_targets, flag):
     packet = bytes([START_BYTE]) + commands.tobytes()
 
     try:
-        ser.write(commands.tobytes())   # Change to packet to include start byte if needed
+        ser.write(packet)   # Change to packet to include start byte if needed
     except Exception as e:
         print(f"Error sending motor commands: {e}")
 

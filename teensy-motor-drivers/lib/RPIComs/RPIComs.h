@@ -4,6 +4,9 @@
 #include <Arduino.h>
 #include "Queue.h"
 
+#define MOTOR_COUNT TOTAL_COUNT
+#define NUM_INT16 (1 + MOTOR_COUNT) // 1 for flag, rest for motor inputs
+#define PACKET_SIZE (NUM_INT16 * sizeof(int16_t))
 
 class RPIComs{
     public:

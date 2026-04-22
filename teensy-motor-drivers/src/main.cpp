@@ -7,22 +7,18 @@
 
 enum STATE {
   READING_FROM_RPI,
+  SENDING_TO_RPI,
   SETTING_MOTOR_POS,
   READING_ROBOT_STATE,
   IDLE,
   STOP,
-  START,
 };
 
-uint8_t robotState = SETTING_MOTOR_POS;
+uint8_t robotState = READING_FROM_RPI;
 
 uint32_t elapsedMicros;
 uint32_t readStartTime;
-
-const uint8_t START_BYTE = 0xAA;
-const uint8_t MOTOR_COUNT = TOTAL_COUNT;
-const int NUM_INT16 = 1 + MOTOR_COUNT;
-const uint8_t PACKET_SIZE = NUM_INT16 * sizeof(int16_t);
+uint32_t lastPacketTime;
 
 float motorPositions[MOTOR_COUNT] = {0};
 float RPIMotorInputs[MOTOR_COUNT] = {0};
@@ -91,36 +87,46 @@ void setup(){
 
 
 void loop(){
+  int rpi_status = rpi.uartRead(); // continuously read from the pi
+  
+  if (millis() - lastPacketTime > 5000) { // if it's been more than 5 seconds since we received a packet, go to idle state
+    Serial.println("No packet received for 5 seconds, stopping...");
+    robotState = STOP;
+  }
+
   switch (robotState){
     case(READING_FROM_RPI):
     {
-      if (rpi.uartRead() == -1){
+      if (rpi_status == -1){
         robotState = STOP;
         break;
       }
 
       // If a packet arrived, handle it
-      const char* pkt = rpi.getPacket();
+      const uint8_t* pkt = (uint8_t*) rpi.getPacket();
       if (pkt != nullptr) {
 
+        lastPacketTime = millis();
+
         // copy packet to avoid buffer overwrite
-        uint8_t buffer[PACKET_SIZE];        
+        int16_t buffer[NUM_INT16];        
         memcpy(buffer, pkt, PACKET_SIZE);
 
-        int16_t data[NUM_INT16];
-        memcpy(data, buffer, PACKET_SIZE);
-
-        int16_t flag = data[0];
+        int16_t flag = buffer[0];
 
         for (int i = 0; i < MOTOR_COUNT; i++) {
-            RPIMotorInputs[i] = data[1 + i] / 100.0f;
+            RPIMotorInputs[i] = buffer[1 + i] / 100.0f;
         }
         // done receiving packet now, we set position
-        robotState = SETTING_MOTOR_POS;
-
-        if (flag == STOP) {
+        if (flag == START) {
+          moveToZeroPositions();
+          robotState = READING_FROM_RPI;
+          break;
+        } else if (flag == STOP) {
           robotState = STOP;
           break;
+        } else { 
+          robotState = SETTING_MOTOR_POS;
         }
       }
 
@@ -128,16 +134,15 @@ void loop(){
     }
     case(SETTING_MOTOR_POS):
     {
-      if (rpi.uartRead() == -1){
+      if (rpi_status == -1){
         robotState = STOP;
         break;
       }
       // // queue all motors in a loop
-      // // does this line up with the correct motors?
-      // HerkulexMotor::motorRefQueueMove(allMotors, motorPositions, TOTAL_COUNT);
-      // SerialBusManager::actionAll(10);
+      // // ensure this lines up with the correct motors
+      HerkulexMotor::motorRefQueueMove(allMotors, RPIMotorInputs, MOTOR_COUNT);
+      SerialBusManager::actionAll(10);
 
-      //TODO: add in functionality for flags here
       robotState = READING_ROBOT_STATE;
       SerialBusManager::requestAllPositions(allMotors, motorPositionsRaw, MOTOR_COUNT);
       Serial.println("Requesting position and switching to READIING_ROBOT_STATE");
@@ -177,7 +182,12 @@ void loop(){
         Serial.print("IMU cal_sys: ");
         Serial.println(imu1.getCalSys());
 
-        delay(4000);
+        //not yet implemented: compile all observations into full_packet
+        full_packet = (char*) malloc(PACKET_SIZE);
+        memcpy(full_packet, motorPositions, MOTOR_COUNT * sizeof(float));
+        rpi.enqueueTXPacket(full_packet);
+        rpi.uartSend();
+
         robotState = SETTING_MOTOR_POS;
       };
       break;
@@ -189,8 +199,11 @@ void loop(){
     }
     case(STOP):
     {
-      delay(1000);
-      break;
+      moveToZeroPositions();
+      Serial.println("Robot stopped.");
+      while (true) {
+        delay(1000);
+      }
     }
   }
 }
