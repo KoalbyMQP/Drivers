@@ -94,10 +94,10 @@ void loop(){
   switch (robotState){
     case(READING_FROM_RPI):
     {
-      // if (rpi.uartRead() == -1){
-      //   robotState = STOP;
-      //   break;
-      // }
+      if (rpi.uartRead() == -1){
+        robotState = STOP;
+        break;
+      }
 
       // If a packet arrived, handle it
       const char* pkt = rpi.getPacket();
@@ -122,10 +122,10 @@ void loop(){
     }
     case(SETTING_MOTOR_POS):
     {
-      // if (rpi.uartRead() == -1){
-      //   robotState = STOP;
-      //   break;
-      // }
+      if (rpi.uartRead() == -1){
+        robotState = STOP;
+        break;
+      }
       // // queue all motors in a loop
       // // does this line up with the correct motors?
       // HerkulexMotor::motorRefQueueMove(allMotors, motorPositions, TOTAL_COUNT);
@@ -151,8 +151,8 @@ void loop(){
         Serial.print(elapsedMicros);
         Serial.println(" microseconds");
 
-        // for (int i = 0; i < 5; i++){
-        for (int i = 0; i < MOTOR_COUNT; i++){
+        for (int i = 0; i < 5; i++){
+        //for (int i = 0; i < MOTOR_COUNT; i++){
           // allmotors is an array of motor refs, as opposed to holding motor objects like motors did before
           motorPositions[i] = HerkulexMotor::motorRefRawToDegs(allMotors[i], motorPositionsRaw[i]);          
           Serial.print("Bus ID: ");
@@ -170,7 +170,7 @@ void loop(){
         Serial.print("IMU cal_sys: ");
         Serial.println(imu1.getCalSys());
 
-        // delay(4000);
+        delay(4000);
         robotState = SETTING_MOTOR_POS;
       };
       break;
