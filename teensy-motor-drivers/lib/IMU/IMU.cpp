@@ -136,7 +136,7 @@ void IMU::getGyroArray(float out[3]) const {
     out[2] = _data.gyro[2];
 }
 
-// Formats fused data as CSV: "aX,aY,aZ,gX,gY,gZ"
+// Formats fused data as CSV: "gX,gY,gZ, aX,aY,aZ"
 // Linear acceleration in m/s², angular velocity in °/s
 int IMU::formatPacket(char* buf, size_t bufSize) const {
     return snprintf(buf, bufSize,
