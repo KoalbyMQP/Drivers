@@ -240,7 +240,7 @@ def run():
 def run_test():
     global running, last_action
 
-    use_serial = False
+    use_serial = True
 
     if use_serial:
         init_serial()   #Don't initialize serial for testing without Teensy connected

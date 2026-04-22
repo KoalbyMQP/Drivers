@@ -3,7 +3,7 @@
 #include "Queue.h"
 // For use with Serial 0
 // changing it to serial 3 so that serial 0 can be used by the usb 0 to monitor
-#define RPI_SERIAL Serial8
+#define RPI_SERIAL Serial
 
 //Different buffers
 static uint8_t rxBuf[PACKET_SIZE];
