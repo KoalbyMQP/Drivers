@@ -89,7 +89,7 @@ void setup(){
 void loop(){
   int rpi_status = rpi.uartRead(); // continuously read from the pi
   
-  if (millis() - lastPacketTime > 5000) { // if it's been more than 5 seconds since we received a packet, go to idle state
+  if (millis() - lastPacketTime > 5000) { // if it's been more than .5 seconds since we received a packet, go to idle state
     Serial.println("No packet received for 5 seconds, stopping...");
     robotState = STOP;
   }
