@@ -8,10 +8,11 @@ IMU::IMU(int32_t sensorID, uint8_t address)
       _requested(false) {}
 
 // ---------------------------------------------------------------------------
-// begin — initialize I2C, apply axis remap, start ACCONLY mode
+// begin — initialize I2C and start NDOF fusion mode
+// Adafruit's begin() defaults to NDOF (0x0C), so no manual mode write needed.
 // ---------------------------------------------------------------------------
 bool IMU::begin() {
-    Wire.setClock(400000);      // 400kHz — sufficient for accel-only, more stable than 1MHz
+    Wire.setClock(400000);      // 400kHz — stable for fusion mode polling
     if (!_bno.begin()) {
         return false;
     }
@@ -31,7 +32,7 @@ void IMU::writeRegister(uint8_t reg, uint8_t val) {
 
 // ---------------------------------------------------------------------------
 // requestUpdate — Phase 1
-// Writes the accel start register address to the BNO055.
+// Writes the LIA start register address to the BNO055.
 // endTransmission(false) holds the bus open (no STOP) so the follow-up
 // requestFrom in collectUpdate can issue a repeated START.
 // ---------------------------------------------------------------------------
@@ -44,13 +45,13 @@ void IMU::requestUpdate() {
 
 // ---------------------------------------------------------------------------
 // collectUpdate — Phase 2
-// Issues the read and pulls all 6 accel bytes from the RX buffer in one call.
+// Issues the read and pulls all 6 fused linear accel bytes from the RX buffer.
 // Also reads the calibration status register separately.
 // ---------------------------------------------------------------------------
 bool IMU::collectUpdate() {
     if (!_requested) return false;
 
-    // Read 6 accel bytes (X_LSB, X_MSB, Y_LSB, Y_MSB, Z_LSB, Z_MSB)
+    // Read 6 LIA bytes (X_LSB, X_MSB, Y_LSB, Y_MSB, Z_LSB, Z_MSB)
     uint8_t count = Wire.requestFrom(_address, ACCEL_READ_LEN, (uint8_t)1);
     if (count < ACCEL_READ_LEN) {
         _requested = false;
@@ -61,14 +62,17 @@ bool IMU::collectUpdate() {
     Wire.readBytes(buf, ACCEL_READ_LEN);
     parseBuffer(buf);
 
-    // Read calibration status register separately
+    // Read all four calibration fields from CALIB_STAT register
     Wire.beginTransmission(_address);
     Wire.write(CALIB_STAT_REG);
     Wire.endTransmission(false);
     Wire.requestFrom(_address, (uint8_t)1, (uint8_t)1);
     if (Wire.available()) {
         uint8_t cal = Wire.read();
-        _data.cal_accel = (cal >> 2) & 0x03;   // bits [3:2]
+        _data.cal_sys   = (cal >> 6) & 0x03;  // bits [7:6]
+        _data.cal_gyro  = (cal >> 4) & 0x03;  // bits [5:4]
+        _data.cal_accel = (cal >> 2) & 0x03;  // bits [3:2]
+        _data.cal_mag   =  cal       & 0x03;  // bits [1:0]
     }
 
     _requested = false;
@@ -78,12 +82,12 @@ bool IMU::collectUpdate() {
 // ---------------------------------------------------------------------------
 // parseBuffer — convert raw 6 bytes into float m/s² values
 //
-// BNO055 accel register map from 0x08:
+// BNO055 LIA register map from 0x28:
 //   Bytes 0-1: X (LSB, MSB) — raw units: 1 LSB = 1 m/s² / 100
 //   Bytes 2-3: Y (LSB, MSB)
 //   Bytes 4-5: Z (LSB, MSB)
 //
-// Scale factor: 1/100 m/s² per LSB (default range ±2g, 100 LSB/m/s²)
+// Scale factor: 1/100 m/s² per LSB (same as raw accel, 100 LSB/m/s²)
 // ---------------------------------------------------------------------------
 void IMU::parseBuffer(uint8_t* buf) {
     const float ACCEL_SCALE = 1.0f / 100.0f;   // 100 LSB per m/s²
@@ -103,10 +107,9 @@ void IMU::getAccelArray(float out[3]) const {
     out[2] = _data.accel[2];
 }
 
-// Formats as CSV: "X,Y,Z,cal_accel"
+// Formats as CSV: "X,Y,Z"
 int IMU::formatPacket(char* buf, size_t bufSize) const {
     return snprintf(buf, bufSize,
-        "%.4f,%.4f,%.4f,%u",
-        _data.accel[0], _data.accel[1], _data.accel[2],
-        _data.cal_accel);
+        "%.4f,%.4f,%.4f",
+        _data.accel[0], _data.accel[1], _data.accel[2]);
 }

@@ -18,7 +18,6 @@ uint8_t robotState = SETTING_MOTOR_POS;
 
 uint32_t elapsedMicros;
 uint32_t readStartTime;
-elapsedMillis imuTimer; 
 
 const uint8_t START_BYTE = 0xAA;
 const uint8_t MOTOR_COUNT = TOTAL_COUNT;
@@ -27,6 +26,7 @@ const uint8_t PACKET_SIZE = NUM_INT16 * sizeof(int16_t);
 
 float motorPositions[MOTOR_COUNT] = {0};
 float RPIMotorInputs[MOTOR_COUNT] = {0};
+char imuPacket[32]; 
 
 HerkulexMotor myMotor = HerkulexMotor(3, DRS_0601, BUS_R_LEG);
 
@@ -141,17 +141,17 @@ void loop(){
       robotState = READING_ROBOT_STATE;
       SerialBusManager::requestAllPositions(allMotors, motorPositionsRaw, MOTOR_COUNT);
       Serial.println("Requesting position and switching to READIING_ROBOT_STATE");
+      imu1.requestUpdate();
       readStartTime = micros();
-      // //imu1.requestRead();
-      
       break;
     }
     case(READING_ROBOT_STATE):
     {
       SerialBusManager::tick(allMotors, motorPositionsRaw, MOTOR_COUNT);
+      imu1.collectUpdate();
       // imu1.tick(imuReadBuffer, imuReadBufferSize); // imuReadBufferSize should be a const, it's defined somewhere in the IMU stack
-      if (SerialBusManager::isDoneCollecting()){ // && imu1.doneCollecting()){
-        // put data togehter into one packet
+      if (SerialBusManager::isDoneCollecting() && imu1.isDoneCollecting()){
+        // put data togehter into one packet 
         // send packet to RPI
         elapsedMicros = micros() - readStartTime;
         Serial.print("Elapsed time: ");
@@ -159,6 +159,7 @@ void loop(){
         Serial.println(" microseconds");
 
         for (int i = 0; i < 5; i++){
+        //for (int i = 0; i < MOTOR_COUNT; i++){
           // allmotors is an array of motor refs, as opposed to holding motor objects like motors did before
           motorPositions[i] = HerkulexMotor::motorRefRawToDegs(allMotors[i], motorPositionsRaw[i]);          
           Serial.print("Bus ID: ");
@@ -168,6 +169,14 @@ void loop(){
           Serial.print(" Position (deg): ");
           Serial.println(motorPositions[i]);
         }
+
+        imu1.formatPacket(imuPacket, sizeof(imuPacket));
+
+        Serial.print("IMU: ");
+        Serial.println(imuPacket);
+        Serial.print("IMU cal_sys: ");
+        Serial.println(imu1.getCalSys());
+
         delay(4000);
         robotState = SETTING_MOTOR_POS;
       };
