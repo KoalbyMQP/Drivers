@@ -20,11 +20,11 @@ uint32_t elapsedMicros;
 uint32_t readStartTime;
 elapsedMillis imuTimer; 
 
+const uint8_t START_BYTE = 0xAA;
 const uint8_t MOTOR_COUNT = TOTAL_COUNT;
-const uint8_t PACKET_SIZE = 192;   // this depends on the number of motors used, HOW???
+const int NUM_INT16 = 1 + MOTOR_COUNT;
+const uint8_t PACKET_SIZE = NUM_INT16 * sizeof(int16_t);
 
-
-uint16_t motorPositionsRaw[MOTOR_COUNT] = {0};
 float motorPositions[MOTOR_COUNT] = {0};
 float RPIMotorInputs[MOTOR_COUNT] = {0};
 
@@ -104,18 +104,24 @@ void loop(){
       if (pkt != nullptr) {
 
         // copy packet to avoid buffer overwrite
-        char buffer[PACKET_SIZE];        
-        strncpy(buffer, pkt, sizeof(buffer));
-        buffer[sizeof(buffer)-1] = '\0';
+        uint8_t buffer[PACKET_SIZE];        
+        memcpy(buffer, pkt, PACKET_SIZE);
 
+        int16_t data[NUM_INT16];
+        memcpy(data, buffer, PACKET_SIZE);
 
-        char* token = strtok(buffer, ",");
-        for (int i = 0; i < MOTOR_COUNT && token != nullptr; i++) {
-            RPIMotorInputs[i] = atof(token);
-            token = strtok(nullptr, ",");
+        int16_t flag = data[0];
+
+        for (int i = 0; i < MOTOR_COUNT; i++) {
+            RPIMotorInputs[i] = data[1 + i] / 100.0f;
         }
         // done receiving packet now, we set position
         robotState = SETTING_MOTOR_POS;
+
+        if (flag == STOP) {
+          robotState = STOP;
+          break;
+        }
       }
 
       break;
@@ -131,6 +137,7 @@ void loop(){
       // HerkulexMotor::motorRefQueueMove(allMotors, motorPositions, TOTAL_COUNT);
       // SerialBusManager::actionAll(10);
 
+      //TODO: add in functionality for flags here
       robotState = READING_ROBOT_STATE;
       SerialBusManager::requestAllPositions(allMotors, motorPositionsRaw, MOTOR_COUNT);
       Serial.println("Requesting position and switching to READIING_ROBOT_STATE");
