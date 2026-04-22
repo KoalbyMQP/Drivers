@@ -138,6 +138,16 @@ void loop(){
         robotState = STOP;
         break;
       }
+      if (true) { //only for testing
+        for (int i = 0; i < MOTOR_COUNT; i++) {
+            Serial.print("Received from RPI - Motor ");
+            Serial.print(i);
+            Serial.print(": ");
+            Serial.println(RPIMotorInputs[i]);
+        }
+        robotState = READING_ROBOT_STATE;
+        break;
+      }
       // // queue all motors in a loop
       // // ensure this lines up with the correct motors
       HerkulexMotor::motorRefQueueMove(allMotors, RPIMotorInputs, MOTOR_COUNT);
@@ -152,6 +162,15 @@ void loop(){
     }
     case(READING_ROBOT_STATE):
     {
+      if (true) { //only for testing
+        test_packet = (char*) malloc(PACKET_SIZE);
+        for (int i = 0; i < MOTOR_COUNT; i++) {
+            motorPositions[i] = 0;
+            rpi.enqueueTXPacket(full_packet);
+            rpi.uartSend();
+            robotState = READING_FROM_RPI;
+        }
+      }
       SerialBusManager::tick(allMotors, motorPositionsRaw, MOTOR_COUNT);
       imu1.collectUpdate();
       // imu1.tick(imuReadBuffer, imuReadBufferSize); // imuReadBufferSize should be a const, it's defined somewhere in the IMU stack
@@ -188,7 +207,7 @@ void loop(){
         rpi.enqueueTXPacket(full_packet);
         rpi.uartSend();
 
-        robotState = SETTING_MOTOR_POS;
+        robotState = READING_FROM_RPI;
       };
       break;
     }
