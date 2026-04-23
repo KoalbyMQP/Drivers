@@ -68,25 +68,25 @@ void setup(){
   
 
   // The following snippet is to test the wiring by looking for all the motor ids on each bus
-  Serial.println();
-  Serial.println("Scanning BUS_L_LEG...");
-  find_all_motors_on_bus(SerialBusManager::getBus(BUS_L_LEG));
+  // Serial.println();
+  // Serial.println("Scanning BUS_L_LEG...");
+  // find_all_motors_on_bus(SerialBusManager::getBus(BUS_L_LEG));
 
-  Serial.println();
-  Serial.println("Scanning BUS_R_LEG..");
-  find_all_motors_on_bus(SerialBusManager::getBus(BUS_R_LEG));
+  // Serial.println();
+  // Serial.println("Scanning BUS_R_LEG..");
+  // find_all_motors_on_bus(SerialBusManager::getBus(BUS_R_LEG));
 
-  Serial.println();
-  Serial.println("Scanning BUS_CHEST..");
-  find_all_motors_on_bus(SerialBusManager::getBus(BUS_CHEST));
+  // Serial.println();
+  // Serial.println("Scanning BUS_CHEST..");
+  // find_all_motors_on_bus(SerialBusManager::getBus(BUS_CHEST));
 
-  Serial.println();
-  Serial.println("Scanning BUS_L_ARM...");
-  find_all_motors_on_bus(SerialBusManager::getBus(BUS_L_ARM));
+  // Serial.println();
+  // Serial.println("Scanning BUS_L_ARM...");
+  // find_all_motors_on_bus(SerialBusManager::getBus(BUS_L_ARM));
 
-  Serial.println();
-  Serial.println("Scanning BUS_R_ARM..");
-  find_all_motors_on_bus(SerialBusManager::getBus(BUS_R_ARM));
+  // Serial.println();
+  // Serial.println("Scanning BUS_R_ARM..");
+  // find_all_motors_on_bus(SerialBusManager::getBus(BUS_R_ARM));
 
   SerialBusManager::infoAllMotors(allMotors, TOTAL_COUNT);
   lastPacketTime = millis();
@@ -118,15 +118,15 @@ void setup(){
 // THIS IS RELIANT ON MOTORDEFS. IF YOU CHANGE MOTORDEFS, YOU MUST UPDATE THIS
 void moveToZeroPositions() {
   // // move knees first — positions in allMotors: 3, 8
-  waitForEnter();
-  HerkulexMotor::motorRefQueueMove(allMotors[3], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[8], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[4], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[9], 0.0);
+  // waitForEnter();
+  // HerkulexMotor::motorRefQueueMove(allMotors[3], 0.0);
+  // HerkulexMotor::motorRefQueueMove(allMotors[8], 0.0);
+  // HerkulexMotor::motorRefQueueMove(allMotors[4], 0.0);
+  // HerkulexMotor::motorRefQueueMove(allMotors[9], 0.0);
 
 
-  SerialBusManager::actionAll(2000);
-  delay(2000);
+  // SerialBusManager::actionAll(2000);
+  // delay(2000);
 
   // // then do the rest of the legs — positions in allMotors: 1, 2, 4, 6, 7, 9
   // waitForEnter();
@@ -213,135 +213,53 @@ void moveToZeroPositions() {
 void hardcodedStanding() {
   // move knees first — positions in allMotors: 3, 8
   waitForEnter();
-  HerkulexMotor::motorRefQueueMove(allMotors[3], -20.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[8], 20.0);
-  waitForEnter();
-  HerkulexMotor::motorRefQueueMove(allMotors[1], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[2], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[6], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[7], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[3], -7.0);  // left knee
+  HerkulexMotor::motorRefQueueMove(allMotors[8],  7.0);  // right knee
   SerialBusManager::actionAll(2000);
   delay(2000);
+  waitForEnter();
+
+  HerkulexMotor::motorRefQueueMove(allMotors[1],  5.7);   // left thigh spin
+  HerkulexMotor::motorRefQueueMove(allMotors[6], -5.7);   // right thigh spin
+  HerkulexMotor::motorRefQueueMove(allMotors[2],  9.0);   // left thigh lift
+  HerkulexMotor::motorRefQueueMove(allMotors[7], -9.0);   // right thigh lift
+  HerkulexMotor::motorRefQueueMove(allMotors[4],  6.0);  // left ankle
+  HerkulexMotor::motorRefQueueMove(allMotors[9], -6.0);  // right ankle
+  SerialBusManager::actionAll(2000);
+  delay(2000);
+  waitForEnter();
 
   // pelvis — positions in allMotors: 0, 5
-  waitForEnter();
-  HerkulexMotor::motorRefQueueMove(allMotors[0], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[5], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[0],  6.0);   // left pelvis lift
+  HerkulexMotor::motorRefQueueMove(allMotors[5], -6.0);   // right pelvis lift
   SerialBusManager::actionAll(2000);
   delay(2000);
   waitForEnter();
 
   // chest — positions in allMotors: 10, 11, 12, 13, 14
-  waitForEnter();
-  HerkulexMotor::motorRefQueueMove(allMotors[10], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[11], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[12], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[13], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[14], 0.0);
+  HerkulexMotor::motorRefQueueMove(allMotors[10], 0.0);   // right pec
+  HerkulexMotor::motorRefQueueMove(allMotors[11], 0.0);   // left pec
+  HerkulexMotor::motorRefQueueMove(allMotors[12], 0.0);   // chest rotate
+  HerkulexMotor::motorRefQueueMove(allMotors[13], 0.0);   // chest lean
+  HerkulexMotor::motorRefQueueMove(allMotors[14], -5.0);   // ab crunch
   SerialBusManager::actionAll(2000);
   delay(2000);
   waitForEnter();
 
-  // arms/neck — positions in allMotors: 15-22
-  waitForEnter();
-  HerkulexMotor::motorRefQueueMove(allMotors[15], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[16], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[17], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[18], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[19], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[20], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[21], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[22], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[23], 0.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[24], 0.0);
-  SerialBusManager::actionAll(2000);
-  delay(2000);
-
-  // then do the rest of the legs — positions in allMotors: 1, 2, 4, 6, 7, 9
-  waitForEnter();
-  HerkulexMotor::motorRefQueueMove(allMotors[1], 5.7);
-  HerkulexMotor::motorRefQueueMove(allMotors[2], -9.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[4], 12.0);
-
-  HerkulexMotor::motorRefQueueMove(allMotors[6], -5.7);
-  HerkulexMotor::motorRefQueueMove(allMotors[7], 9.0);
-  HerkulexMotor::motorRefQueueMove(allMotors[9], -12.0);
-  SerialBusManager::actionAll(2000);
-  delay(2000);
-
-  // pelvis — positions in allMotors: 0, 5
-  waitForEnter();
-  HerkulexMotor::motorRefQueueMove(allMotors[0], 6.0);
+  // arms/neck — positions in allMotors: 15-24
+  HerkulexMotor::motorRefQueueMove(allMotors[15], 0.0);   // head nod
+  HerkulexMotor::motorRefQueueMove(allMotors[20], 0.0);   // head spin
+  HerkulexMotor::motorRefQueueMove(allMotors[16], 0.0);   // left shoulder
+  HerkulexMotor::motorRefQueueMove(allMotors[21], 0.0);   // right shoulder
+  HerkulexMotor::motorRefQueueMove(allMotors[17], 0.0);   // left bicep
+  HerkulexMotor::motorRefQueueMove(allMotors[22], 0.0);   // right bicep
+  HerkulexMotor::motorRefQueueMove(allMotors[18], 0.0);   // left hand spin
+  HerkulexMotor::motorRefQueueMove(allMotors[23], 0.0);   // right hand spin
+  HerkulexMotor::motorRefQueueMove(allMotors[19], 0.0);   // left hand curl
+  HerkulexMotor::motorRefQueueMove(allMotors[24], 0.0);   // right hand curl
   SerialBusManager::actionAll(2000);
   delay(2000);
   waitForEnter();
-  HerkulexMotor::motorRefQueueMove(allMotors[5], -6.0);
-  SerialBusManager::actionAll(2000);
-  delay(2000);
-
-  // // chest — positions in allMotors: 10, 11, 12, 13, 14
-  // waitForEnter();
-  // HerkulexMotor::motorRefQueueMove(allMotors[10], 0.0);
-  // SerialBusManager::actionAll(2000);
-  // delay(2000);
-  // waitForEnter();
-  // HerkulexMotor::motorRefQueueMove(allMotors[11], 0.0);
-  // SerialBusManager::actionAll(2000);
-  // delay(2000);
-  // waitForEnter();
-  // HerkulexMotor::motorRefQueueMove(allMotors[12], 0.0);
-  // SerialBusManager::actionAll(2000);
-  // delay(2000);
-  // waitForEnter();
-  // HerkulexMotor::motorRefQueueMove(allMotors[13], 0.0);
-  // SerialBusManager::actionAll(2000);
-  // delay(2000);
-  // waitForEnter();
-  // HerkulexMotor::motorRefQueueMove(allMotors[14], -10.0);
-  // SerialBusManager::actionAll(2000);
-  // delay(2000);
-
-  // // arms/neck — positions in allMotors: 15-22 (23, 24 removed — lost motors on left arm)
-  // waitForEnter();
-  // HerkulexMotor::motorRefQueueMove(allMotors[15], 0.0);
-  // SerialBusManager::actionAll(2000);
-  // delay(2000);
-  // waitForEnter();
-  // // everything here up to bad
-  // // HerkulexMotor::motorRefQueueMove(allMotors[16], 0.0);
-  // // SerialBusManager::actionAll(2000);
-  // // delay(2000);
-  // // waitForEnter();
-  // HerkulexMotor::motorRefQueueMove(allMotors[17], 0.0);
-  // SerialBusManager::actionAll(2000);
-  // delay(2000);
-  // waitForEnter();
-  // HerkulexMotor::motorRefQueueMove(allMotors[18], 0.0);
-  // SerialBusManager::actionAll(2000);
-  // delay(2000);
-  // waitForEnter();
-  // HerkulexMotor::motorRefQueueMove(allMotors[19], 0.0);
-  // SerialBusManager::actionAll(2000);
-  // delay(2000);
-  // waitForEnter();
-  // HerkulexMotor::motorRefQueueMove(allMotors[20], 0.0);
-  // SerialBusManager::actionAll(2000);
-  // delay(2000);
-  // waitForEnter();
-
-  // myMotor.setPos(0.0);
-  // HerkulexMotor::motorRefQueueMove(allMotors[21], 0.0);
-  // SerialBusManager::actionAll(2000);
-  // delay(2000);
-  // waitForEnter();
-  // HerkulexMotor::motorRefQueueMove(allMotors[22], 0.0);
-  // SerialBusManager::actionAll(2000);
-  // delay(2000);
-  // waitForEnter();
-
-  // myMotor.setPos(0);
-  // delay(2000);
-  // waitForEnter();
 }
 
 
