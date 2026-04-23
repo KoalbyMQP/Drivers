@@ -135,7 +135,7 @@ def send_motor_commands(joint_targets, flag):
     packet = bytes([START_BYTE]) + commands.tobytes()
 
     try:
-        ser.write(commands.tobytes())   # Change to packet to include start byte if needed
+        ser.write(packet)   # Change to packet to include start byte if needed
     except Exception as e:
         print(f"Error sending motor commands: {e}")
 
@@ -240,7 +240,7 @@ def run():
 def run_test():
     global running, last_action
 
-    use_serial = False
+    use_serial = True
 
     if use_serial:
         init_serial()   #Don't initialize serial for testing without Teensy connected

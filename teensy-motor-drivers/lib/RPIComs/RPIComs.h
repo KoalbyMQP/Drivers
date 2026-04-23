@@ -3,7 +3,18 @@
 
 #include <Arduino.h>
 #include "Queue.h"
+#include "motorDefs.h"
 
+#define MOTOR_COUNT TOTAL_COUNT
+#define NUM_INT16 (1 + MOTOR_COUNT) // 1 for flag, rest for motor inputs
+#define PACKET_SIZE (NUM_INT16 * sizeof(int16_t))
+
+
+enum FLAG_BYTE{
+    START_BYTE = 1,
+    STOP_BYTE = -1,
+    CONTINUTE_BYTE = 0,
+};
 
 class RPIComs{
     public:
@@ -14,7 +25,7 @@ class RPIComs{
 
         int uartRead();
         void uartSend();
-        const char* getPacket();     // returns nullptr if none
+        const uint8_t* getPacket();     // returns nullptr if none
         void enqueueTXPacket(const char* pkt);  // const because we are only reading it
 
         bool hasPacket() const { return !_rxPacketQueue.isEmpty(); }
@@ -24,8 +35,8 @@ class RPIComs{
         PacketQueue<MAX_PACKETS, RX_BUF_SIZE> _rxPacketQueue;
         PacketQueue<MAX_PACKETS, RX_BUF_SIZE> _txPacketQueue;
 
-        char rxBuf[RX_BUF_SIZE] = {0};
-        char pktBuf[RX_BUF_SIZE] = {0};
+        uint8_t rxBuf[RX_BUF_SIZE] = {0};
+        uint8_t pktBuf[RX_BUF_SIZE] = {0};
         uint16_t rxPos = 0;
 
 };
