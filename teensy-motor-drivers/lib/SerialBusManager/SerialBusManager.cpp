@@ -183,8 +183,13 @@ void SerialBusManager::actionAll(int playTimeMs){
         // if we have a serial port created
         if (SerialBusManager::_busesTracker[i] == 1){
 
-            // then action the moves queued
-            SerialBusManager::_buses[i].actionMoves(playTime);
+            // and there's queued packets on queue
+            if(SerialBusManager::_buses[i].getQueuedBytes() > 0){
+                // then action the moves queued
+                SerialBusManager::_buses[i].actionMoves(playTime);
+            }
+
+
         }
     }       
 }

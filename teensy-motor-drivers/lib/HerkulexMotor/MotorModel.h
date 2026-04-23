@@ -33,10 +33,11 @@ const HerkulexMotorSpec ModelInfo[] = {
 
   // DRS_0602
   // bounds are  full supported 16bit int range (max what 0602 can read)
-  {0, 65535, 16384, 0xFFFF, 0.02778f},
+  {0, 32767, 16384, 0xFFFF, 0.02778f},
 
-  // DRS_0602_GEARBOX
-  {0, 65535, 16384, 0xFFFF, 0.00926f},
+  // represents the gearbox-equipped drs0602 used in 2025 to 2026 designed by sam g with 3x reduction
+  // DRS_0602_GEARBOX       conversion factor is /3 of DRS_0602 conversion factor for 3x gearbox reduction
+  {0, 32767, 16384, 0xFFFF, 0.00926f},
 };
 
 
