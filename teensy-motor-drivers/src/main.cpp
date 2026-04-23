@@ -5,6 +5,20 @@
 #include <debug.h>
 #include <motorDefs.h>
 
+void waitForEnter() {
+  Serial.println("Press Enter to continue...");
+  while (true) {
+    if (Serial.available() > 0) {
+      char c = Serial.read();
+      if (c == '\n' || c == '\r') {
+        // flush any remaining chars (e.g. \r\n pairs)
+        while (Serial.available() > 0) Serial.read();
+        return;
+      }
+    }
+  }
+}
+
 enum STATE {
   READING_FROM_RPI,
   SENDING_TO_RPI,
@@ -56,7 +70,7 @@ void setup(){
   delay(1000);
   delay(1000);
   SerialBusManager::initAllMotors();
-  // SerialBusManager::torqueOnAllMotors();
+  SerialBusManager::torqueOnAllMotors();
   delay(1000);
   
   
@@ -85,7 +99,7 @@ void setup(){
   SerialBusManager::infoAllMotors(allMotors, TOTAL_COUNT);
   lastPacketTime = millis();
 
-  while (true){
+  // while (true){
     SerialBusManager::requestAllPositions(allMotors, motorPositionsRaw, MOTOR_COUNT);
 
     while(!SerialBusManager::isDoneCollecting()){
@@ -105,23 +119,14 @@ void setup(){
     }
 
     delay(1000);
+
+    waitForEnter();
   }
-}
+// }
 
 
-void waitForEnter() {
-  Serial.println("Press Enter to continue...");
-  while (true) {
-    if (Serial.available() > 0) {
-      char c = Serial.read();
-      if (c == '\n' || c == '\r') {
-        // flush any remaining chars (e.g. \r\n pairs)
-        while (Serial.available() > 0) Serial.read();
-        return;
-      }
-    }
-  }
-}
+
+
 
 // THIS IS RELIANT ON MOTORDEFS. IF YOU CHANGE MOTORDEFS, YOU MUST UPDATE THIS
 void moveToZeroPositions() {
