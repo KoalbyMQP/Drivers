@@ -170,12 +170,10 @@ void loop(){
       }
       Serial.println("Reading from RPI...!!!!");
       // If a packet arrived, handle it
-      const uint8_t* pkt = (uint8_t*) rpi.getPacket();
-      Serial.print("Packet received from RPI: ");
-      Serial.println(pkt[0]);
-      Serial.flush();
+      const uint8_t* pkt = rpi.getPacket();
       if (pkt != nullptr) {
-
+         Serial.print("Packet received from RPI: ");
+        Serial.println(pkt[0]);
         lastPacketTime = millis();
 
         // copy packet to avoid buffer overwrite
