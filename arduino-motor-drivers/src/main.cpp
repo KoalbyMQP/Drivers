@@ -1,5 +1,5 @@
 #include "HerkulexMotor.h"
-#include "MotorIDs.h"
+#include "Config.h"
 #include "Herkulex.h"
 
 // Function prototype
