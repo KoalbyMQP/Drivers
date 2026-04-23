@@ -34,9 +34,10 @@ IMU imu1;  // uses sensorID=55 and address=0x28 automatically
 void setup(){
   delay(2000);                  // a delay to have time for serial monitor opening on platformio after uploading
   Serial.begin(1000000);           // open serial communications with computer
-  while (!Serial) {
-    ; // wait for serial port to connect.
-  }
+  //while (!Serial) {
+    //; // wait for serial port to connect.
+  //}
+
   // Serial.println("Beginning... ");
   // Serial.flush();
 
@@ -164,59 +165,22 @@ void loop(){
   switch (robotState){
     case(READING_FROM_RPI):
     {
-      // Serial.println("State: READING_FROM_RPI");
-      if (rpi_status == -1){
+        if (rpi_status == -1) break;
+
+        const uint8_t* pkt = rpi.getPacket();
+        if (pkt != nullptr) {
+            // Reinterpret the raw bytes as int16_t array
+            const int16_t* values = reinterpret_cast<const int16_t*>(pkt);
+
+            // First value is the flag, skip it (index 0)
+            // Print motor values [1..MOTOR_COUNT]
+            for (int i = 1; i <= MOTOR_COUNT; i++) {
+                Serial.print(values[i] / 100.0, 2);  // divide by SCALE to get degrees back
+                if (i < MOTOR_COUNT) Serial.print(",");
+            }
+            Serial.println();
+        }
         break;
-      }
-      // Serial.println("Reading from RPI...!!!!");
-      // If a packet arrived, handle it
-      const uint8_t* pkt = rpi.getPacket();
-      if (true) { // only for testing
-          char* test_packet = (char*) malloc(PACKET_SIZE);
-          // Don't use pkt here in test mode — it may be null
-          for (int i = 0; i < MOTOR_COUNT; i++) {
-              motorPositions[i] = 0;  // dummy value for testing
-              rpi.enqueueTXPacket(test_packet);
-              rpi.uartSend();
-          }
-          free(test_packet);
-          break;
-      }
-
-      if (pkt != nullptr) {
-        // Serial.print("Packet received from RPI: ");
-        // for (int j = 0; j < PACKET_SIZE; j++){
-        //     Serial.print(pkt[j], HEX);
-        //     Serial.print(" ");
-        // }
-        lastPacketTime = millis();
-
-        // copy packet to avoid buffer overwrite
-        int16_t buffer[NUM_INT16];        
-        memcpy(buffer, pkt, PACKET_SIZE);
-
-        int16_t flag = buffer[0];
-        // Serial.print("Flag byte: ");
-        // Serial.println(flag);
-        // Serial.flush();
-
-        for (int i = 0; i < MOTOR_COUNT; i++) {
-            RPIMotorInputs[i] = buffer[1 + i] / 100.0f;
-        }
-        // done receiving packet now, we set position
-        if (flag == 1) { // 1 is start
-          // moveToZeroPositions();  // uncomment for later implementation
-          robotState = READING_FROM_RPI;
-          break;
-        } else if (flag == STOP_BYTE) { // -1 is stop
-          robotState = STOP;
-          break;
-        } else { 
-          robotState = SETTING_MOTOR_POS;
-        }
-      }
-
-      break;
     }
     case(SETTING_MOTOR_POS):
     {
@@ -313,6 +277,4 @@ void loop(){
     }
   }
 }
-
-
 
