@@ -6,17 +6,9 @@
 #include <motorDefs.h>
 
 void waitForEnter() {
-  Serial.println("Press Enter to continue...");
-  while (true) {
-    if (Serial.available() > 0) {
-      char c = Serial.read();
-      if (c == '\n' || c == '\r') {
-        // flush any remaining chars (e.g. \r\n pairs)
-        while (Serial.available() > 0) Serial.read();
-        return;
-      }
-    }
-  }
+  Serial.println("Press Any key to continue... (Which key is the Any key?)");
+  while (Serial.available() == 0) {}
+  while (Serial.available() > 0) Serial.read();
 }
 
 enum STATE {
