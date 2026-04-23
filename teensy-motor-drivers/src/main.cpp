@@ -173,11 +173,17 @@ void loop(){
       const uint8_t* pkt = rpi.getPacket();
       if (true) { //only for testing
         char* test_packet = (char*) malloc(PACKET_SIZE);
+        memset(test_packet, 0, PACKET_SIZE);
         for (int i = 0; i < MOTOR_COUNT; i++) {
+          if (pkt != nullptr) {
             motorPositions[i] = pkt[i+1] / 100.0f;
-            rpi.enqueueTXPacket(test_packet);
-            rpi.uartSend();
           }
+          else {
+            motorPositions[i] = 0.0f;
+          }
+        }
+          rpi.enqueueTXPacket(test_packet);
+          rpi.uartSend();
           robotState = READING_FROM_RPI;
           free(test_packet);
           break;
