@@ -7,26 +7,26 @@ import random
 # -------------------------
 win = turtle.Screen()
 win.title("Simple Face Animation")
-win.bgcolor("black")
+win.bgcolor("white")
 win.setup(width=1024, height=600)
 win._root.attributes("-fullscreen", True)
 
 # -------------------------
 # Eyes
 # -------------------------
-EYE_HEIGHT = 3
-EYE_WIDTH = 4   
+EYE_HEIGHT = 5
+EYE_WIDTH = 5  
 
 left_eye = turtle.Turtle()
 left_eye.shape("circle")
-left_eye.color("blue")
+left_eye.color("black")
 left_eye.penup()
 left_eye.goto(-200, 170)
 left_eye.shapesize(EYE_HEIGHT, EYE_WIDTH)
 
 right_eye = turtle.Turtle()
 right_eye.shape("circle")
-right_eye.color("blue")
+right_eye.color("black")
 right_eye.penup()
 right_eye.goto(200, 170)
 right_eye.shapesize(EYE_HEIGHT, EYE_WIDTH)
@@ -36,8 +36,8 @@ right_eye.shapesize(EYE_HEIGHT, EYE_WIDTH)
 # -------------------------
 mouth = turtle.Turtle()
 mouth.hideturtle()
-mouth.color("blue")
-mouth.pensize(10)
+mouth.color("black")
+mouth.pensize(40)
 mouth.penup()
 mouth.goto(-250, -50)
 mouth.pendown()
