@@ -86,8 +86,8 @@ HerkulexMotor motors[MOTOR_COUNT] = {
 //
 
 // status pin is analog
-ToolChanger TCR(A13, 24, 600, 400, 1600); // status pin, servo pin, attach pos, lock pos, deposit pos
-ToolChanger TCL(A12, 25, 850, 600, 1800);
+ToolChanger TCR(A13, 24, 600, 200, 1600); // status pin, servo pin, attach pos, lock pos, deposit pos
+ToolChanger TCL(A12, 25, 850, 400, 1800);
 
 // MAX30105 sensor for oximeter readings
 MAX30105 particleSensor;
