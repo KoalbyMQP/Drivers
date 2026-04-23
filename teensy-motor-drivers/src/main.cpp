@@ -16,7 +16,7 @@ enum STATE {
 
 uint8_t robotState = IDLE;
 
-uint32_t elapsedMicros;
+uint32_t loopElapsedMicros;
 uint32_t readStartTime;
 uint32_t lastPacketTime;
 
@@ -82,6 +82,7 @@ void setup(){
   find_all_motors_on_bus(SerialBusManager::getBus(BUS_R_ARM));
 
   SerialBusManager::infoAllMotors(allMotors, TOTAL_COUNT);
+  lastPacketTime = millis();
 }
 
 
@@ -152,25 +153,31 @@ void moveToZeroPositions() {
 
 
 void loop(){
+  Serial.println("Loop running");
+  Serial.flush();
   int rpi_status = rpi.uartRead(); // continuously read from the pi
-  
-  if (millis() - lastPacketTime > 5000) { // if it's been more than 5 seconds since we received a packet, go to idle state
-    Serial.println("No packet received for 5 seconds, stopping...");
-    robotState = STOP;
-  }
+  Serial.print("RPI status: ");
+  Serial.println(rpi_status);
+  Serial.flush();
+  // if (millis() - lastPacketTime > 500000) { // if it's been more than 5 seconds since we received a packet, go to idle state
+  //   Serial.println("No packet received for a while, stopping...");
+  //   delay(5);
+  //   robotState = STOP;
+  // }
 
   switch (robotState){
     case(READING_FROM_RPI):
     {
+      Serial.println("State: READING_FROM_RPI");
       if (rpi_status == -1){
-        robotState = STOP;
         break;
       }
-
+      Serial.println("Reading from RPI...!!!!");
       // If a packet arrived, handle it
-      const uint8_t* pkt = (uint8_t*) rpi.getPacket();
+      const uint8_t* pkt = rpi.getPacket();
       if (pkt != nullptr) {
-
+         Serial.print("Packet received from RPI: ");
+        Serial.println(pkt[0]);
         lastPacketTime = millis();
 
         // copy packet to avoid buffer overwrite
@@ -178,6 +185,9 @@ void loop(){
         memcpy(buffer, pkt, PACKET_SIZE);
 
         int16_t flag = buffer[0];
+        Serial.print("Flag byte: ");
+        Serial.println(flag);
+        Serial.flush();
 
         for (int i = 0; i < MOTOR_COUNT; i++) {
             RPIMotorInputs[i] = buffer[1 + i] / 100.0f;
@@ -235,6 +245,7 @@ void loop(){
             rpi.uartSend();
           }
           robotState = READING_FROM_RPI;
+          free(test_packet);
           break;
       }
       SerialBusManager::tick(allMotors, motorPositionsRaw, MOTOR_COUNT);
@@ -242,9 +253,9 @@ void loop(){
       if (SerialBusManager::isDoneCollecting() && imu1.isDoneCollecting()){
         // put data togehter into one packet 
         // send packet to RPI
-        elapsedMicros = micros() - readStartTime;
+        loopElapsedMicros = micros() - readStartTime;
         Serial.print("Elapsed time: ");
-        Serial.print(elapsedMicros);
+        Serial.print(loopElapsedMicros);
         Serial.println(" microseconds");
 
         // for (int i = 0; i < 5; i++){

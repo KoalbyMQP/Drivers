@@ -8,10 +8,11 @@
 //Different buffers
 static uint8_t rxBuf[PACKET_SIZE];
 uint8_t pktBuf[PACKET_SIZE];
-char txBuf[RPIComs::RX_BUF_SIZE];
+uint8_t outBuf[PACKET_SIZE];
+char txBuf[RPIComs::TX_BUF_SIZE];
 bool testing_serial = false;
-uint16_t startTimeRPI = 0;
-uint16_t elapsedTimeRPI = 0;
+uint32_t startTimeRPI = 0;
+uint32_t elapsedTimeRPI = 0;
 
 uint16_t rxPos = 0;
 uint16_t txPos = 0;
@@ -21,9 +22,70 @@ static bool packetReady = false;
 
 /*
     Following function returns an integer representing a command code:
-    |   0   |   No Command from Pi Read |
+    |   -1   |   No Command from Pi Read |
     |   1   |   Command Received        |
 */
+// int RPIComs::uartRead(){
+//     Serial.println("uartRead called");
+//     Serial.flush();
+//     while(RPI_SERIAL.available() > 0){
+//         // should we update 0 with the expected packet size? if it will be constant... of course when we know what it is
+//         // Set temp char to the packets with .read
+
+//         Serial.print("rxPos: ");
+//         Serial.println(rxPos);
+//         Serial.flush();
+
+//         uint8_t byte  = RPI_SERIAL.read();
+
+//         // wait for start byte to start receiving
+//         if (!receiving) {
+//             Serial.print("Received byte: ");
+//             Serial.println(byte, HEX);
+//             Serial.flush();
+
+//             if (byte == 0xAA) {
+//                 receiving = true;
+//                 rxPos = 0; // reset position for new packet
+//             }
+//             continue; // skip to next byte
+//         }
+
+
+//         // store byte in buffer and increment position
+//         Serial.print("Received byte: ");
+//         Serial.println(byte, HEX);
+//         Serial.flush();
+//         rxBuf[rxPos++] = byte;
+
+//         if (rxPos == PACKET_SIZE) {
+//             receiving = false;
+//             rxPos = 0; // reset for next packet
+
+//             memcpy(pktBuf, rxBuf, PACKET_SIZE); // copy to packet buffer for processing
+//             packetReady = true;
+//             Serial.println("Packet received and ready to process");
+//             Serial.println("First byte of packet (flag): ");
+//             Serial.flush();
+//             for(int j = 0; j < PACKET_SIZE; j++){
+//                 Serial.print(pktBuf[j], HEX);
+//                 Serial.print(" ");
+//                 Serial.flush();
+//             }
+//             //Serial.println(pktBuf[0], HEX);
+//             Serial.flush();
+//             return 1; // packet received
+//         }
+//         if (rxPos > PACKET_SIZE) {
+//             // packet too large, reset
+//             receiving = false;
+//             rxPos = 0;
+//         }
+
+//     }
+//     return -1;
+// }
+
 int RPIComs::uartRead(){
     while(RPI_SERIAL.available() > 0){
         // should we update 0 with the expected packet size? if it will be constant... of course when we know what it is
@@ -44,20 +106,19 @@ int RPIComs::uartRead(){
         // store byte in buffer and increment position
         if (rxPos < PACKET_SIZE) {
             rxBuf[rxPos++] = byte;
-        }
-        else if (rxPos == PACKET_SIZE) {
-            receiving = false;
-            rxPos = 0; // reset for next packet
-
-            memcpy(pktBuf, rxBuf, PACKET_SIZE); // copy to packet buffer for processing
-            // _rxPacketQueue.enqueue(rxBuf);
-            packetReady = true;
-            return 1; // packet received
+            if (rxPos == PACKET_SIZE) {  // Check immediately after storing
+                receiving = false;
+                rxPos = 0;
+                memcpy(pktBuf, rxBuf, PACKET_SIZE);
+                packetReady = true;
+                return 1;
+            }
         }
         else {
             // packet too large, reset
             receiving = false;
             rxPos = 0;
+            return -1;
         }
 
     }
@@ -76,7 +137,8 @@ const uint8_t* RPIComs::getPacket(){
             Serial.println(" microseconds between enqueing the message and sending it back");
         }
         packetReady = false; // reset for next packet
-        return pktBuf;
+        memcpy(outBuf, pktBuf, PACKET_SIZE); // set output buffer to the received packet
+        return outBuf;
     }
 }
 
@@ -88,7 +150,7 @@ void RPIComs::enqueueTXPacket(const char* pkt){
 // Send uart packet to pi
 void RPIComs::uartSend(){
     if(_txPacketQueue.dequeue(txBuf, sizeof(txBuf))){
-        // RPI_SERIAL.write((byte*)txBuf, sizeof(txBuf));
-        RPI_SERIAL.println(txBuf);
+        RPI_SERIAL.write((byte*)txBuf, sizeof(txBuf));
+        // RPI_SERIAL.println(txBuf);
     }
 }
