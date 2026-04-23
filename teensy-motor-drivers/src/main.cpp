@@ -294,11 +294,12 @@ void loop(){
     {
       if (true) { //only for testing
         char* test_packet = (char*) malloc(PACKET_SIZE);
+        memset(test_packet, 0, PACKET_SIZE);
         for (int i = 0; i < MOTOR_COUNT; i++) {
             motorPositions[i] = 0;
-            rpi.enqueueTXPacket(test_packet);
-            rpi.uartSend();
           }
+          rpi.enqueueTXPacket(test_packet);
+          rpi.uartSend();
           robotState = READING_FROM_RPI;
           free(test_packet);
           break;
