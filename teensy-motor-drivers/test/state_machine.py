@@ -183,6 +183,51 @@ class StateMachine:
             time.sleep(0.05)
         print("  [ERROR] No end effector response received")
         return None, None
+    
+    def execute_tool_use(self, duration):
+        """Execute a tool use state, such as reading the oximeter."""
+        print(f"\n[TOOL_USE] Activating oximeter for {duration}ms...")
+        print("-" * 40)
+        self.state = "TOOL_USE"
+
+        # Send the command to Teensy
+        cmd = f"OX|{duration}"
+        self.finley.write(f"{cmd}\n".encode())
+        print(f"  [SENT to Teensy] {cmd}")
+
+        # Calculate timeout (duration in ms to seconds, plus a 2-second buffer)
+        timeout = (duration / 1000.0) + 2.0
+        start = time.time()
+        
+        success = False
+        
+        # Block and wait for the specific tool completion response
+        while time.time() - start < timeout:
+            if self.finley.in_waiting > 0:
+                response = self.finley.readline().decode().strip()
+                if response:
+                    # Parse the specific OX response to terminate the state
+                    if response.startswith("OX|"):
+                        parts = response.split("|")
+                        if len(parts) == 2:
+                            bpm = parts[1]
+                            if bpm == "ERROR":
+                                print(f"  [Teensy] Oximeter Error - Sensor not detected")
+                            else:
+                                print(f"  [Teensy] Heart Rate: {bpm} BPM")
+                            success = True
+                            break
+                    else:
+                        # Pass through any other status messages (like standard BPM updates)
+                        print(f"  [Teensy] {response}")
+            time.sleep(0.05)
+            
+        if not success:
+            print("  [Timeout] Tool use did not return a final reading within the expected timeframe.")
+
+        print(f"\n[TOOL_USE] Operation complete, returning to idle")
+        print("-" * 40)
+        self.state = "IDLE"
 
     def execute_swap(self, action_code):
         """Execute a full deposit or attach sequence"""
@@ -392,6 +437,10 @@ class StateMachine:
                                 self.state = "SWAPPING"
                                 action_code = user_input[5:8]  # e.g. DL1, AR2
                                 self.execute_swap(action_code)
+                            elif user_input.startswith("OX|"):
+                                # Extract duration and trigger the TOOL_USE state
+                                duration = int(user_input.split("|")[1])
+                                self.execute_tool_use(duration)
                             else:
                                 self.send_command(user_input, target)
 

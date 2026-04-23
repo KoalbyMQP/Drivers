@@ -7,6 +7,7 @@
 #include <ToolChanger.h>
 #include <MAX30105.h>
 #include <heartRate.h>
+#include <spo2_algorithm.h>
 
 // the serial bus IDs for the different groups of motors, used for initialization and in the MotorRef table
 enum SERIAL_BUS {
@@ -31,6 +32,22 @@ bool bufferFull = false; // Whether the rates array has been filled at least onc
 
 float beatsPerMinute;
 float beatAvg;
+
+// Oximeter state machine variables
+bool oximeterMeasuring = false;
+unsigned long oximeterStartTime;
+unsigned long oximeterDuration = 5000; // Default 5 seconds in milliseconds
+const int OXIMETER_SAMPLE_RATE = 25; // 25 samples per second
+const int OXIMETER_BUFFER_SIZE = 100; // 4 seconds of data at 25 Hz
+uint32_t irBuffer[OXIMETER_BUFFER_SIZE];
+uint32_t redBuffer[OXIMETER_BUFFER_SIZE];
+int32_t bufferIndex = 0;
+int32_t spo2 = 0;
+int8_t spo2Valid = 0;
+int32_t heartRate = 0;
+int8_t heartRateValid = 0;
+float oximeterAvgBPM = 0;
+int32_t oximeterAvgSPO2 = 0;
 
 // robot state machine for the swapping sequence
 enum ROBOT_STATE {
@@ -97,8 +114,6 @@ void setup(){
   }
 
   // MotorRef table — used by the parallelized position read.
-  // Each entry is {busId, servoId}. Order here determines order in rawPositions[], can mix and match serial buses
-  // Add or remove entries to match the motors needed
   for (int i = 0; i < MOTOR_COUNT; i++) motorRefs[i] = motors[i].getMotorRef();
   for (int i = 0; i < MOTOR_COUNT; i++) motors[i].queueMove(0.0);
   SerialBusManager::actionAll(10000); // execute the queued moves with a 1 second timeout
@@ -149,6 +164,15 @@ void loop(){
           robotState = RUN_TO;
         }
         else if (command.startsWith("OX")){
+          // Parse OX command format: OX|duration_ms
+          int pipeIndex = command.indexOf('|');
+          if (pipeIndex != -1) {
+            String durationStr = command.substring(pipeIndex + 1);
+            oximeterDuration = durationStr.toInt();
+            if (oximeterDuration <= 0) oximeterDuration = 5000; // Default to 5 seconds if invalid
+          } else {
+            oximeterDuration = 5000; // Default to 5 seconds if no parameter
+          }
           robotState = OXIMETER;
         }
         else if (command.startsWith("E")){
@@ -159,10 +183,6 @@ void loop(){
 
     case RUN_TO: {
       // Parse command format: M0|50|10|40|-9999|1000
-      // Each position corresponds to a motor, -9999 means no movement
-      // Last value is the timing in milliseconds
-      
-      // Remove 'M' prefix and parse the pipe-separated values
       String data = lastCommand.substring(1);
       float positions[MOTOR_COUNT];
       uint16_t timing = 0;
@@ -170,13 +190,12 @@ void loop(){
       // Parse positions and timing
       int lastIndex = 0;
       int motorIndex = 0;
-      for (int i = 0; i <= data.length() && motorIndex <= MOTOR_COUNT; i++) {
-        if (data[i] == '|' || i == data.length()) {
+      for (unsigned int i = 0; i <= data.length() && motorIndex <= MOTOR_COUNT; i++) {
+        if (i == data.length() || data[i] == '|') {
           String value = data.substring(lastIndex, i);
           if (motorIndex < MOTOR_COUNT) {
             positions[motorIndex] = value.toFloat();
           } else {
-            // Last value is timing
             timing = value.toInt();
           }
           motorIndex++;
@@ -210,67 +229,76 @@ void loop(){
       robotState = IDLE;
       break;
 
-    case OXIMETER:
-      // Reset tracking variables
-      rateSpot = 0;
-      lastBeat = 0;
-      beatsPerMinute = 0;
-      beatAvg = 0;
-      
-      // Initialize rates array
-      for (byte i = 0; i < RATE_SIZE; i++) {
-        rates[i] = 0;
-      }
-
-      if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
-        Serial.println("OX|ERROR");
-        robotState = IDLE;
-        break;
-      }
-      particleSensor.setup(); // Configure sensor with default settings
-      delay(1000); // Wait for sensor to stabilize
-
-      particleSensor.setPulseAmplitudeRed(0x0A); // Set Red LED to low brightness
-      particleSensor.setPulseAmplitudeGreen(0x0A); // Set Green LED to low brightness
+    case OXIMETER: {
       long irValue = particleSensor.getIR();
       
-      Serial.println("Waiting for finger on sensor...");
-      while (irValue < 50000) { // Wait for a finger to be placed on the sensor
-        irValue = particleSensor.getIR();
-        delay(100);
-      }
-      Serial.println("Finger detected, reading oximeter...");
-      
-      // read the average for the time passed through the command from serial after OX
-      // example OX|10000, where 10000 is the time in milliseconds to read for
-      long startTime = millis();
-      long readDuration = lastCommand.substring(3).toInt();
-      while (millis() - startTime < readDuration) {
-        irValue = particleSensor.getIR();
-        if (checkForBeat(irValue)) {
-          long currentTime = millis();
-          long beatInterval = currentTime - lastBeat;
-          lastBeat = currentTime;
-
-          beatsPerMinute = 60 / (beatInterval / 1000.0);
-          if (beatsPerMinute < 255 && beatsPerMinute > 20) {
-            rates[rateSpot] = (byte)beatsPerMinute;
-            rateSpot++;
-            rateSpot %= RATE_SIZE;
-
-            beatAvg = 0;
-            for (byte i = 0; i < RATE_SIZE; i++) {
-              beatAvg += rates[i];
+      // Wait for finger detection
+      if (irValue > 50000) {
+        if (!oximeterMeasuring) {
+          // Start new measurement
+          oximeterMeasuring = true;
+          oximeterStartTime = millis();
+          bufferIndex = 0;
+          oximeterAvgBPM = 0;
+          oximeterAvgSPO2 = 0;
+          // Reset all buffers
+          for (int i = 0; i < OXIMETER_BUFFER_SIZE; i++) {
+            irBuffer[i] = 0;
+            redBuffer[i] = 0;
+          }
+          // Initialize sensor readings
+          spo2 = 0;
+          spo2Valid = 0;
+          heartRate = 0;
+          heartRateValid = 0;
+          Serial.println("OX|RECORDING_STARTED");
+        }
+        
+        if (oximeterMeasuring && bufferIndex < OXIMETER_BUFFER_SIZE) {
+          // Collect samples for the specified duration
+          if (millis() - oximeterStartTime < oximeterDuration) {
+            // Get IR and Red LED readings
+            uint32_t red = particleSensor.getRed();
+            
+            irBuffer[bufferIndex] = irValue;
+            redBuffer[bufferIndex] = red;
+            bufferIndex++;
+          } else {
+            // 5 seconds elapsed, process the data
+            if (bufferIndex > 0) {
+              // Calculate heart rate and SpO2
+              maxim_heart_rate_and_oxygen_saturation(irBuffer, bufferIndex, redBuffer, &spo2, &spo2Valid, &heartRate, &heartRateValid);
+              
+              oximeterAvgBPM = (float)heartRate;
+              oximeterAvgSPO2 = spo2;
+              
+              // Output recording finished and results
+              Serial.println("OX|RECORDING_FINISHED");
+              Serial.print("OX|");
+              Serial.print(oximeterAvgBPM);
+              Serial.print("|");
+              Serial.println(oximeterAvgSPO2);
+            } else {
+              Serial.println("OX|ERROR|No samples collected");
             }
-            beatAvg /= RATE_SIZE;
+            
+            // Reset for next measurement
+            oximeterMeasuring = false;
+            bufferIndex = 0;
+            robotState = IDLE;
           }
         }
-        delay(100);
+      } else {
+        // No finger detected
+        if (oximeterMeasuring) {
+          Serial.println("OX|ERROR|Finger removed");
+          oximeterMeasuring = false;
+          bufferIndex = 0;
+        }
+        Serial.println("OX|WAITING_FOR_FINGER");
+        delay(500); // Avoid flooding serial output
       }
-      // print the average heart rate to serial for python to read, format: OX|avg_bpm
-      Serial.print("OX|");
-      Serial.println(beatAvg);
-      robotState = IDLE;
       break;
+    }
   }
 }
