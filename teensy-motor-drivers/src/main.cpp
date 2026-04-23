@@ -25,9 +25,6 @@ float RPIMotorInputs[MOTOR_COUNT] = {0};
 uint16_t motorPositionsRaw[MOTOR_COUNT] = {0};
 char imuPacket[32]; 
 
-HerkulexMotor myMotor = HerkulexMotor(3, DRS_0601, BUS_R_LEG);
-
-
 RPIComs rpi = RPIComs();
 IMU imu1;  // uses sensorID=55 and address=0x28 automatically
 
@@ -53,6 +50,10 @@ void setup(){
   SerialBusManager::createBus(SERIAL_BUS::BUS_L_ARM);
   SerialBusManager::createBus(SERIAL_BUS::BUS_R_ARM);
   SerialBusManager::startAllBuses(BAUD_RATE::SPEED_115K);
+  delay(1000);
+  SerialBusManager::initAllMotors();
+  // SerialBusManager::torqueOnAllMotors();
+  delay(1000);
   delay(1000);
   SerialBusManager::initAllMotors();
   // SerialBusManager::torqueOnAllMotors();
@@ -83,6 +84,28 @@ void setup(){
 
   SerialBusManager::infoAllMotors(allMotors, TOTAL_COUNT);
   lastPacketTime = millis();
+
+  while (true){
+    SerialBusManager::requestAllPositions(allMotors, motorPositionsRaw, MOTOR_COUNT);
+
+    while(!SerialBusManager::isDoneCollecting()){
+      SerialBusManager::tick(allMotors, motorPositionsRaw, MOTOR_COUNT);
+
+    }
+
+    for (int i = 0; i < MOTOR_COUNT; i++){
+      // allmotors is an array of motor refs, as opposed to holding motor objects like motors did before
+      motorPositions[i] = HerkulexMotor::motorRefRawToDegs(allMotors[i], motorPositionsRaw[i]);          
+      Serial.print("Bus ID: ");
+      Serial.print(allMotors[i].busId);
+      Serial.print("    Motor ID: ");
+      Serial.print(allMotors[i].servoId);
+      Serial.print(" Position (deg): ");
+      Serial.println(motorPositions[i]);
+    }
+
+    delay(1000);
+  }
 }
 
 
@@ -153,12 +176,12 @@ void moveToZeroPositions() {
 
 
 void loop(){
-  Serial.println("Loop running");
-  Serial.flush();
+  // Serial.println("Loop running");
+  // Serial.flush();
   int rpi_status = rpi.uartRead(); // continuously read from the pi
-  Serial.print("RPI status: ");
-  Serial.println(rpi_status);
-  Serial.flush();
+  // Serial.print("RPI status: ");
+  // Serial.println(rpi_status);
+  // Serial.flush();
   // if (millis() - lastPacketTime > 500000) { // if it's been more than 5 seconds since we received a packet, go to idle state
   //   Serial.println("No packet received for a while, stopping...");
   //   delay(5);
@@ -258,7 +281,6 @@ void loop(){
         Serial.print(loopElapsedMicros);
         Serial.println(" microseconds");
 
-        // for (int i = 0; i < 5; i++){
         // //for (int i = 0; i < MOTOR_COUNT; i++){
         //   // allmotors is an array of motor refs, as opposed to holding motor objects like motors did before
         //   motorPositions[i] = HerkulexMotor::motorRefRawToDegs(allMotors[i], motorPositionsRaw[i]);          
