@@ -20,6 +20,7 @@ class RPIComs{
     public:
         static constexpr size_t RX_BUF_SIZE   = 256; // shorten this when we know the constant packet size?
         static constexpr size_t MAX_PACKETS   = 8;
+        static const uint16_t TX_BUF_SIZE = PACKET_SIZE;
 
         // RPIComs() = default;
 
