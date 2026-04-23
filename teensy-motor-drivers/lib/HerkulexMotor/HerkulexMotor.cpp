@@ -146,10 +146,6 @@ void HerkulexMotor::motorRefReboot(const MotorRef &ref){
 float HerkulexMotor::motorRefRawToDegs(const MotorRef &ref, uint16_t rawPos){
     uint16_t masked = rawPos & ModelInfo[static_cast<int>(ref.type)].posBitMask;
     return stepsToDeg(masked, ref.type);
-
-    // const HerkulexMotorSpec& m = ModelInfo[static_cast<int>(ref.type)];
-    // int32_t centered = (int32_t)masked - (int32_t)m.zeroSteps;
-    // return m.degPerStep * (float)centered;
 }
 
 

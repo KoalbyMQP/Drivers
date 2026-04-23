@@ -59,7 +59,7 @@
 // this way, the instance is related to the port as opposed to having to pass it, 
 // this allows the function on the instance to be unaware of the serial port, which makes them simpler
 
-HerkulexClass::HerkulexClass() : _serialPort(0), queuedPacketCount(0), playTime(0) {}
+HerkulexClass::HerkulexClass() : _serialPort(0) {} // queuedByteCount(0), PlayTimeSJog(0) {}
 
 HerkulexClass::HerkulexClass(uint8_t serialPort){
 	
@@ -87,7 +87,7 @@ HerkulexClass::HerkulexClass(uint8_t serialPort){
 } 
 
 void HerkulexClass::resetClassVals(){
-	queuedPacketCount = 0;
+	queuedByteCount = 0;
 	newDataInInputBuffer = false;
 	readStartTime = 0;
 	packetLength = 0;
@@ -96,7 +96,6 @@ void HerkulexClass::resetClassVals(){
 	checksumOne = 0;
 	checksumTwo = 0;
 	additionalDataLength = 0;
-	playTime = 0;
 	goalLSB = 0;
 	goalMSB = 0;
 	SET = 0;
@@ -221,26 +220,23 @@ void HerkulexClass::clearError(int servoID)
 
 void HerkulexClass::queueMove(motorMoveInfo moveInfo)
 {	  
-	packetQueue[queuedPacketCount++] = (uint8_t) (moveInfo.goalPos & 0xFF);        // add 8 lower bits of 16 bit goal
-	packetQueue[queuedPacketCount++] = (uint8_t) (moveInfo.goalPos >> 8 & 0xFF);   // add 8 higher bits of 16 bit goal
-	packetQueue[queuedPacketCount++] = (uint8_t) (moveInfo.ledColor << 2);         // add LED value
-	packetQueue[queuedPacketCount++] = moveInfo.servoID;                           // add id of servo
+	packetQueue[++queuedByteCount] = (uint8_t) (moveInfo.goalPos & 0X00FF);        // add 8 lower bits of 16 bit goal
+	packetQueue[++queuedByteCount] = (uint8_t) ((moveInfo.goalPos & 0XFF00) >> 8); // add 8 higher bits of 16 bit goal, masked to preserve reserved last bit of MSB
+	packetQueue[++queuedByteCount] = moveInfo.ledColor << 2;                       // add LED value
+	packetQueue[++queuedByteCount] = moveInfo.servoID;                             // add id of servo
 }
 
 // move all servos with the same execution time
 // DO NOT USE IN MAIN: USE HerkulexMotor::actionMoves(int playTimeMs) instead
 void HerkulexClass::actionMoves(uint8_t playTime)
 {
-	uint8_t optionalDataLength = PACKET_LENGTH_BYTES::HSJOG_MOVEMULTIPLE_DATA_LENGTH + queuedPacketCount;
-    uint8_t optionalData[optionalDataLength];
+    packetQueue[0] = playTime; // add playtime to packetqueue
+	queuedByteCount += 1;      // update count
 
-    optionalData[0] = playTime;
-    memcpy(&optionalData[1], packetQueue, queuedPacketCount);
-
-    buildPacket(PACKET_CONSTS::ALL_SERVOS, optionalData, optionalDataLength, COMMAND::HSJOG);
+	// build and send packet
+    buildPacket(PACKET_CONSTS::ALL_SERVOS, packetQueue, queuedByteCount, COMMAND::HSJOG);
     sendData(packet, packetLength);
-
-    queuedPacketCount = 0;
+    queuedByteCount = 0;
 }
 
 // Builds and sends the RAMREAD position-request packet then returns immediately.
@@ -309,6 +305,10 @@ uint16_t HerkulexClass::getSpeed(int servoID) {
 		return (((uint16_t)dataBuffer[1] << 8) | dataBuffer[0]) & 0x03FF; // build 16 bit int, then mask to 10 bits (max 1023)
 	}
 	return -1;
+}
+
+uint8_t HerkulexClass::getQueuedBytes(){
+	return queuedByteCount;
 }
 
 // moves one motor with the set moveInfo of goal, ID, LED color, and playTime
@@ -423,12 +423,10 @@ bool HerkulexClass::readPacketReply(uint8_t servoID, uint8_t* outputBuffer, uint
     packetLength = PACKET_LENGTH_BYTES::BASE_LENGTH + optionalDataLength;
 
     if (!readBlocking(packetLength)){
-		// Serial.println("readBlocking returned nothing."); 
 		return false;
 	}
 	// Something is going wrong in verifyInputPacket
     if (!verifyInputPacket(inputBuffer, packetLength)){
-		//Serial.println("Packet cannot be verified.");
 		return false;
 	}
 

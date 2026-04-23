@@ -221,6 +221,7 @@ class HerkulexClass {
     void moveOne(motorMoveInfo moveInfo);
     uint16_t getPositionBlocking(int servoID);
     uint16_t getSpeed(int servoID);
+    uint8_t getQueuedBytes();
 
     // simultaneous move methods
     void queueMove(motorMoveInfo moveInfo);
@@ -279,19 +280,18 @@ class HerkulexClass {
       uint8_t checksumOne;
       uint8_t checksumTwo;
 
-      uint8_t additionalDataLength; // length of additional data
+      uint8_t additionalDataLength = 0; // length of additional data
 
       // servo jog "optional data"
-      uint8_t playTime;
       uint8_t goalLSB; // lower 8 bits of goal
       uint8_t goalMSB; // upper 8 bits of goal : in total 16 bit goal
       uint8_t SET; // called in datasheet, it contains multiple bits of distinct info
       uint8_t ID; // seperate from pID in datasheet but same for our use case
 
 
-      uint8_t queuedPacketCount;
-      uint8_t packet[DATA_MOVE + PACKET_LENGTH_BYTES::BASE_LENGTH + PACKET_LENGTH_BYTES::HSJOG_MOVEONE_DATA_LENGTH]; // stores full packet to send
-      uint8_t packetQueue[DATA_MOVE];  // stores move packets for simulataneous jog
+      uint8_t queuedByteCount;
+      uint8_t packet[20 + PACKET_LENGTH_BYTES::BASE_LENGTH + PACKET_LENGTH_BYTES::HSJOG_MOVEONE_DATA_LENGTH]; // stores full packet to send
+      uint8_t packetQueue[20];  // max for 5 servos
       uint8_t inputBuffer[DATA_MOVE]; // stores input HOW LARGE DOES THIS NEED TO BE?
       uint8_t checksumData[PACKET_LENGTH_BYTES::BASE_LENGTH];  // stores checksumdata for input validation 
 };

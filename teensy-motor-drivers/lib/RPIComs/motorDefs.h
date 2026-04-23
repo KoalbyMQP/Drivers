@@ -9,7 +9,7 @@ enum SERIAL_BUS_COUNTS {
   BUS_L_LEG_COUNT = 5,
   BUS_R_LEG_COUNT = 5,
   BUS_CHEST_COUNT = 5,
-  BUS_L_ARM_COUNT = 3,
+  BUS_L_ARM_COUNT = 5,
   BUS_R_ARM_COUNT = 5,
   TOTAL_COUNT = BUS_L_LEG_COUNT + BUS_R_LEG_COUNT + BUS_CHEST_COUNT + BUS_L_ARM_COUNT + BUS_R_ARM_COUNT,
 };
@@ -50,17 +50,17 @@ inline MotorRef chestMotors[BUS_CHEST_COUNT] = {
 
 inline MotorRef leftArmMotors[BUS_L_ARM_COUNT] = {
   (HerkulexMotor(1, MotorModel::DRS_0201,         SERIAL_BUS::BUS_L_ARM, -10.0, 10.0)).getMotorRef(),
-  (HerkulexMotor(2, MotorModel::DRS_0602_GEARBOX, SERIAL_BUS::BUS_L_ARM, -180.0, 40.0)).getMotorRef(),
+  (HerkulexMotor(2, MotorModel::DRS_0602_GEARBOX, SERIAL_BUS::BUS_L_ARM, -45, 40.0)).getMotorRef(),
   (HerkulexMotor(3, MotorModel::DRS_0601,         SERIAL_BUS::BUS_L_ARM, -99.0, 80.0)).getMotorRef(),
-  // (HerkulexMotor(4, MotorModel::DRS_0201,         SERIAL_BUS::BUS_L_ARM, -180.0, 180.0)).getMotorRef(),
-  // (HerkulexMotor(5, MotorModel::DRS_0201,         SERIAL_BUS::BUS_L_ARM, -110.0, 110.0)).getMotorRef(),
+  (HerkulexMotor(4, MotorModel::DRS_0201,         SERIAL_BUS::BUS_L_ARM, -145.0, 145.0)).getMotorRef(),
+  (HerkulexMotor(5, MotorModel::DRS_0201,         SERIAL_BUS::BUS_L_ARM, -110.0, 110.0)).getMotorRef(),
 };
 
 inline MotorRef rightArmMotors[BUS_R_ARM_COUNT] = {
   (HerkulexMotor(1, MotorModel::DRS_0201,         SERIAL_BUS::BUS_R_ARM, -45.0, 45.0)).getMotorRef(), //technically this motor (bottom neck) should be able to do 360, but no need
-  (HerkulexMotor(2, MotorModel::DRS_0602_GEARBOX, SERIAL_BUS::BUS_R_ARM, -40.0, 180.0)).getMotorRef(),
-  (HerkulexMotor(3, MotorModel::DRS_0601,         SERIAL_BUS::BUS_R_ARM, -80.0 ,99.0)).getMotorRef(),
-  (HerkulexMotor(4, MotorModel::DRS_0201,         SERIAL_BUS::BUS_R_ARM, -180.0, 180.0)).getMotorRef(),
+  (HerkulexMotor(2, MotorModel::DRS_0602_GEARBOX, SERIAL_BUS::BUS_R_ARM, -40.0, 145.0)).getMotorRef(),
+  (HerkulexMotor(3, MotorModel::DRS_0601,         SERIAL_BUS::BUS_R_ARM, -80.0, 99.0)).getMotorRef(),
+  (HerkulexMotor(4, MotorModel::DRS_0201,         SERIAL_BUS::BUS_R_ARM, -145.0, 145.0)).getMotorRef(),
   (HerkulexMotor(5, MotorModel::DRS_0201,         SERIAL_BUS::BUS_R_ARM, -110.0, 110.0)).getMotorRef(),
 };
 
