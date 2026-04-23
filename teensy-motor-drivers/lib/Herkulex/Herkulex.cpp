@@ -223,7 +223,7 @@ void HerkulexClass::queueMove(motorMoveInfo moveInfo)
 {	  
 	packetQueue[queuedPacketCount++] = (uint8_t) (moveInfo.goalPos & 0xFF);        // add 8 lower bits of 16 bit goal
 	packetQueue[queuedPacketCount++] = (uint8_t) (moveInfo.goalPos >> 8 & 0xFF);   // add 8 higher bits of 16 bit goal
-	packetQueue[queuedPacketCount++] = (moveInfo.ledColor << 2);                   // add LED value
+	packetQueue[queuedPacketCount++] = (uint8_t) (moveInfo.ledColor << 2);         // add LED value
 	packetQueue[queuedPacketCount++] = moveInfo.servoID;                           // add id of servo
 }
 
