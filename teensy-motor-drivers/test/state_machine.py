@@ -231,16 +231,13 @@ class StateMachine:
 
         if side == "L":
             # TODO: Replace with real motor positions for approaching the LEFT swap station
-            approach_move_1 = "M70|-9999|30|-95|15|-90|-9999|-9999|-9999|-9999|5000"
-            approach_move_2 = "M15|-9999|60|-95|8|-15|-9999|-9999|-9999|-9999|5000"
-            approach_move_3 = "M-50|-9999|45|-10|8|-35|-9999|-9999|-9999|-9999|5000"
+            approach_move_1 = "M70|-9999|0|-95|0|-90|-9999|-9999|-9999|-9999|4000"
+            approach_move_2 = "M-20|-9999|0|-45|0|-25|-9999|-9999|-9999|-9999|4000"
 
-            # 
         else:
             # TODO: Replace with real motor positions for approaching the RIGHT swap station
-            approach_move_1 = "M-10|-20|-9999|-9999|-9999|-9999|-9999|-9999|-9999|-9999|1500"
-            approach_move_2 = "M-15|-25|-30|-9999|-9999|-9999|-9999|-9999|-9999|-9999|1500"
-            approach_move_3 = "M-15|-25|-30|-9999|-9999|-9999|-9999|-9999|-9999|-9999|1500"
+            approach_move_1 = "M-9999|-70|-9999|-9999|-9999|-9999|0|-95|0|-90|4000"
+            approach_move_2 = "M-9999|20|-9999|-9999|-9999|-9999|0|-45|0|-25|4000"
 
         print("  [3a] Approach movement 1...")
         self.finley.write(f"{approach_move_1}\n".encode())
@@ -257,35 +254,21 @@ class StateMachine:
             print("[ABORT] Arm approach movement 2 did not complete")
             self.state = "IDLE"
             return
-        
-        print("  [3c] Approach movement 3 (final alignment)...")
-        self.finley.write(f"{approach_move_3}\n".encode())
-        print(f"  [SENT to Teensy] {approach_move_3}")
-        if not self.wait_for_response(self.finley, "M|COMPLETE"):
-            print("[ABORT] Arm approach movement 3 did not complete")
-            self.state = "IDLE"
-            return
 
         # --- Step 4: Attach or deposit the end effector ---
-        teensy_cmd = f"{'A' if action == 'A' else 'D'}{side}"  # e.g. AL, DR
+        if action == "D":
+            teensy_cmd = f"D{side}"  # e.g. DL, DR
+        else:
+            teensy_cmd = "A"  # Just "A" for attach
+        
         print(f"\n[4/6] {'Attaching' if action == 'A' else 'Depositing'} end effector ({teensy_cmd})...")
         self.finley.write(f"{teensy_cmd}\n".encode())
         print(f"  [SENT to Teensy] {teensy_cmd}")
 
         if action == "D":
-            # Wait 2 seconds for the deposit to settle then check, continue regardless
+            # Wait 2 seconds for the deposit to settle
             print("  [WAIT] Waiting 2 seconds for deposit to settle...")
             time.sleep(2)
-            print("  [CHECK] Verifying end effector released...")
-            right_attached, left_attached = self.check_end_effector()
-            if right_attached is None:
-                print("  [WARN] Could not read end effector status after deposit, continuing anyway")
-            else:
-                attached = right_attached if side == "R" else left_attached
-                if attached:
-                    print("  [WARN] End effector may not have released, continuing anyway")
-                else:
-                    print("  [OK] End effector successfully released")
 
         elif action == "A":
             # Wait for M|COMPLETE, then wait 2 seconds and verify, continue regardless
@@ -303,22 +286,29 @@ class StateMachine:
                     print("  [WARN] End effector may not have attached, continuing anyway")
                 else:
                     print("  [OK] End effector successfully attached")
+                    
+                    # Lock the end effector after detecting it's attached
+                    lock_cmd = f"L{side}"  # e.g. LL, LR
+                    print(f"  [4b/6] Locking end effector ({lock_cmd})...")
+                    self.finley.write(f"{lock_cmd}\n".encode())
+                    print(f"  [SENT to Teensy] {lock_cmd}")
+                    if not self.wait_for_response(self.finley, "M|COMPLETE"):
+                        print("  [WARN] Lock M|COMPLETE not received, continuing anyway")
 
         # --- Step 5: Move arm back to home (2 chained movements, left and right are different) ---
         print(f"\n[5/6] Moving arm back to home position...")
 
         if side == "L":
             # TODO: Replace with real motor positions for retracting from the LEFT swap station
-            retract_move_1 = "M15|-9999|55|-95|10|-15|-9999|-9999|-9999|-9999|5000"
-            retract_move_2 = "M70|-9999|30|-95|15|-90|-9999|-9999|-9999|-9999|5000"
-            retract_move_3 = "M0|-9999|0|0|0|0|-9999|-9999|-9999|-9999|5000"
+            retract_move_1 = "M-20|-9999|0|-45|0|-25|-9999|-9999|-9999|-9999|4000"
+            retract_move_2 = "M70|-9999|0|-95|0|-90|-9999|-9999|-9999|-9999|4000"
+            retract_move_3 = "M0|-9999|0|0|0|0|-9999|-9999|-9999|-9999|4000"
 
-            
         else:
             # TODO: Replace with real motor positions for retracting from the RIGHT swap station
-            retract_move_1 = "M-15|-25|-30|-9999|-9999|-9999|-9999|-9999|-9999|-9999|1500"
-            retract_move_2 = "M0|0|0|-9999|-9999|-9999|-9999|-9999|-9999|-9999|1500"
-            retract_move_3 = "M10|20|9999|9999|9999|9999|9999|9999|9999|9999|1500"
+            retract_move_1 = "M-9999|0|-9999|-9999|-9999|-9999|0|0|0|0|4000"
+            retract_move_2 = "M-9999|0|-9999|-9999|-9999|-9999|0|0|0|0|4000"
+            retract_move_3 = "M-9999|0|-9999|-9999|-9999|-9999|0|0|0|0|4000"
 
         print("  [5a] Retract movement 1...")
         self.finley.write(f"{retract_move_1}\n".encode())
@@ -336,7 +326,7 @@ class StateMachine:
             self.state = "IDLE"
             return
         
-        print("  [5c] Retract movement 3 (final alignment)...")
+        print("  [5c] Retract movement 3...")
         self.finley.write(f"{retract_move_3}\n".encode())
         print(f"  [SENT to Teensy] {retract_move_3}")
         if not self.wait_for_response(self.finley, "M|COMPLETE"):
@@ -346,6 +336,8 @@ class StateMachine:
 
         # --- Step 6: Move elevator back to home ---
         print(f"\n[6/6] Moving elevator back to home ({elevator_home})...")
+        print("  [WAIT] Waiting for arm to fully settle...")
+        time.sleep(1)
         self.swapping_station.write(f"{elevator_home}\n".encode())
         print(f"  [SENT to ESP32] {elevator_home}")
         if not self.wait_for_response(self.swapping_station, "MC"):
@@ -412,9 +404,9 @@ class StateMachine:
                         if response.startswith("E|"):
                             parts = response.split("|")
                             if len(parts) == 3:
-                                tcr_status = "ATTACHED" if parts[1] >= "1" else "DETACHED"
-                                tcl_status = "ATTACHED" if parts[2] >= "1" else "DETACHED"
-                                print(f"\n[Teensy] End Effector Status - Right: {tcr_status}, Left: {tcl_status}")
+                                right_attached = int(parts[1]) != 0
+                                left_attached  = int(parts[2]) != 0
+                                print(f"\n[Teensy] End Effector Status - Right: {right_attached}, Left: {left_attached}")
                             else:
                                 print(f"\n[Teensy] {response}")
                         elif response.startswith("OX|"):
@@ -454,5 +446,6 @@ class StateMachine:
                 self.swapping_station.close()
 
 if __name__ == "__main__":
+
     machine = StateMachine()
     machine.run()

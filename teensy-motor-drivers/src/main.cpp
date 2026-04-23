@@ -64,9 +64,13 @@ HerkulexMotor motors[MOTOR_COUNT] = {
   HerkulexMotor(26, MotorModel::DRS_0201, SERIAL_BUS::BUS_R_ARM),
 };
 
+// 
+//
+//
+
 // status pin is analog
 ToolChanger TCR(A13, 24, 600, 400, 1600); // status pin, servo pin, attach pos, lock pos, deposit pos
-ToolChanger TCL(A12, 25, 800, 600, 1800);
+ToolChanger TCL(A12, 25, 850, 600, 1800);
 
 // MAX30105 sensor for oximeter readings
 MAX30105 particleSensor;
@@ -120,22 +124,26 @@ void loop(){
         lastCommand = command;
         
         if (command.startsWith("DL")){
-          TCR.depositTool();
+          TCL.depositTool();
+          Serial.println("M|COMPLETE");
         }
         else if (command.startsWith("DR")){
-          TCL.depositTool();
+          TCR.depositTool();
+          Serial.println("M|COMPLETE");
         }
-        else if (command.startsWith("AL")){
-          TCR.attachTool();
-        }
-        else if (command.startsWith("AR")){
+        else if (command.startsWith("A") && !command.startsWith("AL") && !command.startsWith("AR")){
+          // Generic attach command - attach both sides
           TCL.attachTool();
+          TCR.attachTool();
+          Serial.println("M|COMPLETE");
         }
         else if (command.startsWith("LL")){
-          TCR.lockTool();
+          TCL.lockTool();
+          Serial.println("M|COMPLETE");
         }
         else if (command.startsWith("LR")){
-          TCL.lockTool();
+          TCR.lockTool();
+          Serial.println("M|COMPLETE");
         }
         else if (command.startsWith("M")){
           robotState = RUN_TO;
