@@ -4,7 +4,11 @@
 
 // Function prototype
 void printJoints();
-void goToStartPosition();
+void startFromZero();
+void makeMove(char hand, char file);
+
+// Global Variables
+bool isHoldingPiece = false;
 
 // Define the motors
 // Right Arm (Serial Bus 1)
@@ -73,7 +77,7 @@ void loop() {
 
   Serial.println("Going to start position...");
 
-  goToStartPosition();
+  startFromZero();
 
   Serial.println("At start position.");
 
@@ -110,7 +114,7 @@ void printJoints(){
   Serial.println("Done.");
 }
 
-void goToStartPosition() {
+void startFromZero() {
   shoulderR.queueMove(-2.28);
   bicepR.queueMove(151.62);
   elbowR.queueMove(1.14);
@@ -164,4 +168,50 @@ void goToStartPosition() {
   HerkulexMotor::actionMoves(1000, allMotors, 12);
 
   delay(1000);
+}
+
+// Helpers in main.cpp
+
+void applyPosition(const float angles[5], HerkulexMotor* arm[], float gripperAngle) {
+    arm[0]->queueMove(angles[0]); // shoulder
+    arm[1]->queueMove(angles[1]); // bicep
+    arm[2]->queueMove(angles[2]); // elbow
+    arm[3]->queueMove(angles[3]); // wrist
+    arm[4]->queueMove(angles[4]); // hand
+    arm[5]->queueMove(gripperAngle);
+    HerkulexMotor::actionMoves(1000, arm, 6);
+    delay(1000);
+}
+
+int columnIndex(char file) {
+    for (int i = 0; i < NUM_COLUMNS; i++) {
+        if (COLUMN_KEYS[i] == file) return i;
+    }
+    return -1;
+}
+
+void pickUpFromColumn(HerkulexMotor* arm[], const ColumnPositions& col, float gripOpen, float gripClosed) {
+    applyPosition(col.above.angles, arm, gripOpen);   // Move above
+    applyPosition(col.pick.angles,  arm, gripOpen);   // Lower
+    applyPosition(col.pick.angles,  arm, gripClosed); // Grip
+    applyPosition(col.above.angles, arm, gripClosed); // Raise
+}
+
+void makeMove(char hand, char file) {
+    int col = columnIndex(file);
+    if (col == -1) {
+        Serial.println("Unknown file!");
+        return;
+    }
+
+    if (hand == 'R') {
+        if (!isHoldingPiece) {
+            pickUpFromColumn(rightArmMotors, RIGHT_COLUMNS[col], ROpen, RClosed);
+            isHoldingPiece = true;
+        } else {
+            // place-down logic (mirror of pickup) goes here
+        }
+    } else if (hand == 'L') {
+        // Left arm equivalent
+    }
 }

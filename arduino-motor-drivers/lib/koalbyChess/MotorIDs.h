@@ -20,85 +20,27 @@ enum MotorID {
     gripper_left = 35,
 };
 
-/*
-Joint Positions for Squares:
-Gripper Right Open: 6.50
-Gripper Right Closed: -6.50
+float ROpen = 7.50;  // Right hand open angle
+float RClosed = -7.50; // Right hand closed angle
 
-Gripper Left Open:
-Gripper Left Closed:
+struct ArmPosition {
+    float angles[5];  // shoulder, bicep, elbow, wrist, hand
+};
 
-Right Above Column H: 
-    shoulderR.queueMove(122.25);
-    bicepR.queueMove(-7.00);
-    elbowR.queueMove(-46.46);
-    wristR.queueMove(4.55);
-    handR.queueMove(23.72);
+struct ColumnPositions {
+    ArmPosition above;
+    ArmPosition pick;
+};
 
-Right Pick Up Column H:
-    shoulderR.queueMove(87.46);
-    bicepR.queueMove(-7.17);
-    elbowR.queueMove(-40.91);
-    wristR.queueMove(7.48);
-    handR.queueMove(47.45);
-
-Right Above Column G:
-    shoulderR.queueMove(89.16);
-    bicepR.queueMove(-15.61);
-    elbowR.queueMove(6.19);
-    wristR.queueMove(6.82);
-    handR.queueMove(2.27);
-    
-Right Pick Up Column G:
-    shoulderR.queueMove(77.07);
-    bicepR.queueMove(-15.61);
-    elbowR.queueMove(-11.41);
-    wristR.queueMove(7.15);
-    handR.queueMove(26.32);
-
-Right Above Column F:
-    shoulderR.queueMove(80.16);
-    bicepR.queueMove(-29.72);
-    elbowR.queueMove(1.30);
-    wristR.queueMove(0.00);
-    handR.queueMove(29.57);
-
-Right Pick Up Column F:
-    shoulderR.queueMove(68.16);
-    bicepR.queueMove(-29.72);
-    elbowR.queueMove(1.30);
-    wristR.queueMove(0.00);
-    handR.queueMove(29.57);
-
-Right Above Column E:
-    shoulderR.queueMove(91.44);
-    bicepR.queueMove(-44.58);
-    elbowR.queueMove(-0.81);
-    wristR.queueMove(0.97);
-    handR.queueMove(6.50);
-
-Right Pick Up Column E:
-    shoulderR.queueMove(77.44);
-    bicepR.queueMove(-44.58);
-    elbowR.queueMove(-0.81);
-    wristR.queueMove(0.97);
-    handR.queueMove(13.50);
-
-Right Above Column D:
-    shoulderR.queueMove(84.76);
-    bicepR.queueMove(-58.47);
-    elbowR.queueMove(5.71);
-    wristR.queueMove(0.00);
-    handR.queueMove(0.65);
-
-Right Pick Up Column D:
-    shoulderR.queueMove(56.56);
-    bicepR.queueMove(-58.47);
-    elbowR.queueMove(5.87);
-    wristR.queueMove(-5.20);
-    handR.queueMove(32.18);
-
-
-*/
+// Right arm column positions (H, G, F, E, D)
+const ColumnPositions RIGHT_COLUMNS[] = {
+    { {122.25, -7.00, -46.46, 4.55, 23.72}, {87.46, -7.17, -40.91, 7.48, 47.45} },  // H
+    { {89.16, -15.61, 6.19, 6.82, 2.27},    {77.07, -15.61, -11.41, 7.15, 26.32} }, // G
+    { {80.16, -29.72, 1.30, 0.00, 29.57},   {68.16, -29.72, 1.30, 0.00, 29.57} },   // F
+    { {91.44, -44.58, -0.81, 0.97, 6.50},   {77.44, -44.58, -0.81, 0.97, 13.50} },  // E
+    { {84.76, -58.47, 5.71, 0.00, 0.65},    {56.56, -58.47, 5.87, -5.20, 32.18} },  // D
+};
+const char COLUMN_KEYS[] = {'H', 'G', 'F', 'E', 'D'};
+const int NUM_COLUMNS = 5;
 
 #endif
