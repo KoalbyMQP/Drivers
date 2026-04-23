@@ -171,14 +171,14 @@ void loop(){
       // Serial.println("Reading from RPI...!!!!");
       // If a packet arrived, handle it
       const uint8_t* pkt = rpi.getPacket();
-      if (true) { //only for testing
-        char* test_packet = (char*) malloc(PACKET_SIZE);
-        for (int i = 0; i < MOTOR_COUNT; i++) {
-            motorPositions[i] = pkt[i+1] / 100.0f;
-            rpi.enqueueTXPacket(test_packet);
-            rpi.uartSend();
+      if (true) { // only for testing
+          char* test_packet = (char*) malloc(PACKET_SIZE);
+          // Don't use pkt here in test mode — it may be null
+          for (int i = 0; i < MOTOR_COUNT; i++) {
+              motorPositions[i] = 0;  // dummy value for testing
+              rpi.enqueueTXPacket(test_packet);
+              rpi.uartSend();
           }
-          robotState = READING_FROM_RPI;
           free(test_packet);
           break;
       }
@@ -204,7 +204,7 @@ void loop(){
             RPIMotorInputs[i] = buffer[1 + i] / 100.0f;
         }
         // done receiving packet now, we set position
-        if (flag == START_BYTE) { // 1 is start
+        if (flag == 1) { // 1 is start
           // moveToZeroPositions();  // uncomment for later implementation
           robotState = READING_FROM_RPI;
           break;
