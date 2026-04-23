@@ -6,6 +6,7 @@
 void printJoints();
 void startFromZero();
 void makeMove(char hand, char file);
+void goToHomePosition(HerkulexMotor* arm[], float gripOpen);
 
 // Global Variables
 bool isHoldingPiece = false;
@@ -37,55 +38,59 @@ HerkulexMotor* leftArmMotors[] = { &shoulderL, &bicepL, &elbowL, &wristL, &handL
 
 void setup() {
 
-  Serial.begin(9600);
-  while (!Serial); // Wait for Serial Monitor to open
-  Serial.println("System Starting...");
+    Serial.begin(9600);
+    while (!Serial); // Wait for Serial Monitor to open
+    Serial.println("System Starting...");
 
-  // 1. Initialize Serial Ports at 115200 baud (standard for Herkulex on Mega)
-  HerkulexMotor::initSerialPorts(115200); 
+    // 1. Initialize Serial Ports at 115200 baud (standard for Herkulex on Mega)
+    HerkulexMotor::initSerialPorts(115200); 
+        
+    // 2. Clear errors and enable torque for all motors on all active buses
+    HerkulexMotor::initialize();
+
+    // shoulderR.queueMove(0.0);
+    // bicepR.queueMove(0.0);
+    // elbowR.queueMove(0.0);
+    // wristR.queueMove(0.0);
+    // handR.queueMove(0.0);
+    // gripperR.queueMove(0.0);
+        
+    // shoulderL.queueMove(0.0);
+    // bicepL.queueMove(0.0);
+    // elbowL.queueMove(0.0);
+    // wristL.queueMove(0.0);
+    // handL.queueMove(0.0);
+    // gripperL.queueMove(0.0);
+
+    // HerkulexMotor::actionMoves(1000, allMotors, 12);
+
+    // delay(1000);
     
-  // 2. Clear errors and enable torque for all motors on all active buses
-  HerkulexMotor::initialize();
+    // Serial.println("Set up Finished");
 
-  shoulderR.queueMove(0.0);
-  bicepR.queueMove(0.0);
-  elbowR.queueMove(0.0);
-  wristR.queueMove(0.0);
-  handR.queueMove(0.0);
-  gripperR.queueMove(0.0);
-    
-  shoulderL.queueMove(0.0);
-  bicepL.queueMove(0.0);
-  elbowL.queueMove(0.0);
-  wristL.queueMove(0.0);
-  handL.queueMove(0.0);
-  gripperL.queueMove(0.0);
+    delay(500);
 
-  HerkulexMotor::actionMoves(1000, allMotors, 12);
+    printJoints();
 
-  delay(1000);
-  
-  Serial.println("Set up Finished");
-
-  // delay(500);
-
-  // printJoints();
-
-}
+    }
 
 void loop() {
 
-  Serial.println("Going to start position...");
+    startFromZero();
 
-  startFromZero();
+    delay(2000);
 
-  Serial.println("At start position.");
+    // makeMove('L', 'A');
 
-  printJoints();
+    delay(2000);
 
-  while (true) {
-    // Stop here forever
-  } 
+    makeMove('L', 'B');
+
+    // goToHomePosition(leftArmMotors, ROpen);
+    
+    while (true) {
+        // Stop here forever
+    } 
 }
 
 void printJoints(){
@@ -151,18 +156,18 @@ void startFromZero() {
 
   delay(1000);
 
-  shoulderR.queueMove(80.52);
-  bicepR.queueMove(34.20);
-  elbowR.queueMove(8.03);
-  wristR.queueMove(5.20);
-  handR.queueMove(3.57);
+  shoulderR.queueMove(106.44);
+  bicepR.queueMove(52.95);
+  elbowR.queueMove(-54.93);
+  wristR.queueMove(-5.52);
+  handR.queueMove(51.68);
   gripperR.queueMove(-2.60);
   
-  shoulderL.queueMove(-80.52);
-  bicepL.queueMove(-34.20);
-  elbowL.queueMove(-8.03);
-  wristL.queueMove(-5.20);
-  handL.queueMove(-3.57);
+  shoulderL.queueMove(-103.34);
+  bicepL.queueMove(-52.45);
+  elbowL.queueMove(44.50);
+  wristL.queueMove(12.67);
+  handL.queueMove(-39.00);
   gripperL.queueMove(2.60);
 
   HerkulexMotor::actionMoves(1000, allMotors, 12);
@@ -183,22 +188,39 @@ void applyPosition(const float angles[5], HerkulexMotor* arm[], float gripperAng
     delay(1000);
 }
 
-int columnIndex(char file) {
-    for (int i = 0; i < NUM_COLUMNS; i++) {
-        if (COLUMN_KEYS[i] == file) return i;
+int columnIndex(char file, char hand) {
+    if (hand == 'R') {
+        for (int i = 0; i < NUM_COLUMNS; i++) {
+            if (RIGHT_COLUMN_KEYS[i] == file) return i;
+        }
+    } else if (hand == 'L') {
+        for (int i = 0; i < NUM_COLUMNS; i++) {
+            if (LEFT_COLUMN_KEYS[i] == file) return i;
+        }
     }
     return -1;
 }
 
 void pickUpFromColumn(HerkulexMotor* arm[], const ColumnPositions& col, float gripOpen, float gripClosed) {
     applyPosition(col.above.angles, arm, gripOpen);   // Move above
+    printJoints();
     applyPosition(col.pick.angles,  arm, gripOpen);   // Lower
+    printJoints();
     applyPosition(col.pick.angles,  arm, gripClosed); // Grip
     applyPosition(col.above.angles, arm, gripClosed); // Raise
 }
 
+void placeDownAtColumn(HerkulexMotor* arm[], const ColumnPositions& col, float gripOpen, float gripClosed) {
+    applyPosition(col.above.angles, arm, gripClosed); // Move above with grip
+    printJoints();
+    applyPosition(col.pick.angles,  arm, gripClosed); // Lower
+    printJoints();
+    applyPosition(col.pick.angles,  arm, gripOpen);   // Release
+    applyPosition(col.above.angles, arm, gripOpen);   // Raise
+}
+
 void makeMove(char hand, char file) {
-    int col = columnIndex(file);
+    int col = columnIndex(file, hand);
     if (col == -1) {
         Serial.println("Unknown file!");
         return;
@@ -209,9 +231,41 @@ void makeMove(char hand, char file) {
             pickUpFromColumn(rightArmMotors, RIGHT_COLUMNS[col], ROpen, RClosed);
             isHoldingPiece = true;
         } else {
-            // place-down logic (mirror of pickup) goes here
+            placeDownAtColumn(rightArmMotors, RIGHT_COLUMNS[col], ROpen, RClosed);
+            isHoldingPiece = false;
         }
     } else if (hand == 'L') {
-        // Left arm equivalent
+        if (!isHoldingPiece) {
+            pickUpFromColumn(leftArmMotors, LEFT_COLUMNS[col], LOpen, LClosed);
+            isHoldingPiece = true;
+        } else {
+            placeDownAtColumn(leftArmMotors, LEFT_COLUMNS[col], LOpen, LClosed);
+            isHoldingPiece = false;
+        }
     }
+}
+
+void goToHomePosition(HerkulexMotor* arm[], float gripOpen) {
+    if (arm == rightArmMotors) {
+        shoulderR.queueMove(106.44);
+        bicepR.queueMove(52.95);
+        elbowR.queueMove(-54.93);
+        wristR.queueMove(-5.52);
+        handR.queueMove(51.68);
+        gripperR.queueMove(-2.60);
+        
+        HerkulexMotor::actionMoves(1000, rightArmMotors, 6);
+
+    } else if (arm == leftArmMotors) {
+        shoulderL.queueMove(-103.34);
+        bicepL.queueMove(-52.45);
+        elbowL.queueMove(44.50);
+        wristL.queueMove(12.67);
+        handL.queueMove(-39.00);
+        gripperL.queueMove(2.60);
+
+        HerkulexMotor::actionMoves(1000, leftArmMotors, 6);
+    }
+
+    delay(1000);
 }
