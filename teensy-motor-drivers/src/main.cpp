@@ -37,7 +37,7 @@ void setup(){
   while (!Serial) {
     ; // wait for serial port to connect.
   }
-  Serial.println("Beginning... ");
+  // Serial.println("Beginning... ");
   // Serial.flush();
 
   // Serial8.begin(1000000); // begin serial communication with the raspberry pi, this has been changed to Serial 8 instead of 1
@@ -149,12 +149,12 @@ void moveToZeroPositions(){
 
 
 void loop(){
-  Serial.println("Loop running");
-  Serial.flush();
+  // Serial.println("Loop running");
+  // Serial.flush();
   int rpi_status = rpi.uartRead(); // continuously read from the pi
-  Serial.print("RPI status: ");
-  Serial.println(rpi_status);
-  Serial.flush();
+  // Serial.print("RPI status: ");
+  // Serial.println(rpi_status);
+  // Serial.flush();
   // if (millis() - lastPacketTime > 500000) { // if it's been more than 5 seconds since we received a packet, go to idle state
   //   Serial.println("No packet received for a while, stopping...");
   //   delay(5);
@@ -164,16 +164,31 @@ void loop(){
   switch (robotState){
     case(READING_FROM_RPI):
     {
-      Serial.println("State: READING_FROM_RPI");
+      // Serial.println("State: READING_FROM_RPI");
       if (rpi_status == -1){
         break;
       }
-      Serial.println("Reading from RPI...!!!!");
+      // Serial.println("Reading from RPI...!!!!");
       // If a packet arrived, handle it
       const uint8_t* pkt = rpi.getPacket();
+      if (true) { //only for testing
+        char* test_packet = (char*) malloc(PACKET_SIZE);
+        for (int i = 0; i < MOTOR_COUNT; i++) {
+            motorPositions[i] = pkt[i+1] / 100.0f;
+            rpi.enqueueTXPacket(test_packet);
+            rpi.uartSend();
+          }
+          robotState = READING_FROM_RPI;
+          free(test_packet);
+          break;
+      }
+
       if (pkt != nullptr) {
-         Serial.print("Packet received from RPI: ");
-        Serial.println(pkt[0]);
+        // Serial.print("Packet received from RPI: ");
+        // for (int j = 0; j < PACKET_SIZE; j++){
+        //     Serial.print(pkt[j], HEX);
+        //     Serial.print(" ");
+        // }
         lastPacketTime = millis();
 
         // copy packet to avoid buffer overwrite
@@ -181,9 +196,9 @@ void loop(){
         memcpy(buffer, pkt, PACKET_SIZE);
 
         int16_t flag = buffer[0];
-        Serial.print("Flag byte: ");
-        Serial.println(flag);
-        Serial.flush();
+        // Serial.print("Flag byte: ");
+        // Serial.println(flag);
+        // Serial.flush();
 
         for (int i = 0; i < MOTOR_COUNT; i++) {
             RPIMotorInputs[i] = buffer[1 + i] / 100.0f;
@@ -211,10 +226,10 @@ void loop(){
       }
       if (true) { //only for testing
         for (int i = 0; i < MOTOR_COUNT; i++) {
-            Serial.print("Received from RPI - Motor ");
-            Serial.print(i);
-            Serial.print(": ");
-            Serial.println(RPIMotorInputs[i]);
+            // Serial.print("Received from RPI - Motor ");
+            // Serial.print(i);
+            // Serial.print(": ");
+            // Serial.println(RPIMotorInputs[i]);
         }
         robotState = READING_ROBOT_STATE;
         break;
@@ -226,7 +241,7 @@ void loop(){
 
       robotState = READING_ROBOT_STATE;
       SerialBusManager::requestAllPositions(allMotors, motorPositionsRaw, MOTOR_COUNT);
-      Serial.println("Requesting position and switching to READIING_ROBOT_STATE");
+      // Serial.println("Requesting position and switching to READIING_ROBOT_STATE");
       imu1.requestUpdate();
       readStartTime = micros();
       break;
@@ -250,9 +265,9 @@ void loop(){
         // put data togehter into one packet 
         // send packet to RPI
         loopElapsedMicros = micros() - readStartTime;
-        Serial.print("Elapsed time: ");
-        Serial.print(loopElapsedMicros);
-        Serial.println(" microseconds");
+        // Serial.print("Elapsed time: ");
+        // Serial.print(loopElapsedMicros);
+        // Serial.println(" microseconds");
 
         // for (int i = 0; i < 5; i++){
         // //for (int i = 0; i < MOTOR_COUNT; i++){
@@ -291,7 +306,7 @@ void loop(){
     case(STOP):
     {
       moveToZeroPositions();
-      Serial.println("Robot stopped.");
+      // Serial.println("Robot stopped.");
       while (true) {
         delay(1000);
       }
