@@ -39,10 +39,34 @@ mouth.hideturtle()
 mouth.color("black")
 mouth.pensize(40)
 mouth.penup()
-mouth.goto(-250, -50)
-mouth.pendown()
-mouth.setheading(-60)
-mouth.circle(300, 120)
+
+mouth_state = 0
+
+def draw_mouth(state):
+    mouth.clear()
+    mouth.penup()
+
+    if state == 0:
+        # smile
+        mouth.goto(-250, -50)
+        mouth.pendown()
+        mouth.setheading(-60)
+        mouth.circle(300, 120)
+    if state == 1:
+        # line
+        mouth.goto(-250, -150)
+        mouth.pendown()
+        mouth.setheading(6)
+        mouth.forward(500)
+
+
+def toggle_mouth(x, y):
+    global mouth_state
+    mouth_state = (mouth_state + 1) % 2
+    draw_mouth(mouth_state)
+
+
+win.onscreenclick(toggle_mouth)
 
 # -------------------------
 # Blink function
@@ -57,14 +81,29 @@ def blink():
     left_eye.shapesize(EYE_HEIGHT, EYE_WIDTH)
     right_eye.shapesize(EYE_HEIGHT, EYE_WIDTH)
 
-# -------------------------
-# Main loop (random blinking)
-# -------------------------
-while True:
-    time.sleep(random.uniform(1.5, 5))  # random pause between blinks
-    
-    # sometimes do a double blink
+def random_blink():
     blink()
     if random.random() < 0.3:
-        time.sleep(0.15)
-        blink()
+        win.ontimer(blink, 150)
+
+        delay = int(random.uniform(1500,5000))
+        win.ontimer(random_blink, delay)
+
+
+## Main Loop ##
+draw_mouth(mouth_state)
+random_blink()
+win.mainloop()
+
+# # -------------------------
+# # Main loop (random blinking)
+# # -------------------------
+# while True:
+#     time.sleep(random.uniform(1.5, 5))  # random pause between blinks
+    
+#     # sometimes do a double blink
+#     blink()
+#     if random.random() < 0.3:
+#         time.sleep(0.15)
+#         blink()
+
