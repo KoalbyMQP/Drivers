@@ -56,7 +56,7 @@ def draw_mouth(state):
         # line
         mouth.goto(-250, -150)
         mouth.pendown()
-        mouth.setheading(6)
+        mouth.setheading(0)
         mouth.forward(500)
 
 
