@@ -21,6 +21,7 @@ Bus IDs (teensy-motor-driver/lib/Herkulex/Herkulex.cpp):
 HerkulexMotor motor(MOTOR_ID, MotorModel::DRS_0601, BUS_ID);
 
 void setup() {
+  delay(15000);
   Serial.begin(1000000);
   delay(2000);
 
@@ -29,6 +30,17 @@ void setup() {
   SerialBusManager::createBus(BUS_ID);
   SerialBusManager::startAllBuses(BAUD_RATE::SPEED_667K);
   SerialBusManager::initAllMotors();
+  
+  SerialBusManager::torqueOnAllMotors();
+
+  uint16_t model = 0;
+  if (SerialBusManager::getBus(BUS_ID).getModel(MOTOR_ID, &model)) {
+    Serial.print("Motor has model 0x");
+    Serial.println(model, HEX);
+  } else {
+    Serial.println("No response from motor on this bus");
+  }
+
 
   Serial.println("Motor bus initialized");
 }
