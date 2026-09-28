@@ -48,7 +48,7 @@ void setup() {
   SerialBusManager::createBus(BUS_ID);
 
   Serial.println("Starting bus...");
-  SerialBusManager::startAllBuses(BAUD_RATE::SPEED_667K);
+  SerialBusManager::startAllBuses(BAUD_RATE::SPEED_115K);
 
   Serial.println("Scanning for Herkulex IDs...");
   if (findMotorId(BUS_ID, activeMotorId)) {
