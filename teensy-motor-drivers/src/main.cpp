@@ -9,7 +9,7 @@
  that is attached to each Teensy UART bus by printing the motor ID and model to your serial monitor. 
  You will then be able to use this information to test/move these motors. If you have everything 
  wired correctly and follow the comments, this process should (hopefully) be straightforward. If needed, 
- fine the schematics for wiring a motor to a Teensy in n/a
+ find the schematics for wiring a motor to a Teensy in motor wiring schemtaic.md
  Sincerely,
  Swapping End Effectors 2026-27
  */
