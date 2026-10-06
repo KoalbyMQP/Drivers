@@ -34,7 +34,7 @@ class StateMachine:
 
         try:
             print("Connecting to Teensy (COM15)...")
-            self.finley = serial.Serial('COM15', 115200, timeout=1)
+            self.finley = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
             time.sleep(1)
             print("Teensy connected!")
         except Exception as e:
