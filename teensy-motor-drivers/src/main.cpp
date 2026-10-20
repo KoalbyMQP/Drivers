@@ -49,6 +49,87 @@ void moveToZeroPositions() {
 
 }
 
+void jog(int n) {
+  Serial.println(n);
+  HerkulexMotor::motorRefQueueMove(allMotors[n], 15);
+  SerialBusManager::actionAll(1000);
+  delay(1000);
+  HerkulexMotor::motorRefQueueMove(allMotors[n], 0);
+  SerialBusManager::actionAll(1000);
+  delay(1000);
+}
+
+// moves motor n to a, then b, then back to 0, logging each step
+void sweepMotor(int n, const char* jointName, const char* aName, float a, const char* bName, float b) {
+  Serial.print("[legTest] ");
+  Serial.print(jointName);
+  Serial.print(" (allMotors[");
+  Serial.print(n);
+  Serial.print("], bus ");
+  Serial.print(allMotors[n].busId);
+  Serial.print(", servo ");
+  Serial.print(allMotors[n].servoId);
+  Serial.println(")");
+
+  Serial.print("  -> ");
+  Serial.print(aName);
+  Serial.print(": ");
+  Serial.println(a);
+  HerkulexMotor::motorRefQueueMove(allMotors[n], a);
+  SerialBusManager::actionAll(1000);
+  delay(1000);
+
+  Serial.print("  -> ");
+  Serial.print(bName);
+  Serial.print(": ");
+  Serial.println(b);
+  HerkulexMotor::motorRefQueueMove(allMotors[n], b);
+  SerialBusManager::actionAll(1000);
+  delay(1000);
+
+  Serial.println("  -> back to 0");
+  HerkulexMotor::motorRefQueueMove(allMotors[n], 0);
+  SerialBusManager::actionAll(1000);
+  delay(1000);
+}
+
+// exercises each leg joint one at a time: hip fwd/back, hip twist in/out, knee fwd/back, ankle fwd/back
+// relies on motorDefs order: leg index +1 = hip twist, +2 = hip (thigh), +3 = knee, +4 = ankle
+// left leg starts at allMotors[0], right leg at allMotors[5]
+// sign convention taken from walkingGait(): left forward is negative, right forward is positive
+void testLegJoints() {
+  const float HIP_DEG   = 15.0;
+  const float TWIST_DEG = 10.0;
+  const float KNEE_DEG  = 15.0;
+  const float ANKLE_DEG = 10.0;
+
+  const int legStart[2]   = {0, 5};
+  const char* legName[2]  = {"LEFT", "RIGHT"};
+  const float fwdSign[2]  = {-1.0, 1.0};
+
+  Serial.println("[legTest] ===== starting leg joint test =====");
+
+  for (int leg = 0; leg < 2; leg++) {
+    int base = legStart[leg];
+    float s = fwdSign[leg];
+
+    Serial.print("[legTest] ----- ");
+    Serial.print(legName[leg]);
+    Serial.println(" LEG -----");
+
+    sweepMotor(base + 2, "hip forward/back", "forward", s * HIP_DEG,   "back", -s * HIP_DEG);
+    sweepMotor(base + 1, "hip twist in/out", "in",      s * TWIST_DEG, "out",  -s * TWIST_DEG);
+    sweepMotor(base + 3, "knee forward/back", "forward", s * KNEE_DEG,  "back", -s * KNEE_DEG);
+    sweepMotor(base + 4, "ankle forward/back", "forward", s * ANKLE_DEG, "back", -s * ANKLE_DEG);
+
+    Serial.print("[legTest] ");
+    Serial.print(legName[leg]);
+    Serial.println(" LEG done");
+  }
+
+  Serial.println("[legTest] ===== leg joint test complete =====");
+}
+
 void setup(){
   delay(2000);                  // a delay to have time for serial monitor opening on platformio after uploading
   Serial.begin(1000000);        // open serial communications with computer
@@ -77,7 +158,7 @@ void setup(){
   SerialBusManager::torqueOnAllMotors();
   delay(2000);
 
-  moveToZeroPositions();
+  //moveToZeroPositions();
   
   SerialBusManager::infoAllMotors(allMotors, TOTAL_COUNT);
 
@@ -97,9 +178,17 @@ void setup(){
     Serial.println(motorPositions[i]);
   }
 
-  Serial.println("Waiting for any key... ");
-  waitForEnter();
+  // Serial.println("Waiting for any key... ");
+  // waitForEnter();
+  
+  while (true) {
+    while (Serial.available() == 0) {}
+    int n = Serial.parseInt();
+    while (Serial.available() > 0) Serial.read();  // clear leftover newline
+    jog(n);
+  }
 }
+
 
 
 void walkingGait() {
