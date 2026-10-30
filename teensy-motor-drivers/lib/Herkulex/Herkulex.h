@@ -218,6 +218,7 @@ class HerkulexClass {
     void setLed(uint8_t servoID, LED_STATE valueLed);
     void torqueON(int servoID);
     void torqueFree(int servoID);
+    void torqueBrake(int servoID); // Pi's command stop is "brake"
     void moveOne(motorMoveInfo moveInfo);
     uint16_t getPositionBlocking(int servoID);
     uint16_t getSpeed(int servoID);
@@ -291,7 +292,7 @@ class HerkulexClass {
 
       uint8_t queuedByteCount;
       uint8_t packet[20 + PACKET_LENGTH_BYTES::BASE_LENGTH + PACKET_LENGTH_BYTES::HSJOG_MOVEONE_DATA_LENGTH]; // stores full packet to send
-      uint8_t packetQueue[20];  // max for 5 servos
+      uint8_t packetQueue[21];  // play time + 4 bytes x 5 servos
       uint8_t inputBuffer[DATA_MOVE]; // stores input HOW LARGE DOES THIS NEED TO BE?
       uint8_t checksumData[PACKET_LENGTH_BYTES::BASE_LENGTH];  // stores checksumdata for input validation 
 };

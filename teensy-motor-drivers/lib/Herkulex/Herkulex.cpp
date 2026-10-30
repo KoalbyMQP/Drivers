@@ -164,6 +164,13 @@ void HerkulexClass::torqueFree(int servoID)
 	writeToRamRegister(servoID, RAM_REGISTER::TORQUE_CONTROL, byteArray, 1);
 }
 
+// torque to brake: the servo resists beint moved but doesn't drive
+void HerkulexClass::torqueBrake(int servoID) 
+{
+	uint8_t byteArray[1] = {TORQUE_MODE::BREAK_ON};
+	writeToRamRegister(servoID, RAM_REGISTER::TORQUE_CONTROL, byteArray, 1);
+}
+
 // ACK  - 0=No Replay, 1=Only reply to READ CMD, 2=Always reply
 void HerkulexClass::setACKPolicy(int valueACK)
 {	
