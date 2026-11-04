@@ -18,9 +18,54 @@ enum STATE {
   READING_ROBOT_STATE,
   IDLE,
   STOP,
+  STAND
 };
 
-uint8_t robotState = IDLE;
+
+// 0,      # hiplift_right
+// 1,    # hiprotate_right
+// 2,    # thighlift_right
+// 3,      # knee_right
+// 4,     # ankle_right
+// 5,     # hiplift_left
+// 6,    # hiprotate_left
+// 7,    # thighlift_left
+// 8,      # knee_left
+// 9,     # ankle_left
+// 10,    # shoulderspin_right
+// 11,    # shoulderspin_left
+// 12,    #chestturn
+// 13,    # waistlean
+// 14,    # Abdominalcrunch
+
+// 21,    # bicep_right
+// 22,    # elbow_right
+
+
+
+
+
+// ,    # neckturn
+// ,    # headnod
+
+
+// ,    # bicep_left
+
+// ,    # elbow_left
+
+// ,    # wristspin_left
+// ,    # wristspin_right
+// ,    # handcurl_left
+// ,    # handcurl_right
+// ,      # gripper_left
+// ,      # gripper_right
+
+
+
+
+
+
+uint8_t robotState = STAND;
 
 
 uint32_t loopElapsedMicros;
@@ -130,6 +175,37 @@ void testLegJoints() {
   Serial.println("[legTest] ===== leg joint test complete =====");
 }
 
+void stand() {
+  const int MOTOR_SPEED = 500;
+  delay(MOTOR_SPEED); 
+  float jointDegrees[] = {-14.3, // 0,      # hiplift_right
+                          -10, // 1,    # hiprotate_right
+                          -44.7, // 2,    # thighlift_right
+                          46.8, // 3,      # knee_right
+                          7.6, // 4,     # ankle_right
+                          1.7, // 5,     # hiplift_left
+                          10, // 6,    # hiprotate_left
+                          24.2, // 7,    # thighlift_left
+                          40, // 8,      # knee_left
+                          -27, // 9,     # ankle_left
+                          6.1, // 10,    # shoulderspin_right
+                          -6.9, // 11,    # shoulderspin_left
+                          5, // 12,    # chestturn
+                          -0.8, // 13,    # waistlean
+                          -1.7 // 14,    # Abdominalcrunch
+                        };
+  
+  
+  for (int i = 0; i < MOTOR_COUNT; i++) {
+    HerkulexMotor::motorRefQueueMove(allMotors[i], jointDegrees[i]);
+  }
+
+  // Execute all queued movements together.
+  SerialBusManager::actionAll(MOTOR_SPEED);
+
+  Serial.println("[legTest] ===== leg joint test complete =====");
+}
+
 void setup(){
   delay(2000);                  // a delay to have time for serial monitor opening on platformio after uploading
   Serial.begin(1000000);        // open serial communications with computer
@@ -181,12 +257,12 @@ void setup(){
   // Serial.println("Waiting for any key... ");
   // waitForEnter();
   
-  while (true) {
-    while (Serial.available() == 0) {}
-    int n = Serial.parseInt();
-    while (Serial.available() > 0) Serial.read();  // clear leftover newline
-    jog(n);
-  }
+  //while (true) {
+    //while (Serial.available() == 0) {}
+    //int n = Serial.parseInt();
+    //while (Serial.available() > 0) Serial.read();  // clear leftover newline
+    //jog(n);
+  //}
 }
 
 
@@ -503,16 +579,19 @@ void loop(){
     }
     case(IDLE):
     {
-      for(int i = 0; i < 5; i++){
-        walkingGait();
-      }
+      
       Serial.println("Press any key to walk again");
       waitForEnter();
       break;
     }
+    
     case(STOP):
     {
       delay(1000);
+    }
+    case(STAND):
+    {
+      stand();
     }
   }
 }
