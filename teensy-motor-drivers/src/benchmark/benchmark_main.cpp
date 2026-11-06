@@ -76,6 +76,9 @@ void printHelp() {
   Serial.println("Commands (type one, then press Enter):");
   Serial.println("  ping         ask leg motors ID 1-5 for status and model (read-only)");
   Serial.println("  scan         ask every ID 0-253 on both leg buses (read-only, ~4 s)");
+  Serial.println("  stress [n]   repeat STAT n times (default 100) on each leg, count replies");
+  Serial.println("  led <id> <color>  set one ID's LED: green, blue, red or off (nothing stored)");
+  Serial.println("  id <bus> <old> <new>  change one motor's ID (stored in the motor)");
   Serial.println("  baud <rate>  change the Teensy's bus speed for searching (motors unchanged)");
   Serial.println("  help         show this list");
   Serial.println();
@@ -181,6 +184,113 @@ void scan() {
   Serial.println();
 }
 
+   // ---------- stress: repeat STAT many times, count replies per ID ----------
+   void stressLeg(LegBus& leg, uint16_t rounds) {
+     HerkulexClass& bus = SerialBusManager::getBus(leg.busId);
+     uint16_t okCount[MOTORS_PER_LEG] = {0};
+
+     Serial.printf("\n== %s: %u rounds of STAT to IDs 1-%u at %lu baud ==\n",
+                   leg.name, rounds, MOTORS_PER_LEG, (unsigned long)busBaud);
+
+     for (uint16_t r = 0; r < rounds; r++) {
+       for (uint8_t i = 0; i < MOTORS_PER_LEG; i++) {
+         uint8_t err = 0, det = 0;
+         flushInput(leg.port);
+         if (bus.stat(LEG_MOTORS[i].id, &err, &det)) okCount[i]++;
+         delay(2);
+       }
+     }
+
+     Serial.println("  ID  joint         replies   success");
+     for (uint8_t i = 0; i < MOTORS_PER_LEG; i++) {
+       Serial.printf("  %2u  %-12s  %3u/%-3u   %3u %%\n",
+                     LEG_MOTORS[i].id, LEG_MOTORS[i].joint, okCount[i], rounds,
+                     (unsigned)(100UL * okCount[i] / rounds));
+     }
+   }
+
+   void stress(uint16_t rounds) {
+     if (rounds == 0) rounds = 100;
+     for (uint8_t i = 0; i < LEG_COUNT; i++) stressLeg(LEGS[i], rounds);
+     Serial.println();
+   }
+
+   // ---------- led: set one ID's LED (RAM write only: nothing stored, no torque) ----------
+   void setLedCmd(String args) {
+     args.trim();                       // e.g. "3 green"
+     int space = args.indexOf(' ');
+     if (space < 0) { Serial.println("Usage: led <id> <green|blue|red|off>"); return; }
+     int id = args.substring(0, space).toInt();
+     String color = args.substring(space + 1);
+     color.trim();
+
+     LED_STATE c;
+     if      (color == "green") c = LED_GREEN;
+     else if (color == "blue")  c = LED_BLUE;
+     else if (color == "red")   c = LED_RED;
+     else if (color == "off")   c = LED_OFF;
+     else { Serial.println("Color must be green, blue, red or off."); return; }
+
+     for (uint8_t i = 0; i < LEG_COUNT; i++) {
+       SerialBusManager::getBus(LEGS[i].busId).setLed((uint8_t)id, c);
+     }
+     Serial.printf("Sent LED %s to ID %d on both leg buses.\n", color.c_str(), id);
+   }
+
+      // ---------- id: change one motor's ID (EEPROM write + reboot) ----------
+   // Usage: id <bus> <oldID> <newID>    e.g. "id 2 3 30"
+   // Only run it when exactly ONE motor on that bus has <oldID>.
+   void changeIdCmd(String args) {
+     args.trim();
+     int s1 = args.indexOf(' ');
+     String rest = (s1 < 0) ? String("") : args.substring(s1 + 1);
+     rest.trim();
+     int s2 = rest.indexOf(' ');
+     if (s1 < 0 || s2 < 0) { Serial.println("Usage: id <bus> <oldID> <newID>   e.g. id 2 3 30"); return; }
+
+     int busId = args.substring(0, s1).toInt();
+     int oldId = rest.substring(0, s2).toInt();
+     int newId = rest.substring(s2 + 1).toInt();
+
+     LegBus* leg = nullptr;
+     for (uint8_t i = 0; i < LEG_COUNT; i++) if (LEGS[i].busId == busId) leg = &LEGS[i];
+     if (leg == nullptr) { Serial.println("Bus must be 1 (left leg) or 2 (right leg). Nothing changed."); return; }
+     if (oldId < 0 || oldId > 253 || newId < 0 || newId > 253 || oldId == newId) {
+       Serial.println("IDs must be 0-253 and different. Nothing changed.");
+       return;
+     }
+
+     HerkulexClass& bus = SerialBusManager::getBus(busId);
+     uint8_t err = 0, det = 0;
+
+     flushInput(leg->port);
+     if (!bus.stat((uint8_t)oldId, &err, &det)) {
+       Serial.printf("No motor answers at ID %d on bus %d. Nothing changed.\n", oldId, busId);
+       return;
+     }
+     delay(5);
+     flushInput(leg->port);
+     if (bus.stat((uint8_t)newId, &err, &det)) {
+       Serial.printf("ID %d is already taken on bus %d. Nothing changed.\n", newId, busId);
+       return;
+     }
+
+     Serial.printf("Changing ID %d -> %d on bus %d (EEPROM write + reboot, about 2 s)...\n",
+                   oldId, newId, busId);
+     bus.setID((uint8_t)oldId, (uint8_t)newId);   // driver: EEP write, 1 s, reboot, 1 s
+     delay(200);
+
+     flushInput(leg->port);
+     bool newAnswers = bus.stat((uint8_t)newId, &err, &det);
+     delay(5);
+     flushInput(leg->port);
+     bool oldAnswers = bus.stat((uint8_t)oldId, &err, &det);
+
+     Serial.printf("  ID %d answers now:    %s\n", newId, newAnswers ? "yes" : "NO");
+     Serial.printf("  ID %d still answers:  %s\n", oldId, oldAnswers ? "YES" : "no");
+     Serial.println((newAnswers && !oldAnswers) ? "ID CHANGE: DONE" : "ID CHANGE: CHECK FAILED - run scan");
+   }
+
 // ---------- baud: Teensy side only ----------
 void setBaud(uint32_t rate) {
   bool supported = false;
@@ -219,6 +329,9 @@ void loop() {
 
   if      (cmd == "ping")         ping();
   else if (cmd == "scan")         scan();
+  else if (cmd.startsWith("stress")) stress((uint16_t)cmd.substring(6).toInt());
+  else if (cmd.startsWith("led"))    setLedCmd(cmd.substring(3));
+  else if (cmd.startsWith("id "))    changeIdCmd(cmd.substring(3));
   else if (cmd.startsWith("baud")) setBaud((uint32_t)cmd.substring(4).toInt());
   else if (cmd == "help")         printHelp();
   else if (cmd.length() > 0)      Serial.println("Unknown command. Type help.");
