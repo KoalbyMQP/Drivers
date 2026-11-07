@@ -78,7 +78,9 @@ void printHelp() {
   Serial.println("  scan         ask every ID 0-253 on both leg buses (read-only, ~4 s)");
   Serial.println("  stress [n]   repeat STAT n times (default 100) on each leg, count replies");
   Serial.println("  led <id> <color>  set one ID's LED: green, blue, red or off (nothing stored)");
+  Serial.println("  ledrange <a> <b> <color>  set the LED on IDs a..b (finds a motor that can't reply)");
   Serial.println("  id <bus> <old> <new>  change one motor's ID (stored in the motor)");
+    Serial.println("  init                  all motors: reply policy 1 + clear errors (RAM only)");
   Serial.println("  baud <rate>  change the Teensy's bus speed for searching (motors unchanged)");
   Serial.println("  help         show this list");
   Serial.println();
@@ -291,6 +293,39 @@ void scan() {
      Serial.println((newAnswers && !oldAnswers) ? "ID CHANGE: DONE" : "ID CHANGE: CHECK FAILED - run scan");
    }
 
+
+      // ---------- ledrange: set the LED on a range of IDs (finds a motor that hears but can't reply) ----------
+   // Usage: ledrange <first> <last> <green|blue|red|off>    e.g. "ledrange 0 127 green"
+   void ledRangeCmd(String args) {
+     args.trim();
+     int s1 = args.indexOf(' ');
+     String rest = (s1 < 0) ? String("") : args.substring(s1 + 1);
+     rest.trim();
+     int s2 = rest.indexOf(' ');
+     if (s1 < 0 || s2 < 0) { Serial.println("Usage: ledrange <first> <last> <green|blue|red|off>"); return; }
+
+     int first = args.substring(0, s1).toInt();
+     int last  = rest.substring(0, s2).toInt();
+     String color = rest.substring(s2 + 1);
+     color.trim();
+
+     LED_STATE c;
+     if      (color == "green") c = LED_GREEN;
+     else if (color == "blue")  c = LED_BLUE;
+     else if (color == "red")   c = LED_RED;
+     else if (color == "off")   c = LED_OFF;
+     else { Serial.println("Color must be green, blue, red or off."); return; }
+     if (first < 0 || last > 253 || first > last) { Serial.println("IDs must be 0-253, first <= last."); return; }
+
+     for (int id = first; id <= last; id++) {
+       for (uint8_t i = 0; i < LEG_COUNT; i++) {
+         SerialBusManager::getBus(LEGS[i].busId).setLed((uint8_t)id, c);
+       }
+       delay(2);
+     }
+     Serial.printf("Sent LED %s to IDs %d-%d on both leg buses.\n", color.c_str(), first, last);
+   }
+
 // ---------- baud: Teensy side only ----------
 void setBaud(uint32_t rate) {
   bool supported = false;
@@ -330,8 +365,13 @@ void loop() {
   if      (cmd == "ping")         ping();
   else if (cmd == "scan")         scan();
   else if (cmd.startsWith("stress")) stress((uint16_t)cmd.substring(6).toInt());
+  else if (cmd.startsWith("ledrange")) ledRangeCmd(cmd.substring(8));
   else if (cmd.startsWith("led"))    setLedCmd(cmd.substring(3));
   else if (cmd.startsWith("id "))    changeIdCmd(cmd.substring(3));
+    else if (cmd == "init") {
+    SerialBusManager::initAllMotors();   // RAM writes to all IDs: reply policy = 1, clear errors
+    Serial.println("Sent to every motor on both leg buses: reply policy = 1, errors cleared (RAM only, nothing stored).");
+  }
   else if (cmd.startsWith("baud")) setBaud((uint32_t)cmd.substring(4).toInt());
   else if (cmd == "help")         printHelp();
   else if (cmd.length() > 0)      Serial.println("Unknown command. Type help.");
