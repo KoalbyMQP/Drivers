@@ -29,7 +29,7 @@ inline MotorRef leftLegMotors[BUS_L_LEG_COUNT] = {
   (HerkulexMotor(2, MotorModel::DRS_0601,         SERIAL_BUS::BUS_L_LEG, -16.0, 150.0)).getMotorRef(), // but this motor technically, if no other motor moves, could be moved indefinitely
   (HerkulexMotor(3, MotorModel::DRS_0601,         SERIAL_BUS::BUS_L_LEG, -120.0, 33.0)).getMotorRef(),
   (HerkulexMotor(4, MotorModel::DRS_0602_GEARBOX, SERIAL_BUS::BUS_L_LEG, -74.0, 69.0)).getMotorRef(),
-  (HerkulexMotor(5, MotorModel::DRS_0201,         SERIAL_BUS::BUS_L_LEG, -45.0, 42.0)).getMotorRef(),
+  (HerkulexMotor(5, MotorModel::DRS_0601,         SERIAL_BUS::BUS_L_LEG, -45.0, 42.0)).getMotorRef(),
 };
 
 inline MotorRef rightLegMotors[BUS_R_LEG_COUNT] = {
@@ -37,7 +37,7 @@ inline MotorRef rightLegMotors[BUS_R_LEG_COUNT] = {
   (HerkulexMotor(2, MotorModel::DRS_0601,         SERIAL_BUS::BUS_R_LEG, -150.0, 16.0)).getMotorRef(),
   (HerkulexMotor(3, MotorModel::DRS_0601,         SERIAL_BUS::BUS_R_LEG, -33.0, 120.0)).getMotorRef(),
   (HerkulexMotor(4, MotorModel::DRS_0602_GEARBOX, SERIAL_BUS::BUS_R_LEG, -69.0, 74.0)).getMotorRef(),
-  (HerkulexMotor(5, MotorModel::DRS_0201,         SERIAL_BUS::BUS_R_LEG, -42.0, 45.0)).getMotorRef(),
+  (HerkulexMotor(5, MotorModel::DRS_0601,         SERIAL_BUS::BUS_R_LEG, -42.0, 45.0)).getMotorRef(),
 };
 
 inline MotorRef chestMotors[BUS_CHEST_COUNT] = {
