@@ -1,8 +1,9 @@
 // LAPTOP › VS Code   file: teensy-motor-drivers/src/pi_link.cpp   (branch pi-link)
 // Raspberry Pi <-> Teensy link for Ava. Message format: sim/robot/protocol.py.
-// The message code (CRC, frames, watchdog) is copied from sim/robot/teensy/pi_link_reference.ino;
-// the servo functions call Ava's HerkuleX driver, and the BNO055 IMU (wired to the Teensy) is read
-// here and added to every STATE reply. DRAFT: written from the project files, not yet compiled.
+// LEGS-ONLY VERSION: the Pi moves and reads the 10 leg motors. All 15 upper-body motors (chest, arms,
+// neck) are switched on and held at UPPER_HOLD_DEG from the first "torque on", and never follow the Pi.
+// The message code (CRC, frames, watchdog) is copied from sim/robot/teensy/pi_link_reference.ino.
+// DRAFT: written from the project files, not yet compiled.
 #include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_BNO055.h>
@@ -10,40 +11,45 @@
 #include <SerialBusManager.h>
 #include <motorDefs.h>
 
+#define USE_IMU 0   // 0 = IMU disconnected: never touch it (Pi config: interface: none). 1 = read the BNO055.
+
 // Message types (MSG_ prefix so they cannot clash with names in Herkulex.h)
 static const uint8_t MSG_PING = 0x01, MSG_TORQUE = 0x02, MSG_SET_TARGETS = 0x03, MSG_GET_STATE = 0x04;
 static const uint8_t MSG_PONG = 0x81, MSG_ACK = 0x82, MSG_STATE = 0x84;
-static const uint16_t FW_VERSION = 2;
+static const uint16_t FW_VERSION = 3;
 static const uint32_t WATCHDOG_MS = 200;    // must match teensy.watchdog_ms in config.yaml
 
-// ===================== FILL IN FROM THE JOINT TABLE =============================================
-// Global ID = bus number x 10 + servo ID on that bus:
-//   left leg 11-15, right leg 21-25, chest 31-35, left arm 41-45, right arm 51-55
-// SERVO_IDS: the 21 motors that are URDF joints
-static const uint8_t SERVO_IDS[] = {11, 12, 13, 14, 15,
-                                    21, 22, 23, 24, 25,
-                                    31, 32, 33, 34, 35,
-                                        42, 43, 44, 
-                                        52, 53, 54,   };
-// LOCKED_IDS: neck yaw, neck pitch, left wrist pitch, right wrist pitch
-// LOCKED_DEG: the angle each locked motor holds, in degrees (the CAD pose).
-static const uint8_t LOCKED_IDS[] = {41, 45, 51, 55};
-static const float LOCKED_DEG[] = {0.0f, 0.0f, 0.0f, 0.0f};
+// ===================== WHICH MOTORS THE PI CONTROLS =============================================
+// Global ID = bus number x 10 + servo ID on that bus.
+// LEG_IDS: the 10 leg motors, which are allMotors[0..9]. The Pi moves them; the firmware reads them.
+static const uint8_t LEG_IDS[] = {11, 12, 13, 14, 15,    // left leg:  pelvis-lift, pelvis-twist, thigh, calf, ankle
+                                  21, 22, 23, 24, 25};   // right leg: same order (checked by the benchmark)
+// UPPER_REPORT_IDS: one ID per upper-body URDF joint (11 of them). The firmware tells the Pi they sit at
+// UPPER_HOLD_DEG and ignores Pi targets for them. They must match the upper-body ids in config.yaml.
+static const uint8_t UPPER_REPORT_IDS[] = {31, 32, 33, 34, 35, 42, 43, 44, 52, 53, 54};
+// UPPER_HOLD_DEG: the angle every upper-body motor (allMotors[10..24], neck and wrist pitch too) holds.
+static const float UPPER_HOLD_DEG = 0.0f;
 // ================================================================================================
 
-static const uint8_t N_SERVOS = sizeof(SERVO_IDS);
-static const uint8_t N_LOCKED = sizeof(LOCKED_IDS);
+static const uint8_t N_LEGS = sizeof(LEG_IDS);            // 10 (legs are the first 10 entries of allMotors)
+static const uint8_t N_UPPER = sizeof(UPPER_REPORT_IDS);  // 11
+static const uint8_t N_SERVOS = N_LEGS + N_UPPER;         // 21 joints: what the Pi sees
 
 static uint16_t rawPos[TOTAL_COUNT];      // raw positions, written by the background poller
-static float lastGoodRad[TOTAL_COUNT];    // last valid angle of every motor, radians
+static float lastGoodRad[TOTAL_COUNT];    // last valid angle of every leg motor, radians
 static uint8_t badReads[TOTAL_COUNT];     // failed reads in a row
 static uint8_t statErr[TOTAL_COUNT];      // last HerkuleX status error byte
 static uint8_t statDetail[TOTAL_COUNT];   // last HerkuleX status detail byte
-static uint8_t statNext = 0;              // which motor gets a status check next
-static uint8_t torqueMode = 0;            // 0 free, 1 brake, 2 on
+static uint8_t statNext = 0;              // which leg motor gets a status check next
+static uint8_t torqueMode = 0;            // legs: 0 free, 1 brake, 2 on
+static bool upperHeld = false;            // upper body switched on and sent to UPPER_HOLD_DEG
 static uint32_t lastCommandMs = 0;
 
-// ---- IMU side: BNO055 board wired to the Teensy's I2C pins (same wiring and address as before) ----
+static uint8_t reportedId(uint8_t i) {    // the i-th joint the Pi sees: legs first, then upper body
+  return i < N_LEGS ? LEG_IDS[i] : UPPER_REPORT_IDS[i - N_LEGS];
+}
+
+// ---- IMU side: BNO055 board wired to the Teensy's I2C pins (only used when USE_IMU is 1) ---------
 static Adafruit_BNO055 bno(55, BNO055_ADDRESS_A, &Wire);
 static bool imuOk = false;                // true once the BNO055 answered at start-up
 static uint16_t imuCount = 0;             // goes up by one for every new reading
@@ -83,14 +89,14 @@ static void drainBuses() {                // throw away late or stray reply byte
   while (Serial5.available()) Serial5.read();
 }
 
-// Keeps reading every motor, all buses in parallel. Between two full sweeps the buses are idle,
-// so that is when results are stored and one motor's status is checked.
+// Keeps reading the 10 leg motors (both leg buses in parallel). Between two full sweeps the buses are
+// idle, so that is when results are stored and one leg motor's status is checked.
 static void pollServos() {
   if (!SerialBusManager::isDoneCollecting()) {
-    SerialBusManager::tick(allMotors, rawPos, TOTAL_COUNT);
+    SerialBusManager::tick(allMotors, rawPos, N_LEGS);
     return;
   }
-  for (int i = 0; i < TOTAL_COUNT; i++) {
+  for (int i = 0; i < N_LEGS; i++) {
     if (isBadRaw(rawPos[i])) {
       if (badReads[i] < 255) badReads[i]++;
     } else {
@@ -100,35 +106,42 @@ static void pollServos() {
     rawPos[i] = 0xFFFF;                   // not read yet in the next sweep
   }
   drainBuses();
-  uint8_t e = 0, d = 0;                   // status check of one motor (a few ms)
+  uint8_t e = 0, d = 0;                   // status check of one leg motor (a few ms)
   if (SerialBusManager::getBus(allMotors[statNext].busId).stat(allMotors[statNext].servoId, &e, &d)) {
     statErr[statNext] = e;
     statDetail[statNext] = d;
   }
-  statNext = (statNext + 1) % TOTAL_COUNT;
+  statNext = (statNext + 1) % N_LEGS;
   drainBuses();
-  SerialBusManager::requestAllPositions(allMotors, rawPos, TOTAL_COUNT);
+  SerialBusManager::requestAllPositions(allMotors, rawPos, N_LEGS);
 }
 
 static void setTargets(const uint8_t *ids, const float *rad, uint8_t n, uint16_t playtime_ms) {
   if (torqueMode != 2) return;            // only move when the Pi has switched torque on
   for (uint8_t i = 0; i < n; i++) {
     int m = motorIndex(ids[i]);
-    if (m >= 0) HerkulexMotor::motorRefQueueMove(allMotors[m], rad[i] * RAD_TO_DEG);
-  }
-  SerialBusManager::actionAll(playtime_ms);   // one move packet per bus, all start together
+    if (m >= 0 && m < N_LEGS) HerkulexMotor::motorRefQueueMove(allMotors[m], rad[i] * RAD_TO_DEG);
+  }                                       // upper-body targets from the Pi are ignored
+  SerialBusManager::actionAll(playtime_ms);   // one move packet per leg bus, both start together
 }
 
-static void holdCurrentPose(int playtimeMs) {   // aim every motor at where it is now
-  for (int i = 0; i < TOTAL_COUNT; i++) {
+static void holdCurrentPose(int playtimeMs) {   // aim every leg motor at where it is now
+  for (int i = 0; i < N_LEGS; i++) {
     if (badReads[i] == 0) HerkulexMotor::motorRefQueueMove(allMotors[i], lastGoodRad[i] * RAD_TO_DEG);
   }
   SerialBusManager::actionAll(playtimeMs);
 }
 
-static void setTorque(uint8_t mode) {
+static void holdUpperBody() {             // chest + arm buses: torque on, all 15 motors to UPPER_HOLD_DEG in 2 s
+  for (uint8_t b = 3; b <= 5; b++) SerialBusManager::getBus(b).torqueON(PACKET_CONSTS::ALL_SERVOS);
+  for (int i = N_LEGS; i < TOTAL_COUNT; i++) HerkulexMotor::motorRefQueueMove(allMotors[i], UPPER_HOLD_DEG);
+  SerialBusManager::actionAll(2000);
+  upperHeld = true;
+}
+
+static void setTorque(uint8_t mode) {     // the Pi's torque commands act on the two leg buses only
   if (mode == 2) holdCurrentPose(100);    // no jump when torque comes on
-  for (uint8_t b = 1; b <= 5; b++) {
+  for (uint8_t b = 1; b <= 2; b++) {
     HerkulexClass &bus = SerialBusManager::getBus(b);
     if (mode == 2) bus.torqueON(PACKET_CONSTS::ALL_SERVOS);
     else if (mode == 1) bus.torqueBrake(PACKET_CONSTS::ALL_SERVOS);
@@ -137,18 +150,17 @@ static void setTorque(uint8_t mode) {
   torqueMode = mode;
   if (mode == 2) {
     holdCurrentPose(100);                 // again, now that torque is on
-    for (uint8_t j = 0; j < N_LOCKED; j++) {   // locked motors move slowly (2 s) to their angle
-      int m = motorIndex(LOCKED_IDS[j]);
-      if (m >= 0) HerkulexMotor::motorRefQueueMove(allMotors[m], LOCKED_DEG[j]);
-    }
-    SerialBusManager::actionAll(2000);
+    if (!upperHeld) holdUpperBody();      // first torque on: the upper body goes to zero and stays there
   }
 }
 
 static void readServo(uint8_t gid, float &rad, int16_t &load, uint8_t &err, uint8_t &detail) {
-  int m = motorIndex(gid);
   load = 0;                               // not measured yet
-  if (m < 0) { rad = 0.0f; err = 0x08; detail = 0; return; }
+  for (uint8_t j = 0; j < N_UPPER; j++) { // upper body: reported as held, never read
+    if (UPPER_REPORT_IDS[j] == gid) { rad = UPPER_HOLD_DEG * DEG_TO_RAD; err = 0; detail = 0; return; }
+  }
+  int m = motorIndex(gid);
+  if (m < 0 || m >= N_LEGS) { rad = 0.0f; err = 0x08; detail = 0; return; }
   rad = lastGoodRad[m];
   err = statErr[m];
   detail = statDetail[m];
@@ -183,9 +195,10 @@ static void sendState(uint16_t seq) {
   memcpy(p, &seq, 2); memcpy(p + 2, &t, 4); memcpy(p + 6, &v, 4); p[10] = N_SERVOS;
   uint16_t off = 11;
   for (uint8_t i = 0; i < N_SERVOS; i++) {
+    uint8_t id = reportedId(i);
     float rad; int16_t load; uint8_t err, det;
-    readServo(SERVO_IDS[i], rad, load, err, det);
-    p[off] = SERVO_IDS[i]; memcpy(p + off + 1, &rad, 4); memcpy(p + off + 5, &load, 2);
+    readServo(id, rad, load, err, det);
+    p[off] = id; memcpy(p + off + 1, &rad, 4); memcpy(p + off + 5, &load, 2);
     p[off + 7] = err; p[off + 8] = det; off += 9;
   }
   // IMU block, read on the Pi by protocol.parse_imu (Appendix D1), 32 bytes:
@@ -201,7 +214,8 @@ static void handleFrame(uint8_t type, const uint8_t *p, uint16_t len) {
   switch (type) {
     case MSG_PING: {
       uint8_t r[3 + 32];
-      memcpy(r, &FW_VERSION, 2); r[2] = N_SERVOS; memcpy(r + 3, SERVO_IDS, N_SERVOS);
+      memcpy(r, &FW_VERSION, 2); r[2] = N_SERVOS;
+      for (uint8_t i = 0; i < N_SERVOS; i++) r[3 + i] = reportedId(i);
       sendFrame(MSG_PONG, r, 3 + N_SERVOS);
       break;
     }
@@ -253,8 +267,10 @@ void piLinkSetup() {
   for (int i = 0; i < TOTAL_COUNT; i++) {
     rawPos[i] = 0xFFFF; lastGoodRad[i] = 0.0f; badReads[i] = 0; statErr[i] = 0; statDetail[i] = 0;
   }
+#if USE_IMU
   Wire.setClock(400000);
   imuOk = bno.begin(OPERATION_MODE_IMUPLUS);   // gyro + accelerometer fusion, no magnetometer
+#endif
   lastCommandMs = millis();
 }
 
@@ -262,5 +278,5 @@ void piLinkLoop() {
   pollPi();
   pollServos();
   pollImu();
-  if (torqueMode == 2 && millis() - lastCommandMs > WATCHDOG_MS) setTorque(1);   // Pi silent: brake
+  if (torqueMode == 2 && millis() - lastCommandMs > WATCHDOG_MS) setTorque(1);   // Pi silent: brake the legs
 }
